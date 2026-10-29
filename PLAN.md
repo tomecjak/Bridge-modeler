@@ -117,12 +117,18 @@ interface DrawingDefinition {
 Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 ### Fáza 0 — Kostra projektu
-- [ ] pnpm monorepo, spoločný `tsconfig` (strict), lint a format
-- [ ] Vitest pre všetky balíky, `pnpm test` z koreňa
-- [ ] `apps/web`: Vite + React, rozloženie: vľavo strom projektu, v strede 3D/2D, vpravo vlastnosti
-- [ ] prázdne balíky podľa `CLAUDE.md`, každý s `index.ts` a jedným testom
-- [ ] GitHub Actions: typecheck, lint, test
-- [ ] ADR 0001 stack a nástroje, 0002 doménový model ako zdroj pravdy, 0003 súradnice a jednotky
+- [x] pnpm monorepo, spoločný `tsconfig` (strict), lint a format
+  - `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`); balíky bez `DOM` aj bez Node typov — prístup k `document`/`process` zlyhá v typechecku. Lint a format: Biome (ADR 0001), Markdown sa neformátuje.
+- [x] Vitest pre všetky balíky, `pnpm test` z koreňa
+  - koreňový `vitest.config.ts` s `test.projects`; nový balík sa zaradí automaticky.
+- [x] `apps/web`: Vite + React, rozloženie: vľavo strom projektu, v strede 3D/2D, vpravo vlastnosti
+  - CSS grid (hlavička, 3 panely, stavový riadok), prepínač 3D/2D s prázdnymi plochami, texty v `src/i18n/sk.ts`, svetlá/tmavá téma podľa systému.
+- [x] prázdne balíky podľa `CLAUDE.md`, každý s `index.ts` a jedným testom
+  - scope `@bridge/*` (pracovný), bez build kroku (`exports` → `src/index.ts`); `fixtures/README.md` so zoznamom potrebných dát.
+- [x] GitHub Actions: typecheck, lint, test
+  - `.github/workflows/ci.yml` (+ `pnpm build`). Ostáva: vytvoriť GitHub repo a pushnúť — až potom bude CI reálne zelené.
+- [x] ADR 0001 stack a nástroje, 0002 doménový model ako zdroj pravdy, 0003 súradnice a jednotky
+  - v ADR 0003 je konvencia lokálnych osí a smerníka *navrhnutá*, potvrdí sa golden testmi vo Fáze 1.
 
 **Hotové, keď:** CI je zelené a `pnpm dev` zobrazí prázdnu aplikáciu s rozložením.
 
@@ -242,3 +248,5 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 - K čomu sa vzťahuje niveleta: horný povrch vozovky v osi komunikácie, alebo iný bod?
 - Pracovný názov, licencia a vlastníctvo (súkromný vs. firemný projekt).
 - Hosting: stačí statický web bez backendu (predpoklad MVP)?
+- Súradnice a smerník vo výpisoch z Civil 3D: EPSG:5514 (záporné E/N) alebo klasické S-JTSK (kladné Y/X)? Smerník od severu alebo od osi +X (juh), v ° alebo gon? *Predpoklad (ADR 0003): interne lokálne x = E, y = N, `azimuth` od +y v smere hodín; smerník S-JTSK = azimuth + π.*
+- Pracovný scope balíkov `@bridge/*` — premenovať po rozhodnutí o názve?
