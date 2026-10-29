@@ -266,7 +266,6 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 
 ## 7. Otvorené otázky
 
-- Smerník vo výkazoch kontrolných bodov z Civil 3D: návod žiada North Azimuth v decimálnych stupňoch ([docs/navod-kontrolne-body-civil3d.md](docs/navod-kontrolne-body-civil3d.md)); overí sa po dodaní. (V LandXML je konvencia už zistená, pozri nižšie.)
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
@@ -279,7 +278,15 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Os má dĺžku 12 527,25 m a obsahuje 7× Line, 14× Curve a 26× Spiral, všetky typu `clothoid`, aj zostavy prechodnica–prechodnica bez priamky (inflexia). Skok v staničení v súbore nie je.
 - Niveleta: 2× PVI a 6× ParaCurve (parabolické výškové oblúky).
 - Súbor obsahuje aj `CrossSects` (359) a `Superelevation` (14). V MVP sa ignorujú, prečítajú sa len os a niveleta.
-- Do golden testov ešte chýbajú kontrolné body (staničenie, E, N, Z, smerník) — návod na export: [docs/navod-kontrolne-body-civil3d.md](docs/navod-kontrolne-body-civil3d.md).
+- Kontrolné body k osi 101-00 zatiaľ nie sú; golden testy používajú os SO 171-11-01 (nižšie).
+
+`fixtures/inbox/SO 171-11-01.xml` + `CivilReport*.html` (Civil 3D 2023 export osi, výkazy z českej lokalizácie Civil 3D, 2026-10-29) — **hlavný podklad pre golden testy Fázy 1**:
+- Os „Trasa 171-11-01“, dĺžka 723,35 m, staničenie od 0. Prvky: 4× Line (jedna len 0,042 m medzi dvoma prechodnicami), 8× Spiral (`clothoid`, aj nesymetrické dĺžky 89,998 / 69,939 m), 4× Curve (R 65,14 – 290 m). Súradnice EPSG:5514, záporné, poradie N E, hlavička opäť `epsgCode="2065"`.
+- Niveleta pokrýva celú os: 2× PVI, 5× ParaCurve.
+- `CivilReport.html` — prírastkové staničenie osi, krok 10 m, 74 bodov: staničenie, súradnice na 0,1 mm, smer dotyčnice. **Pozor na označenie stĺpcov:** stĺpec „Y“ obsahuje Northing (≈ −1 069 538), stĺpec „X“ Easting (≈ −617 210). Smer je zapísaný ako `S 126.4824.3992 (smv)` = severný azimut v tvare stupne.minútyseknudy (126°48′24,3992″), meraný od severu v smere hodinových ručičiek. Overené na prvej priamke: z LandXML `dir` = 323,193222° vychádza azimut 90° − 323,193222° = 126,806778° = 126°48′24,40″.
+- `CivilReport2.html` — Station and Curve Report: styky prvkov (TS, SC, CS, ST, PC, PT), súradnice na 1 mm, smery ako kvadrantové smerníky (`S 53° 11' 35.6008" E`), staničenie v stovkovom tvare `1+58.761` = 158,761 m, parametre prechodníc (A, X, Y, P, K, Theta).
+- `CivilReport3.html` — prírastkové staničenie nivelety, krok 10 m + body PVC, PVT, PVI, najnižšie body; výška na 0,1 mm, sklon v % na 6 desatinných miest; 89 riadkov.
+- Pokrytie stačí na kritérium Fázy 1 (≥ 20 bodov vrátane prechodníc a výškových oblúkov).
 
 ### Rozhodnuté (2026-10-29)
 

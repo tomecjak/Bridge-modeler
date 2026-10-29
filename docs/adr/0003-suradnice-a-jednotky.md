@@ -34,7 +34,9 @@ Každá nejednoznačnosť tu znamená chybu polohy mosta, preto konvencie fixuje
   `σ = azimuth + π (mod 2π)`. Prevod iba na hranici (import/export, zobrazenie), pokrytý testom.
 - Ktorú konvenciu používa výpis z Civil 3D, sa overí na referenčných dátach (PLAN.md, sekcia 7).
 - LandXML z Civil 3D (overené 2026-10-29): `dir` je v stupňoch od osi +E proti smeru hodinových ručičiek,
-  preto `azimuth = π/2 − dir` (mod 2π). Konvenciu CSV výpisu ešte treba overiť.
+  preto `azimuth = π/2 − dir` (mod 2π).
+- Výkazy Civil 3D (overené 2026-10-29 na osi SO 171-11-01): smer dotyčnice je severný azimut v smere hodinových
+  ručičiek, teda priamo interný `azimuth` (zapísaný v stupňoch, minútach a sekundách). Zhoda s LandXML `dir` overená.
 
 **LandXML**
 - Body sú v poradí **„northing easting [elevation]“**. Parser to prevedie na `{ x: E, y: N, z }` na jednom
