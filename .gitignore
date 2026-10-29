@@ -8,3 +8,7 @@ coverage/
 !.env.example
 __pycache__/
 .venv/
+
+# Podklady od Jakuba sa neverzujú (len README)
+fixtures/inbox/*
+!fixtures/inbox/README.md

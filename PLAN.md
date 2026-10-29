@@ -251,7 +251,20 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 ## 7. Otvorené otázky
 
-- Smerník vo výpisoch z Civil 3D: od severu alebo od osi +X (juh), v ° alebo gonoch? Overí sa na dodanom LandXML (`fixtures/inbox/`).
+- Smerník v CSV výpise kontrolných bodov z Civil 3D: od severu, alebo od osi +X (juh), v ° alebo v gonoch? Overí sa, keď bude CSV v `fixtures/inbox/`. (V LandXML je to už zistené, pozri nižšie.)
+- Záporné staničenia: os 101-00 začína na staničení −7 724,35. Ako ich zobrazovať: `km -1,296 651`, alebo inak?
+- Niveleta pokrýva iba časť osi (staničenie −1 296,65 až 4 802,90). *Predpoklad:* mimo rozsahu nivelety je výška nedefinovaná a vráti sa typovaná chyba; most musí ležať v rozsahu nivelety.
+
+### Zistené z podkladov
+
+`fixtures/inbox/Trasa LandXML.xml` (Civil 3D 2024, os 101-00, export 2026-06-10):
+- Hlavička uvádza `epsgCode="2065"` (klasický S-JTSK), ale súradnice sú záporné E/N (EPSG:5514). Import preto nesmie veriť `epsgCode`; rozhoduje znamienko súradníc.
+- Body sú v poradí N E (napr. `-1166863.09 -384315.69` → N = −1 166 863, E = −384 316).
+- `dir`, `dirStart`, `dirEnd` sú v decimálnych stupňoch a merajú sa **od osi +E proti smeru hodinových ručičiek** (matematický uhol). Overené na úseku Line: vypočítaný smer 201,733604°, v súbore 201.733604221824. Platí teda `azimuth = π/2 − dir` (mod 2π).
+- Os má dĺžku 12 527,25 m a obsahuje 7× Line, 14× Curve a 26× Spiral, všetky typu `clothoid`, aj zostavy prechodnica–prechodnica bez priamky (inflexia). Skok v staničení v súbore nie je.
+- Niveleta: 2× PVI a 6× ParaCurve (parabolické výškové oblúky).
+- Súbor obsahuje aj `CrossSects` (359) a `Superelevation` (14). V MVP sa ignorujú, prečítajú sa len os a niveleta.
+- Do golden testov ešte chýba CSV s kontrolnými bodmi (staničenie, E, N, Z, smerník).
 
 ### Rozhodnuté (2026-10-29)
 
