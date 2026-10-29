@@ -27,6 +27,7 @@ packages/expr       parser a vyhodnocovanie výrazov parametrov (bez eval)
 packages/model      schéma doménového modelu (zod), staničné funkcie, validácia, graf závislostí
 packages/sections   prierez NK na staničení, rozvinutý pozdĺžny rez
 packages/mesh       GeometryKernel, generovanie 3D sietí (sweep NK, podpery)
+packages/terrain    terén: TIN z LandXML, výška v bode, rezy terénom
 packages/drawing    2D výkresový model, hladiny, export SVG a DXF
 packages/ifc        export IFC 4.3
 fixtures/           referenčné LandXML, výpisy z Civil 3D, očakávané výsledky

@@ -16,11 +16,12 @@ Nástroj by mal slúžiť ako taký rýchly modeler pre vytváranie koncepcie mo
 - opory a piliere na staničeniach so šikmosťou, ložiská / kĺby
 - 3D model ako trojuholníková sieť, 3D viewer
 - 2D výkresy: priečny rez, rozvinutý pozdĺžny rez, pôdorys → SVG, DXF
+- terén: import povrchu (TIN) z LandXML, zobrazenie v 3D, terénna čiara v pozdĺžnom a priečnom reze
 - export IFC 4.3 s georeferenciou a osou
 - uloženie projektu ako JSON
 
 **Mimo MVP** (viď Fáza 8): import IFC, booleovské operácie a pohľady so skrytými hranami (OpenCascade),
-terén, výmery, viac osí, detaily oceľových a spriahnutých NK, výstuž, predpätie, backend a spolupráca, ProjectWise.
+výmery, viac osí, detaily oceľových a spriahnutých NK, výstuž, predpätie, backend a spolupráca, ProjectWise.
 
 ## 2. Technologický stack
 
@@ -122,7 +123,7 @@ interface DrawingDefinition {
 
 ## 4. Fázy
 
-Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
+Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) závisí len od fázy 1 a viewera z fázy 5.
 
 ### Fáza 0 — Kostra projektu
 - [x] pnpm monorepo, spoločný `tsconfig` (strict), lint a format
@@ -197,11 +198,23 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 **Hotové, keď:** most dĺžky 200 m sa regeneruje do 1 s, pri priblížení nič netrasie a rez 3D siete na ľubovoľnom staničení sa zhoduje s 2D prierezom z fázy 3 (test).
 
+### Fáza 5b — Terén
+- [ ] `packages/terrain`: TIN (body, trojuholníky) v lokálnych súradniciach, priestorový index, `elevationAt(x, y)` (mimo povrchu → typovaná chyba / `undefined`)
+- [ ] import LandXML `Surfaces/Surface/Definition` (`Pnts`, `Faces`), poradie bodov N E Z; viac povrchov v súbore → výber
+- [ ] orezanie povrchu na koridor okolo osi mosta (šírka ako parameter), aby sa veľké DMR dali používať v prehliadači
+- [ ] rez terénom: pozdĺž osi (pre pozdĺžny rez) a pozdĺž priečnej čiary na staničení (pre priečny rez) → polyline so zlomami na hranách TIN
+- [ ] ADR: kde je terén uložený (v projektovom JSON vs. samostatný súbor/asset) a ako sa udržiava determinizmus
+- [ ] viewer: terén ako polopriehľadná sieť, zapínanie/vypínanie
+- [ ] golden test: výška v kontrolných bodoch voči Civil 3D ≤ 1 mm
+
+**Hotové, keď:** povrch z Civil 3D sa načíta, v 3D lícuje s mostom a rez terénom sa zhoduje s pozdĺžnym profilom terénu z Civil 3D ≤ 1 mm (test).
+
 ### Fáza 6 — 2D výkresy
 - [ ] výkresový model: čiara, polyline, šrafa, text, kóta, značka staničenia; hladiny, typy čiar, mierka
 - [ ] firemný štandard hladín ako konfigurácia (JSON)
 - [ ] priečny rez na zvolených staničeniach (NK a podpera, ak na staničení leží)
-- [ ] rozvinutý pozdĺžny rez: horný a spodný povrch NK, podpery, niveleta, staničenia, výšky
+- [ ] rozvinutý pozdĺžny rez: horný a spodný povrch NK, podpery, niveleta, terén, staničenia, výšky
+- [ ] terénna čiara v priečnom reze
 - [ ] pôdorys: obrysy NK, os so staničením, podpery so šikmosťou
 - [ ] export SVG (náhľad v aplikácii) a DXF (mm, hladiny, mierka; lokálne alebo S-JTSK súradnice)
 - [ ] ADR: knižnica pre DXF vs. vlastný zapisovač
@@ -225,7 +238,6 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 - OpenCascade (WASM) ako druhý `GeometryKernel`: booleovské operácie, presné telesá, pohľady so skrytými hranami
 - IfcSectionedSolidHorizontal a IfcLinearPlacement
 - rozšírenia definované v pôdoryse (okraj NK ako krivka), viac NK, zakrivené podpery
-- terén z LandXML `Surfaces` do pozdĺžneho rezu
 - výmery (objemy betónu, plochy) a export pre KUBATOR
 - PDF výkresy s rámikom a pečiatkou
 - desktopový balík (Tauri), ak bude prehliadač obmedzovať
@@ -238,6 +250,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 3. Výkres priečneho rezu dvojice NK (28 900 mm) a ukážky pozdĺžneho rezu a pôdorysu z reálneho projektu.
 4. Firemný štandard hladín, typov čiar a farieb pre DXF.
 5. Malý referenčný most (2–3 polia) s dĺžkami polí a šikmosťami na end-to-end test.
+6. Povrch terénu z Civil 3D (LandXML `Surface`) v okolí toho istého mosta a pozdĺžny profil terénu po osi (výkaz) na golden test.
 
 ## 6. Sledované riziká
 
@@ -246,12 +259,16 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 | presnosť súradníc S-JTSK vo WebGL | lokálny počiatok od fázy 1, výpočty v double |
 | dialekty LandXML, typy prechodníc | typované chyby, golden testy proti Civil 3D |
 | orientácia prierezu, šikmé podpery | testy zhody 2D prierezu a 3D siete |
+| veľké DMR (milióny trojuholníkov) v prehliadači | orezanie na koridor, priestorový index, výpočet vo Web Workeri |
 | podpora IFC 4.3 v cieľových aplikáciách | tesselovaná geometria, testy importu |
 | rozrastanie rozsahu | nič mimo MVP bez zápisu do tohto plánu |
 
 ## 7. Otvorené otázky
 
 - Smerník vo výkazoch kontrolných bodov z Civil 3D: návod žiada North Azimuth v decimálnych stupňoch ([docs/navod-kontrolne-body-civil3d.md](docs/navod-kontrolne-body-civil3d.md)); overí sa po dodaní. (V LandXML je konvencia už zistená, pozri nižšie.)
+- Terén — zdroj: len LandXML povrch z Civil 3D, alebo aj iné formáty (napr. DMR 5.0 z ÚGKK ako GeoTIFF/LAS)? *Predpoklad MVP:* len LandXML `Surface`.
+- Terén a podpery: má sa výška podpery / hĺbka základu odvíjať od terénu (napr. horná hrana základu X m pod terénom), alebo je terén len vizuálny podklad? *Predpoklad:* v MVP len vizuálny podklad a terénna čiara vo výkresoch.
+- Terén v IFC: exportovať ho (napr. `IfcGeographicElement` s `TERRAIN`), alebo nie? *Predpoklad:* voliteľne, rozhodne sa vo fáze 7.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
