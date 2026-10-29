@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/mesh",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GeometryKernel a generovanie 3D sietí (sweep NK, podpery).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

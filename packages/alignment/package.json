@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/alignment",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Import LandXML, smerové vedenie, niveleta a staničenie.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/drawing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "2D výkresový model, hladiny, export SVG a DXF.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

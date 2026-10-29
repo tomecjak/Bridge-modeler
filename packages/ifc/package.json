@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/ifc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Export IFC 4.3.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

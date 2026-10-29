@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/expr",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Parser a vyhodnocovanie výrazov parametrov (bez eval).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

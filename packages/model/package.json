@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/model",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Schéma doménového modelu, staničné funkcie, validácia, graf závislostí.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/geom",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Vektory, matice, lokálne rámce, operácie s polyline a polygónmi.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}
