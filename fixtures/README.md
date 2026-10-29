@@ -14,3 +14,4 @@ Potrebné dáta (PLAN.md, sekcia 5):
 4. `drawing/` — firemný štandard hladín, typov čiar a farieb pre DXF.
 5. `bridge/` — malý referenčný most (2–3 polia) s dĺžkami polí a šikmosťami na end-to-end test.
 6. `terrain/` — povrch terénu z Civil 3D (LandXML `Surface`) v okolí mosta a pozdĺžny profil terénu po osi (výkaz).
+   Plus vzorka DMR 5.0 z ÚGKK pre to isté územie.

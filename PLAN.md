@@ -201,13 +201,14 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 ### Fáza 5b — Terén
 - [ ] `packages/terrain`: TIN (body, trojuholníky) v lokálnych súradniciach, priestorový index, `elevationAt(x, y)` (mimo povrchu → typovaná chyba / `undefined`)
 - [ ] import LandXML `Surfaces/Surface/Definition` (`Pnts`, `Faces`), poradie bodov N E Z; viac povrchov v súbore → výber
+- [ ] import DMR 5.0 z ÚGKK (formát podľa vzorky, pravdepodobne GeoTIFF raster) → rovnaké rozhranie ako TIN (`elevationAt`, rezy); ADR k knižnici na čítanie rastra
 - [ ] orezanie povrchu na koridor okolo osi mosta (šírka ako parameter), aby sa veľké DMR dali používať v prehliadači
 - [ ] rez terénom: pozdĺž osi (pre pozdĺžny rez) a pozdĺž priečnej čiary na staničení (pre priečny rez) → polyline so zlomami na hranách TIN
 - [ ] ADR: kde je terén uložený (v projektovom JSON vs. samostatný súbor/asset) a ako sa udržiava determinizmus
 - [ ] viewer: terén ako polopriehľadná sieť, zapínanie/vypínanie
 - [ ] golden test: výška v kontrolných bodoch voči Civil 3D ≤ 1 mm
 
-**Hotové, keď:** povrch z Civil 3D sa načíta, v 3D lícuje s mostom a rez terénom sa zhoduje s pozdĺžnym profilom terénu z Civil 3D ≤ 1 mm (test).
+**Hotové, keď:** povrch z Civil 3D aj DMR 5.0 sa načítajú, v 3D lícuje s mostom a rez terénom sa zhoduje s pozdĺžnym profilom terénu z Civil 3D ≤ 1 mm (test).
 
 ### Fáza 6 — 2D výkresy
 - [ ] výkresový model: čiara, polyline, šrafa, text, kóta, značka staničenia; hladiny, typy čiar, mierka
@@ -266,9 +267,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 ## 7. Otvorené otázky
 
 - Smerník vo výkazoch kontrolných bodov z Civil 3D: návod žiada North Azimuth v decimálnych stupňoch ([docs/navod-kontrolne-body-civil3d.md](docs/navod-kontrolne-body-civil3d.md)); overí sa po dodaní. (V LandXML je konvencia už zistená, pozri nižšie.)
-- Terén — zdroj: len LandXML povrch z Civil 3D, alebo aj iné formáty (napr. DMR 5.0 z ÚGKK ako GeoTIFF/LAS)? *Predpoklad MVP:* len LandXML `Surface`.
-- Terén a podpery: má sa výška podpery / hĺbka základu odvíjať od terénu (napr. horná hrana základu X m pod terénom), alebo je terén len vizuálny podklad? *Predpoklad:* v MVP len vizuálny podklad a terénna čiara vo výkresoch.
-- Terén v IFC: exportovať ho (napr. `IfcGeographicElement` s `TERRAIN`), alebo nie? *Predpoklad:* voliteľne, rozhodne sa vo fáze 7.
+- DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
@@ -297,6 +296,9 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 | Záporné staničenia | zobrazujú sa so znamienkom mínus, napr. `km -1,296 651` |
 | Rozsah nivelety | mimo rozsahu nivelety je výška nedefinovaná → typovaná chyba; most musí ležať v rozsahu nivelety |
 | Podklady | `fixtures/inbox/` sa neverzuje, podklady nie sú v histórii gitu |
+| Zdroj terénu | povrch z Civil 3D (LandXML `Surface`) aj DMR 5.0 z ÚGKK |
+| Terén a podpery | v MVP len vizuálny podklad a terénna čiara vo výkresoch; výška podpier ani hĺbka základov sa od terénu neodvíja |
+| Terén v IFC | voliteľný export, rozhodne sa vo fáze 7 |
 | Hosting | statický web bez backendu |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
 | GitHub | repo vytvoril Jakub (`tomecjak/Bridge-modeler`); podklady sa nahrávajú do `fixtures/inbox/` |
