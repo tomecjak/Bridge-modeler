@@ -1,2 +1,5 @@
-/** Vektory, matice, lokálne rámce, operácie s polyline a polygónmi. */
-export const PACKAGE_NAME = '@bridge/geom';
+export * from './angle.ts';
+export * from './frame.ts';
+export * from './quadrature.ts';
+export * from './tolerance.ts';
+export * from './vec.ts';
