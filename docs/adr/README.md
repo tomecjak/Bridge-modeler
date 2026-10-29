@@ -1,0 +1,29 @@
+# Architektonické rozhodnutia (ADR)
+
+Krátke záznamy o rozhodnutiach, ktoré menia architektúru, princípy z `CLAUDE.md` alebo pridávajú
+runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemení — nahradí ho nový ADR
+(v starom sa stav zmení na *Nahradené ADR NNNN*).
+
+| ADR | Názov | Stav |
+|---|---|---|
+| [0001](0001-stack-a-nastroje.md) | Stack a nástroje | Prijaté |
+| [0002](0002-domenovy-model-ako-zdroj-pravdy.md) | Doménový model ako zdroj pravdy | Prijaté |
+| [0003](0003-suradnice-a-jednotky.md) | Súradnice a jednotky | Prijaté (časť konvencií navrhnutá, overí sa vo Fáze 1) |
+
+## Šablóna
+
+```markdown
+# NNNN — Názov
+
+- Stav: Navrhnuté | Prijaté | Nahradené ADR NNNN
+- Dátum: RRRR-MM-DD
+
+## Kontext
+Prečo treba rozhodnúť, aké sú obmedzenia.
+
+## Rozhodnutie
+Čo sme zvolili. Pri závislosti: dôvod, licencia, veľkosť.
+
+## Dôsledky
+Čo z toho vyplýva — výhody, nevýhody, čo bude treba urobiť.
+```
