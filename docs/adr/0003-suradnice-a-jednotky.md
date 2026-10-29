@@ -45,8 +45,8 @@ Každá nejednoznačnosť tu znamená chybu polohy mosta, preto konvencie fixuje
 **Staničenie**
 - Interne `s` = spojitá dĺžka po osi v metroch od začiatku osi (bez skokov).
 - Zobrazované staničenie = `s` prepočítané cez skoky v staničení (`StationEquation`) a formátované
-  formátovačom; obojsmerný prevod je samostatný modul s testami. Formát zobrazenia `km 1,234 567`
-  (rozhodnuté 2026-10-29).
+  formátovačom; obojsmerný prevod je samostatný modul s testami. Formát zobrazenia `km 1,234 567`,
+  záporné staničenia so znamienkom mínus `km -1,296 651` (rozhodnuté 2026-10-29).
 
 **Lokálny rámec prierezu**
 - `x` priečne, kladné **vpravo** v smere staničenia; `y` **nahor**; počiatok v referenčnom bode NK na osi.

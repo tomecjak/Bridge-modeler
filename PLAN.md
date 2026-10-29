@@ -7,7 +7,7 @@ Stav: návrh v0.1 (2026-10-29). Úlohy sa odškrtávajú priebežne; poznámky p
 Jeden most (jedna alebo dve NK) nad jednou osou z LandXML:
 parametrický prierez NK s nábehmi a rozšíreniami → podpery na staničeniach → 3D náhľad →
 priečne rezy, rozvinutý pozdĺžny rez a pôdorys do DXF → export IFC 4.3.
-Nástroj by mal slúžiť ako taký rýchly modeler pre vytváranie koncepcie mostov, nie do úplných detialov, ale skôr rozloženie a staničenie pdopeir, využitie nejakého typo nosnej kpnštrukcie, nejakýh otypockého drieku a podobne a ukázenie modelu v teréne, alebo v niečom podobnom.
+Nástroj by mal slúžiť ako taký rýchly modeler pre vytváranie koncepcie mostov, nie do úplných detialov, ale skôr rozloženie a staničenie podpier, využitie nejakého typu nosnej konštrukcie, nejakýho typockého drieku a podobne a ukázenie modelu v teréne, alebo v niečom podobnom.
 
 **V rozsahu MVP**
 - import osi a nivelety z LandXML (priamka, oblúk, klotoida; tangenty, výškové oblúky; skoky v staničení)
@@ -251,9 +251,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 ## 7. Otvorené otázky
 
-- Smerník v CSV výpise kontrolných bodov z Civil 3D: od severu, alebo od osi +X (juh), v ° alebo v gonoch? Overí sa, keď bude CSV v `fixtures/inbox/`. (V LandXML je to už zistené, pozri nižšie.)
-- Záporné staničenia: os 101-00 začína na staničení −7 724,35. Ako ich zobrazovať: `km -1,296 651`, alebo inak?
-- Niveleta pokrýva iba časť osi (staničenie −1 296,65 až 4 802,90). *Predpoklad:* mimo rozsahu nivelety je výška nedefinovaná a vráti sa typovaná chyba; most musí ležať v rozsahu nivelety.
+- Smerník vo výkazoch kontrolných bodov z Civil 3D: návod žiada North Azimuth v decimálnych stupňoch ([docs/navod-kontrolne-body-civil3d.md](docs/navod-kontrolne-body-civil3d.md)); overí sa po dodaní. (V LandXML je konvencia už zistená, pozri nižšie.)
+- Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
 
@@ -264,7 +263,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 - Os má dĺžku 12 527,25 m a obsahuje 7× Line, 14× Curve a 26× Spiral, všetky typu `clothoid`, aj zostavy prechodnica–prechodnica bez priamky (inflexia). Skok v staničení v súbore nie je.
 - Niveleta: 2× PVI a 6× ParaCurve (parabolické výškové oblúky).
 - Súbor obsahuje aj `CrossSects` (359) a `Superelevation` (14). V MVP sa ignorujú, prečítajú sa len os a niveleta.
-- Do golden testov ešte chýba CSV s kontrolnými bodmi (staničenie, E, N, Z, smerník).
+- Do golden testov ešte chýbajú kontrolné body (staničenie, E, N, Z, smerník) — návod na export: [docs/navod-kontrolne-body-civil3d.md](docs/navod-kontrolne-body-civil3d.md).
 
 ### Rozhodnuté (2026-10-29)
 
@@ -278,6 +277,9 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 | Názov, licencia | súkromný projekt, bez licencie (`UNLICENSED`); scope `@bridge/*` ostáva |
 | Zvislý posun osi mosta | predvolene −hrúbka vozovky; os mosta leží na hornom povrchu NK (nie je to limit, len predvolená hodnota) |
 | Os mosta v MVP | len posun osi cesty (vodorovný a zvislý); samostatná os z vlastného LandXML prípadne neskôr |
+| Záporné staničenia | zobrazujú sa so znamienkom mínus, napr. `km -1,296 651` |
+| Rozsah nivelety | mimo rozsahu nivelety je výška nedefinovaná → typovaná chyba; most musí ležať v rozsahu nivelety |
+| Podklady | `fixtures/inbox/` sa neverzuje, podklady nie sú v histórii gitu |
 | Hosting | statický web bez backendu |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
-| GitHub | repo vytvorí Jakub; podklady sa nahrávajú do `fixtures/inbox/` |
+| GitHub | repo vytvoril Jakub (`tomecjak/Bridge-modeler`); podklady sa nahrávajú do `fixtures/inbox/` |
