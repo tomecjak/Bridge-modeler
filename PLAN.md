@@ -7,6 +7,7 @@ Stav: návrh v0.1 (2026-10-29). Úlohy sa odškrtávajú priebežne; poznámky p
 Jeden most (jedna alebo dve NK) nad jednou osou z LandXML:
 parametrický prierez NK s nábehmi a rozšíreniami → podpery na staničeniach → 3D náhľad →
 priečne rezy, rozvinutý pozdĺžny rez a pôdorys do DXF → export IFC 4.3.
+Nástroj by mal slúžiť ako taký rýchly modeler pre vytváranie koncepcie mostov, nie do úplných detialov, ale skôr rozloženie a staničenie pdopeir, využitie nejakého typo nosnej kpnštrukcie, nejakýh otypockého drieku a podobne a ukázenie modelu v teréne, alebo v niečom podobnom.
 
 **V rozsahu MVP**
 - import osi a nivelety z LandXML (priamka, oblúk, klotoida; tangenty, výškové oblúky; skoky v staničení)
@@ -33,7 +34,7 @@ terén, výmery, viac osí, detaily oceľových a spriahnutých NK, výstuž, pr
 | 3D | three.js cez @react-three/fiber | lokálne súradnice |
 | Výpočty mimo UI | Web Worker + Comlink | transferable buffers |
 | LandXML | fast-xml-parser | beží aj v Node (testy) |
-| Výrazy | vlastný parser (podmnožina syntaxe vzorcov Revitu) | prevziať z editora prierezu, ak existuje |
+| Výrazy | vlastný parser (podmnožina syntaxe vzorcov Revitu) | čísla v SI, goniometria v stupňoch |
 | DXF | rozhodne ADR vo fáze 6 | knižnica vs. vlastný ASCII zapisovač |
 | IFC | rozhodne ADR vo fáze 7 (kandidát web-ifc, schéma IFC4X3) | validácia IfcOpenShell (Python) v `tools/` |
 | Testy | Vitest; neskôr Playwright pre e2e | |
@@ -52,6 +53,7 @@ interface ProjectFile {
   name: string;
   crs: { epsg: 5514; origin: { x: number; y: number; z: number } };  // lokálny počiatok v S-JTSK
   alignments: Alignment[];        // normalizované z LandXML, uložené v projekte
+  bridgeAxes: BridgeAxis[];       // os mosta odvodená od osi cesty
   parameters: Parameter[];        // globálne parametre projektu
   profiles: ProfileDefinition[];
   superstructures: Superstructure[];
@@ -73,6 +75,13 @@ interface Segment {
   vertexAt?: 'start' | 'end';                         // kde má parabola nulovú dotyčnicu
 }
 
+interface BridgeAxis {                                // nezávislá od osi cesty, posúvateľná
+  id: string; name: string;
+  alignmentId: string;
+  horizontalOffset: StationFunction;                  // + vpravo; predvolene 0
+  verticalOffset: StationFunction;                    // + nahor; predvolene −hrúbka vozovky
+}
+
 interface ProfileDefinition {
   id: string; name: string;
   parameters: { name: string; unit: Parameter['unit']; default: number }[];
@@ -82,19 +91,18 @@ interface ProfileDefinition {
 
 interface Superstructure {
   id: string; name: string;
-  alignmentId: string;
+  bridgeAxisId: string;
   from: Station; to: Station;
-  offset: StationFunction;                            // posun osi NK od osi komunikácie
   profileId: string;
   parameterLaws: Record<string, StationFunction>;     // napr. h, bLeft, bRight, crossSlope
-  reference: { point: string; verticalOffset: Expr }; // väzba bodu profilu na niveletu
+  referencePoint: string;                             // bod profilu, ktorý leží na osi mosta
   orientation: 'vertical' | 'normalToGrade';
 }
 
 interface Support {
   id: string; name: string;
   kind: 'abutment' | 'pier';
-  alignmentId: string;
+  bridgeAxisId: string;
   station: Station;
   skew: Expr;                                         // šikmosť voči kolmici na os
   type: 'wall' | 'columns' | 'abutmentBlock';
@@ -126,7 +134,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 - [x] prázdne balíky podľa `CLAUDE.md`, každý s `index.ts` a jedným testom
   - scope `@bridge/*` (pracovný), bez build kroku (`exports` → `src/index.ts`); `fixtures/README.md` so zoznamom potrebných dát.
 - [x] GitHub Actions: typecheck, lint, test
-  - `.github/workflows/ci.yml` (+ `pnpm build`). Ostáva: vytvoriť GitHub repo a pushnúť — až potom bude CI reálne zelené.
+  - `.github/workflows/ci.yml` (+ `pnpm build`). Ostáva: Jakub vytvorí GitHub repo a pushne — až potom bude CI reálne zelené.
 - [x] ADR 0001 stack a nástroje, 0002 doménový model ako zdroj pravdy, 0003 súradnice a jednotky
   - v ADR 0003 je konvencia lokálnych osí a smerníka *navrhnutá*, potvrdí sa golden testmi vo Fáze 1.
 
@@ -157,9 +165,10 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 ### Fáza 3 — Prierez NK
 - [ ] `ProfileDefinition`: pomenované body s výrazmi, obrysy a dutiny, parametre s predvolenými hodnotami
-- [ ] zjednotiť formát s editorom priečneho rezu (viď Otvorené otázky)
+- [ ] os mosta: posun od osi cesty (vodorovný a zvislý ako staničné funkcie), predvolene na osi cesty so zvislým posunom o hrúbku vozovky
+- [ ] základný editor prierezu: definovanie základných prvkov (body, obrysy, dutiny, parametre); plný editor vo Fáze 8
 - [ ] `evaluateProfile(superstructure, s) → Polygon2D[]` s dosadením staničných funkcií v `s`
-- [ ] väzba na niveletu cez referenčný bod a zvislý posun (napr. hrúbka vozovky)
+- [ ] väzba referenčného bodu profilu na os mosta
 - [ ] priečny sklon ako parameter profilu (MVP), nie z LandXML
 - [ ] kontroly: uzavretosť, samopretínanie, orientácia; plocha a ťažisko prierezu
 - [ ] fixture: dvojica NK, celková šírka 28 900 mm (jedna NK 14 350, konzoly 1 700 a 900, hrúbka v osi 1 000, spodná šírka 13 650, medzera 200)
@@ -220,6 +229,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 - výmery (objemy betónu, plochy) a export pre KUBATOR
 - PDF výkresy s rámikom a pečiatkou
 - desktopový balík (Tauri), ak bude prehliadač obmedzovať
+- plnohodnotný editor priečneho rezu (grafické kreslenie, väzby, knižnica prierezov)
 
 ## 5. Referenčné dáta (dodá Jakub)
 
@@ -241,12 +251,20 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 ## 7. Otvorené otázky
 
-- Existuje už repo editora priečneho rezu? Ak áno: presunúť ho do tohto monorepa ako balík, alebo zdieľať cez npm?
-- Jednotky vo výrazoch: čisté čísla v SI, alebo zápis s jednotkami (`350 mm`) ako v Reviti?
-- Uhly v goniometrických funkciách: stupne (ako Revit) alebo radiány?
-- Formát zobrazenia staničenia a počet desatinných miest.
-- K čomu sa vzťahuje niveleta: horný povrch vozovky v osi komunikácie, alebo iný bod?
-- Pracovný názov, licencia a vlastníctvo (súkromný vs. firemný projekt).
-- Hosting: stačí statický web bez backendu (predpoklad MVP)?
-- Súradnice a smerník vo výpisoch z Civil 3D: EPSG:5514 (záporné E/N) alebo klasické S-JTSK (kladné Y/X)? Smerník od severu alebo od osi +X (juh), v ° alebo gon? *Predpoklad (ADR 0003): interne lokálne x = E, y = N, `azimuth` od +y v smere hodín; smerník S-JTSK = azimuth + π.*
-- Pracovný scope balíkov `@bridge/*` — premenovať po rozhodnutí o názve?
+- Väzba NK na os mosta (Fáza 3): odpoveď znie „predvolene sa nastaví maximálne odsadenie o hrúbku vozovky“. *Predpoklad:* predvolený zvislý posun osi mosta = −hrúbka vozovky (os mosta leží na hornom povrchu NK pod vozovkou). Treba potvrdiť, či slovo „maximálne“ znamená limit, alebo len predvolenú hodnotu.
+- Os mosta: stačí posun osi cesty (vodorovný a zvislý posun ako staničné funkcie), alebo bude treba aj úplne samostatnú os (vlastné LandXML)? *Predpoklad MVP:* posun.
+- Smerník vo výpisoch z Civil 3D: od severu alebo od osi +X (juh), v ° alebo gonoch? Overí sa na dodanom LandXML (`fixtures/inbox/`).
+
+### Rozhodnuté (2026-10-29)
+
+| Otázka | Rozhodnutie |
+|---|---|
+| Editor priečneho rezu | vlastný editor v tejto aplikácii; v MVP len definovanie základných prvkov prierezu, plnohodnotný editor neskôr (Fáza 8) |
+| Jednotky vo výrazoch | čisté čísla v SI; zápis s jednotkami (`350 mm`) prípadne neskôr |
+| Uhly v goniometrických funkciách | stupne (ako Revit); model interne v radiánoch, prevod len vo vnútri `sin/cos/tan/asin/acos/atan` |
+| Formát staničenia | `km 1,234 567` (km, desatinná čiarka, metre na mm) |
+| Vzťažný bod | NK sa viaže na **os mosta**, nezávislú od osi cesty, posúvateľnú vľavo/vpravo a hore/dole; predvolene leží na osi cesty so zvislým posunom o hrúbku vozovky |
+| Názov, licencia | súkromný projekt, bez licencie (`UNLICENSED`); scope `@bridge/*` ostáva |
+| Hosting | statický web bez backendu |
+| Súradnice | EPSG:5514, záporné E/N (potvrdené) |
+| GitHub | repo vytvorí Jakub; podklady sa nahrávajú do `fixtures/inbox/` |

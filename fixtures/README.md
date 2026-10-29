@@ -3,6 +3,8 @@
 Vstupy a očakávané výsledky pre golden testy. Súbory sa needitujú ručne — pri zmene uveď zdroj
 (projekt, verzia Civil 3D, dátum exportu) v `SOURCES.md` v príslušnom podadresári.
 
+Surové podklady patria do [`inbox/`](inbox/README.md); odtiaľ sa spracované dáta presúvajú sem.
+
 Potrebné dáta (PLAN.md, sekcia 5):
 
 1. `alignment/` — LandXML z Civil 3D: os s klotoidami, niveleta s výškovými oblúkmi, ideálne aj skok v staničení.
