@@ -251,8 +251,6 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 
 ## 7. Otvorené otázky
 
-- Väzba NK na os mosta (Fáza 3): odpoveď znie „predvolene sa nastaví maximálne odsadenie o hrúbku vozovky“. *Predpoklad:* predvolený zvislý posun osi mosta = −hrúbka vozovky (os mosta leží na hornom povrchu NK pod vozovkou). Treba potvrdiť, či slovo „maximálne“ znamená limit, alebo len predvolenú hodnotu.
-- Os mosta: stačí posun osi cesty (vodorovný a zvislý posun ako staničné funkcie), alebo bude treba aj úplne samostatnú os (vlastné LandXML)? *Predpoklad MVP:* posun.
 - Smerník vo výpisoch z Civil 3D: od severu alebo od osi +X (juh), v ° alebo gonoch? Overí sa na dodanom LandXML (`fixtures/inbox/`).
 
 ### Rozhodnuté (2026-10-29)
@@ -265,6 +263,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť.
 | Formát staničenia | `km 1,234 567` (km, desatinná čiarka, metre na mm) |
 | Vzťažný bod | NK sa viaže na **os mosta**, nezávislú od osi cesty, posúvateľnú vľavo/vpravo a hore/dole; predvolene leží na osi cesty so zvislým posunom o hrúbku vozovky |
 | Názov, licencia | súkromný projekt, bez licencie (`UNLICENSED`); scope `@bridge/*` ostáva |
+| Zvislý posun osi mosta | predvolene −hrúbka vozovky; os mosta leží na hornom povrchu NK (nie je to limit, len predvolená hodnota) |
+| Os mosta v MVP | len posun osi cesty (vodorovný a zvislý); samostatná os z vlastného LandXML prípadne neskôr |
 | Hosting | statický web bez backendu |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
 | GitHub | repo vytvorí Jakub; podklady sa nahrávajú do `fixtures/inbox/` |
