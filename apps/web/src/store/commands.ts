@@ -7,6 +7,7 @@ import {
   type ProjectFile,
   renameParameter,
   type Superstructure,
+  type Support,
 } from '@bridge/model';
 
 /** Kolekcie prvkov mosta s rovnakými príkazmi (pridať / upraviť / odstrániť). */
@@ -14,6 +15,7 @@ export interface ElementCollections {
   bridgeAxes: BridgeAxis;
   profiles: ProfileDefinition;
   superstructures: Superstructure;
+  supports: Support;
 }
 export type ElementCollection = keyof ElementCollections;
 
@@ -41,6 +43,7 @@ export type Command =
       bridgeAxes?: BridgeAxis[];
       profiles?: ProfileDefinition[];
       superstructures?: Superstructure[];
+      supports?: Support[];
     }
   | ElementUpdate
   | { type: 'removeElement'; collection: ElementCollection; id: string };
@@ -83,6 +86,7 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       draft.bridgeAxes.push(...(command.bridgeAxes ?? []));
       draft.profiles.push(...(command.profiles ?? []));
       draft.superstructures.push(...(command.superstructures ?? []));
+      draft.supports.push(...(command.supports ?? []));
       return;
     case 'updateElement': {
       const list = draft[command.collection] as { id: string }[];

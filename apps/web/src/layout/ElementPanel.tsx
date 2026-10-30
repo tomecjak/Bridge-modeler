@@ -1,10 +1,14 @@
+import { formatStation } from '@bridge/alignment';
 import type {
   BridgeAxis,
   ParameterUnit,
   ProfileDefinition,
   StationFunction,
   Superstructure,
+  Support,
 } from '@bridge/model';
+import type { SpanResult, SupportResult } from '@bridge/sections';
+import { formatNumber } from '../format/number.ts';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
 import type { ElementCollection, ElementCollections } from '../store/commands.ts';
@@ -15,6 +19,7 @@ import {
 } from '../store/profileEdit.ts';
 import { projectStore, useProject } from '../store/projectStore.ts';
 import type { SectionResult } from '../store/sections.ts';
+import { defaultGeometry } from '../store/supports.ts';
 import { ExpressionInput } from '../views/ExpressionInput.tsx';
 import { StationField, StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
 import { TextField } from '../views/TextField.tsx';
@@ -24,6 +29,8 @@ interface Props {
   collection: ElementCollection;
   id: string;
   result: SectionResult | undefined;
+  supportResult: SupportResult | undefined;
+  spans: SpanResult | undefined;
   onRemoved: () => void;
 }
 
@@ -38,7 +45,7 @@ function update<K extends ElementCollection>(
 }
 
 /** Editor vybraného prvku mosta (os mosta, prierez, NK) v pravom paneli. */
-export function ElementPanel({ collection, id, result, onRemoved }: Props) {
+export function ElementPanel({ collection, id, result, supportResult, spans, onRemoved }: Props) {
   const project = useProject((s) => s.project);
   const element = (project[collection] as { id: string; name: string }[]).find((e) => e.id === id);
   return (
@@ -51,7 +58,10 @@ export function ElementPanel({ collection, id, result, onRemoved }: Props) {
       {element && collection === 'bridgeAxes' && <BridgeAxisEditor axis={element as BridgeAxis} />}
       {element && collection === 'profiles' && <ProfileEditor def={element as ProfileDefinition} />}
       {element && collection === 'superstructures' && (
-        <SuperstructureEditor sup={element as Superstructure} result={result} />
+        <SuperstructureEditor sup={element as Superstructure} result={result} spans={spans} />
+      )}
+      {element && collection === 'supports' && (
+        <SupportEditor support={element as Support} result={supportResult} />
       )}
       {element && (
         <button
@@ -361,9 +371,11 @@ function ProfileEditor({ def }: { def: ProfileDefinition }) {
 function SuperstructureEditor({
   sup,
   result,
+  spans,
 }: {
   sup: Superstructure;
   result: SectionResult | undefined;
+  spans: SpanResult | undefined;
 }) {
   const axes = useProject((s) => s.project.bridgeAxes);
   const profiles = useProject((s) => s.project.profiles);
@@ -439,6 +451,7 @@ function SuperstructureEditor({
       </Field>
 
       {result && <SectionResultDetails result={result} />}
+      <SpanList spans={spans} />
 
       <h3 className="panel-subtitle">{sk.elements.laws}</h3>
       {profile?.parameters.map((p) => {
@@ -479,6 +492,273 @@ function SuperstructureEditor({
             {formatModelIssue({ code: 'UnknownProfileParameter', name })}
           </p>
         ))}
+    </div>
+  );
+}
+
+function SpanList({ spans }: { spans: SpanResult | undefined }) {
+  if (!spans) return <p className="hint">{sk.supports.noSupports}</p>;
+  return (
+    <>
+      <h3 className="panel-subtitle">{sk.supports.spans}</h3>
+      {spans.spans.length > 0 && (
+        <table className="mini-table">
+          <tbody>
+            {spans.spans.map((s) => (
+              <tr key={s.index}>
+                <td>{sk.supports.span(s.index + 1)}</td>
+                <td>
+                  {s.from.support.name} – {s.to.support.name}
+                </td>
+                <td className="num">{formatNumber(s.length, 3)} m</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <IssueItems issues={spans.issues} />
+    </>
+  );
+}
+
+function IssueItems({ issues }: { issues: SupportResult['issues'] }) {
+  if (issues.length === 0) return null;
+  return (
+    <ul className="issues">
+      {issues.map((i) => (
+        <li
+          key={formatModelIssue(i)}
+          className={i.severity === 'warning' ? 'issue issue-warning' : 'issue issue-error'}
+        >
+          {formatModelIssue(i)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const DIMENSION_LABELS: Record<string, string> = {
+  thickness: 'hrúbka (kolmo na os podpery)',
+  length: 'dĺžka (pozdĺž osi podpery)',
+  seatLength: 'šírka úložného prahu',
+  stemThickness: 'hrúbka drieku',
+  diameter: 'priemer stĺpa',
+  width: 'šírka stĺpa (pozdĺž osi podpery)',
+  depth: 'hĺbka stĺpa',
+  count: 'počet stĺpov',
+  spacing: 'osová vzdialenosť stĺpov',
+};
+
+function SupportEditor({
+  support,
+  result,
+}: {
+  support: Support;
+  result: SupportResult | undefined;
+}) {
+  const decks = useProject((s) => s.project.superstructures);
+  const set = (changes: Partial<Support>) => update('supports', support.id, changes);
+  const g = support.geometry;
+  const dimensionKeys =
+    g.type === 'wall'
+      ? ['thickness', 'length']
+      : g.type === 'abutment'
+        ? ['seatLength', 'stemThickness', 'length']
+        : g.shape === 'circle'
+          ? ['diameter', 'count', 'spacing']
+          : ['width', 'depth', 'count', 'spacing'];
+  return (
+    <div className="sf-editor">
+      <Field label={sk.elements.name}>
+        <TextField
+          value={support.name}
+          ariaLabel={sk.elements.name}
+          onCommit={(name) => set({ name })}
+        />
+      </Field>
+      <div className="segment-grid">
+        <Field label={sk.supports.kind}>
+          <select
+            value={support.kind}
+            aria-label={sk.supports.kind}
+            onChange={(e) => set({ kind: e.target.value as Support['kind'] })}
+          >
+            <option value="abutment">{sk.supports.kinds.abutment}</option>
+            <option value="pier">{sk.supports.kinds.pier}</option>
+          </select>
+        </Field>
+        <Field label={sk.supports.deck}>
+          <select
+            value={support.superstructure}
+            aria-label={sk.supports.deck}
+            onChange={(e) => set({ superstructure: e.target.value })}
+          >
+            {decks.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={sk.supports.station}>
+          <StationField
+            ariaLabel={sk.supports.station}
+            value={support.station}
+            onCommit={(station) => set({ station })}
+          />
+        </Field>
+        <Field label={sk.supports.crossingAngle}>
+          <ExpressionInput
+            value={support.crossingAngle}
+            ariaLabel={sk.supports.crossingAngle}
+            onCommit={(crossingAngle) => set({ crossingAngle })}
+          />
+        </Field>
+        <Field label={sk.supports.offset}>
+          <ExpressionInput
+            value={support.offset}
+            ariaLabel={sk.supports.offset}
+            onCommit={(offset) => set({ offset })}
+          />
+        </Field>
+        <Field label={sk.supports.foundationTop}>
+          <ExpressionInput
+            value={support.foundationTop}
+            ariaLabel={sk.supports.foundationTop}
+            onCommit={(foundationTop) => set({ foundationTop })}
+          />
+        </Field>
+      </div>
+
+      <h3 className="panel-subtitle">{sk.supports.geometry}</h3>
+      <div className="segment-grid">
+        <Field label={sk.supports.type}>
+          <select
+            value={g.type}
+            aria-label={sk.supports.type}
+            onChange={(e) =>
+              set({ geometry: defaultGeometry(e.target.value as Support['geometry']['type']) })
+            }
+          >
+            <option value="wall">{sk.supports.types.wall}</option>
+            <option value="columns">{sk.supports.types.columns}</option>
+            <option value="abutment">{sk.supports.types.abutment}</option>
+          </select>
+        </Field>
+        {g.type === 'columns' && (
+          <Field label={sk.supports.shape}>
+            <select
+              value={g.shape}
+              aria-label={sk.supports.shape}
+              onChange={(e) =>
+                set({ geometry: { ...g, shape: e.target.value as 'circle' | 'rect' } })
+              }
+            >
+              <option value="circle">{sk.supports.shapes.circle}</option>
+              <option value="rect">{sk.supports.shapes.rect}</option>
+            </select>
+          </Field>
+        )}
+        {dimensionKeys.map((k) => (
+          <Field key={k} label={DIMENSION_LABELS[k] ?? k}>
+            <ExpressionInput
+              value={(g as unknown as Record<string, string>)[k] ?? ''}
+              ariaLabel={DIMENSION_LABELS[k] ?? k}
+              onCommit={(v) => set({ geometry: { ...g, [k]: v } as Support['geometry'] })}
+            />
+          </Field>
+        ))}
+      </div>
+
+      <h3 className="panel-subtitle">{sk.supports.footing}</h3>
+      <div className="segment-grid">
+        {(['length', 'width', 'thickness'] as const).map((k) => (
+          <Field key={k} label={sk.supports.footingFields[k]}>
+            <ExpressionInput
+              value={support.footing[k]}
+              ariaLabel={sk.supports.footingFields[k]}
+              onCommit={(v) => set({ footing: { ...support.footing, [k]: v } })}
+            />
+          </Field>
+        ))}
+      </div>
+
+      <h3 className="panel-subtitle">{sk.supports.bearings}</h3>
+      <div className="segment-grid">
+        <Field label={sk.supports.connection}>
+          <select
+            value={support.connection}
+            aria-label={sk.supports.connection}
+            onChange={(e) => set({ connection: e.target.value as Support['connection'] })}
+          >
+            <option value="bearing">{sk.supports.connections.bearing}</option>
+            <option value="hinge">{sk.supports.connections.hinge}</option>
+            <option value="fixed">{sk.supports.connections.fixed}</option>
+          </select>
+        </Field>
+        <Field label={sk.supports.bearingHeight}>
+          <ExpressionInput
+            value={support.bearingHeight}
+            ariaLabel={sk.supports.bearingHeight}
+            onCommit={(bearingHeight) => set({ bearingHeight })}
+          />
+        </Field>
+      </div>
+      <table className="mini-table">
+        <thead>
+          <tr>
+            <th>{sk.supports.bearingX}</th>
+            <th className="num">{sk.supports.bearingStation}</th>
+            <th className="num">{sk.supports.seat}</th>
+            <th className="num">{sk.supports.height}</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {support.bearings.map((b, i) => {
+            const r = result?.bearings.find((x) => x.index === i);
+            return (
+              // biome-ignore lint/suspicious/noArrayIndexKey: ložiská sú určené poradím
+              <tr key={i}>
+                <td>
+                  <ExpressionInput
+                    value={b}
+                    ariaLabel={`${sk.supports.bearingX} ${i + 1}`}
+                    onCommit={(v) =>
+                      set({ bearings: support.bearings.map((x, j) => (j === i ? v : x)) })
+                    }
+                  />
+                </td>
+                <td className="num">{r ? formatStation(r.station) : '—'}</td>
+                <td className="num">{r ? formatNumber(r.seat, 3) : '—'}</td>
+                <td className="num">{r ? formatNumber(r.height, 3) : '—'}</td>
+                <td>
+                  <RemoveButton
+                    label={`${i + 1}`}
+                    onClick={() => set({ bearings: support.bearings.filter((_, j) => j !== i) })}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <button
+        type="button"
+        className="button"
+        onClick={() => set({ bearings: [...support.bearings, '0'] })}
+      >
+        {sk.supports.addBearing}
+      </button>
+      {result && result.bearings.length > 0 && (
+        <p className="hint">
+          {sk.supports.heightRange(
+            formatNumber(result.height.min, 3),
+            formatNumber(result.height.max, 3),
+          )}
+        </p>
+      )}
+      {result && <IssueItems issues={result.issues} />}
     </div>
   );
 }

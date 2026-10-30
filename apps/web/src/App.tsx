@@ -19,6 +19,7 @@ import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
+import { useSupportState } from './store/supports.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
 
@@ -68,6 +69,7 @@ export function App() {
   const sectionAt =
     sectionStation ?? (sectionRange ? (sectionRange.from + sectionRange.to) / 2 : 0);
   const sections = useSectionResults(alignmentMap, parameterState.set, sectionAt);
+  const supportState = useSupportState(alignmentMap, parameterState.set);
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
 
@@ -337,6 +339,15 @@ export function App() {
               issues: r.issues.filter((i) => i.severity !== 'warning').length,
             })),
           },
+          {
+            collection: 'supports',
+            title: sk.tree.supports,
+            items: supportState.supports.map((r) => ({
+              id: r.support.id,
+              name: r.support.name,
+              issues: r.issues.filter((i) => i.severity !== 'warning').length,
+            })),
+          },
         ]}
         selectedElement={selectedElement}
         onSelectElement={(collection, id) => {
@@ -395,6 +406,8 @@ export function App() {
             collection={selectedElement.collection}
             id={selectedElement.id}
             result={sections.results.find((r) => r.superstructure.id === selectedElement.id)}
+            supportResult={supportState.supports.find((r) => r.support.id === selectedElement.id)}
+            spans={supportState.spans.get(selectedElement.id)}
             onRemoved={() => setSelectedElement(undefined)}
           />
         ) : (
