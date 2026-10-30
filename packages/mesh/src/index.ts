@@ -3,3 +3,4 @@ export * from './mesh.ts';
 export * from './sampling.ts';
 export * from './slice.ts';
 export * from './superstructure.ts';
+export * from './supports.ts';
