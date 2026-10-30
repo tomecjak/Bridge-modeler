@@ -1,30 +1,38 @@
-import type { ModelIssue, Parameter } from '@bridge/model';
+import type { ModelIssue, Parameter, ParameterSet } from '@bridge/model';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
+import { chartRange } from '../views/chartSamples.ts';
+import { StationFunctionChart } from '../views/StationFunctionChart.tsx';
+import { StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
 
 interface Props {
   parameter: Parameter | undefined;
   issues: readonly ModelIssue[];
+  set: ParameterSet;
+  alignmentRange: { from: number; to: number } | undefined;
+  referenceStation: number;
 }
 
-/** Panel vlastností vybraného parametra (editor staničnej funkcie pribudne v ďalšom kroku). */
-export function ParameterPanel({ parameter, issues }: Props) {
+/** Panel vlastností vybraného parametra: editor staničnej funkcie, graf priebehu a problémy. */
+export function ParameterPanel({
+  parameter,
+  issues,
+  set,
+  alignmentRange,
+  referenceStation,
+}: Props) {
+  const range = parameter ? chartRange(parameter, alignmentRange, referenceStation) : undefined;
   return (
-    <aside className="panel panel-right" aria-labelledby="parameter-panel-title">
+    <aside className="panel panel-right panel-wide" aria-labelledby="parameter-panel-title">
       <h2 id="parameter-panel-title" className="panel-title">
-        {sk.properties.title}
+        {parameter ? `${sk.properties.title}: ${parameter.name}` : sk.properties.title}
       </h2>
       {!parameter && <p className="panel-empty">{sk.properties.nothingSelected}</p>}
-      {parameter && (
+      {parameter && range && (
         <>
-          <dl className="props">
-            <dt>{sk.parameters.name}</dt>
-            <dd className="mono">{parameter.name}</dd>
-            <dt>{sk.parameters.unit}</dt>
-            <dd>{sk.parameters.units[parameter.unit]}</dd>
-            <dt>{sk.parameters.kind}</dt>
-            <dd>{sk.parameters.kinds[parameter.law.kind]}</dd>
-          </dl>
+          <StationFunctionEditor parameter={parameter} range={alignmentRange ?? range} />
+          <h3 className="panel-subtitle">{sk.stationFunction.title}</h3>
+          <StationFunctionChart parameter={parameter} set={set} range={range} />
           <h3 className="panel-subtitle">{sk.properties.issues}</h3>
           {issues.length === 0 ? (
             <p className="panel-empty">{sk.properties.noIssues}</p>

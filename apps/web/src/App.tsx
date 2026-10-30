@@ -260,6 +260,9 @@ export function App() {
         <ParameterPanel
           parameter={selectedParameter}
           issues={selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []}
+          set={parameterState.set}
+          alignmentRange={displayRange}
+          referenceStation={station}
         />
       ) : (
         <PropertiesPanel

@@ -63,6 +63,25 @@ export const sk = {
     segments: (n: number) =>
       `po častiach: ${n} ${n === 1 ? 'úsek' : n < 5 ? 'úseky' : 'úsekov'} — upraviť`,
   },
+  stationFunction: {
+    title: 'Priebeh po staničení',
+    segment: (n: number) => `Úsek ${n}`,
+    from: 'Od',
+    to: 'Do',
+    v0: 'Hodnota na začiatku',
+    v1: 'Hodnota na konci',
+    shape: 'Tvar',
+    vertex: 'Vodorovná dotyčnica',
+    vertexStart: 'na začiatku',
+    vertexEnd: 'na konci',
+    shapes: { linear: 'lineárny', parabolic: 'parabolický', circular: 'kružnicový' },
+    addSegment: 'Pridať úsek',
+    removeSegment: 'Odstrániť úsek',
+  },
+  chart: {
+    title: 'Priebeh parametra',
+    noValues: 'V tomto rozsahu nemá parameter žiadnu hodnotu.',
+  },
   properties: {
     title: 'Vlastnosti',
     nothingSelected: 'Nič nie je vybrané.',
