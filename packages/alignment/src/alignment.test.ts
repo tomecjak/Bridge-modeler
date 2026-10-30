@@ -21,6 +21,7 @@ describe('createAlignment', () => {
     expect(issues).toEqual([]);
     expect(alignment.length).toBeCloseTo(435, 9);
     expect(alignment.staStart).toBe(2000);
+    expect(alignment.stationing.toDisplay(10).station).toBe(2010);
     expect(alignment.elements.map((e) => e.kind)).toEqual([
       'line',
       'spiral',

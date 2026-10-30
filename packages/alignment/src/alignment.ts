@@ -8,6 +8,7 @@ import {
   type HorizontalProjection,
 } from './horizontal/horizontal.ts';
 import type { AlignmentIssue } from './issues.ts';
+import { createStationing, type Stationing } from './station/stationing.ts';
 import { buildVertical, type ProfilePoint, type VerticalProfile } from './vertical/vertical.ts';
 
 export interface AlignmentPoint {
@@ -36,6 +37,8 @@ export interface Alignment {
   /** aktívna niveleta (prvá v dátach), ak existuje */
   readonly profile: VerticalProfile | undefined;
   readonly elements: readonly ElementInfo[];
+  /** prevod s ↔ zobrazované staničenie so skokmi */
+  readonly stationing: Stationing;
   evaluate(s: number): AlignmentPoint;
   evaluateHorizontal(s: number): HorizontalPoint;
   elevation(s: number): ProfilePoint;
@@ -75,6 +78,7 @@ class EvaluatedAlignment implements Alignment {
   readonly name: string;
   readonly staStart: number;
   readonly length: number;
+  readonly stationing: Stationing;
 
   constructor(
     data: AlignmentData,
@@ -86,6 +90,7 @@ class EvaluatedAlignment implements Alignment {
     this.name = data.name;
     this.staStart = data.staStart;
     this.length = horizontal.length;
+    this.stationing = createStationing(data.staStart, horizontal.length, data.stationEquations);
   }
 
   evaluateHorizontal(s: number): HorizontalPoint {
