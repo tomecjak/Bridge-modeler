@@ -9,5 +9,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@bridge/geom": "workspace:*",
+    "fast-xml-parser": "5.11.2"
   }
 }

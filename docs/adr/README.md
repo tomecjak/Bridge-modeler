@@ -9,6 +9,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0001](0001-stack-a-nastroje.md) | Stack a nástroje | Prijaté |
 | [0002](0002-domenovy-model-ako-zdroj-pravdy.md) | Doménový model ako zdroj pravdy | Prijaté |
 | [0003](0003-suradnice-a-jednotky.md) | Súradnice a jednotky | Prijaté (časť konvencií navrhnutá, overí sa vo Fáze 1) |
+| [0004](0004-xml-parser.md) | XML parser pre LandXML | Prijaté |
 
 ## Šablóna
 
