@@ -230,7 +230,17 @@ importers:
 
   packages/mesh: {}
 
-  packages/model: {}
+  packages/model:
+    dependencies:
+      '@bridge/alignment':
+        specifier: workspace:*
+        version: link:../alignment
+      '@bridge/expr':
+        specifier: workspace:*
+        version: link:../expr
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/sections: {}
 
@@ -889,6 +899,9 @@ packages:
     resolution: {integrity: sha512-ghig2TBE/H11aOVgmahA3MhimvkBr6JIYknH/Dhdk10nXwdbIqBJsbfMxpvFPG8bAw77gN29aQWvKpmVoPlvPQ==}
     engines: {node: '>=16.0.0'}
 
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
+
 snapshots:
 
   '@biomejs/biome@2.6.3':
@@ -1308,3 +1321,5 @@ snapshots:
   why-is-node-running@3.2.1: {}
 
   xml-naming@0.3.0: {}
+
+  zod@4.6.7: {}

@@ -9,5 +9,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@bridge/alignment": "workspace:*",
+    "@bridge/expr": "workspace:*",
+    "zod": "4.6.7"
   }
 }
