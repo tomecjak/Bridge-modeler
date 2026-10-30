@@ -187,7 +187,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - [ ] väzba referenčného bodu profilu na os mosta
 - [ ] priečny sklon ako parameter profilu (MVP), nie z LandXML
 - [ ] kontroly: uzavretosť, samopretínanie, orientácia; plocha a ťažisko prierezu
-- [ ] fixture: dvojica NK, celková šírka 28 900 mm (jedna NK 14 350, konzoly 1 700 a 900, hrúbka v osi 1 000, spodná šírka 13 650, medzera 200)
+- [ ] fixture: dvojica NK podľa rezu E–E (`Dvojica NK.png`): celkom 29 400 mm, ľavá NK 15 400 / pravá 13 800, spodná šírka trámu 5 000 / 4 000, výška v osi 1 700 (zvislo), konzola 200 na konci a 500 pri nábehu, priečny sklon 4,5 %
 - [ ] UI: náhľad prierezu s posuvníkom staničenia a kótami hlavných rozmerov
 
 **Hotové, keď:** fixture sedí s výkresom na všetkých kótach a zmena parametra sa prejaví v náhľade do 100 ms.
@@ -284,7 +284,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
-- Fixture Fázy 3 podľa `Dvojica NK.png` (rez E–E, 29 400 mm) namiesto pôvodných 28 900 mm z plánu? Chýbajúce kóty tvaru sú v otázkach nižšie (hrúbka konca konzoly, nábeh, steny trámu, rímsy).
+- Sklon stien trámu a vodorovná dĺžka nábehu nie sú na výkrese okótované. *Predpoklad:* steny 5 : 1 (vodorovne : zvislo = 1 : 5) a nábeh ako priamka; obe hodnoty sú parametre, ktoré projektant upraví.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
@@ -342,6 +342,12 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 | Terén v IFC | voliteľný export, rozhodne sa vo fáze 7 |
 | Premenovanie parametra | automaticky prepíše odkazy v ostatných výrazoch (2026-10-30) |
 | `round()` | zaokrúhľuje „od nuly“ ako Revit: round(2,5) = 3, round(−2,5) = −3 (2026-10-30) |
+| Fixture prierezu Fázy 3 | rez E–E dvojice NK (29 400 mm) z `Dvojica NK.png`, nie pôvodných 28 900 mm (2026-10-30) |
+| Konzola NK | hrúbka 200 mm na konci, 500 mm na začiatku nábehu, podhľad priamkový (2026-10-30) |
+| Nábeh NK | stačí priamka (oblúk nie je nutný) (2026-10-30) |
+| Spodok trámu | rovnobežný s vozovkou alebo vodorovný — voliteľné; na výkrese rovnobežný (2026-10-30) |
+| Rímsy | samostatné prvky (`edgeBeam`), nie súčasť prierezu NK (2026-10-30) |
+| Výška NK | meria sa zvislo (2026-10-30) |
 | Hosting | statický web bez backendu |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
 | GitHub | repo vytvoril Jakub (`tomecjak/Bridge-modeler`); podklady sa nahrávajú do `fixtures/inbox/` |
