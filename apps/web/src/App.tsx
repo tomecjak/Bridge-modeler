@@ -1,10 +1,10 @@
 import { type DragEvent, useState } from 'react';
+import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { sk } from './i18n/sk.ts';
 import { type ImportResult, importLandXml } from './import/importLandXml.ts';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
-import type { PlanCursor } from './views/PlanView.tsx';
 
 export function App() {
   const [imported, setImported] = useState<ImportResult>();
@@ -12,7 +12,7 @@ export function App() {
   const [mode, setMode] = useState<ViewMode>('2d');
   const [dragging, setDragging] = useState(false);
   const [readError, setReadError] = useState(false);
-  const [planCursor, setPlanCursor] = useState<PlanCursor>();
+  const [cursor, setCursor] = useState<CursorInfo>();
 
   const item = imported?.alignments[selected];
 
@@ -22,11 +22,18 @@ export function App() {
       setImported(importLandXml(file.name, text));
       setSelected(0);
       setMode('2d');
-      setPlanCursor(undefined);
+      setCursor(undefined);
       setReadError(false);
     } catch {
       setReadError(true);
     }
+  }
+
+  function statusText(): string {
+    if (readError) return sk.import.readFailed;
+    if (cursor && item && imported?.origin)
+      return formatCursor(cursor, item.alignment, imported.origin);
+    return sk.statusBar.ready;
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
@@ -70,13 +77,12 @@ export function App() {
         mode={mode}
         onModeChange={setMode}
         alignment={item?.alignment}
-        cursorS={planCursor?.s}
-        onPlanCursor={setPlanCursor}
+        cursorS={cursor?.s}
+        onPlanCursor={(c) => setCursor(c && { source: 'plan', ...c })}
+        onProfileCursor={(s) => setCursor(s === undefined ? undefined : { source: 'profile', s })}
       />
       <PropertiesPanel item={item} origin={imported?.origin} />
-      <footer className="app-status">
-        {readError ? sk.import.readFailed : sk.statusBar.ready}
-      </footer>
+      <footer className="app-status">{statusText()}</footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
     </div>
   );

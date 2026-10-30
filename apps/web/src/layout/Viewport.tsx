@@ -1,6 +1,7 @@
 import type { Alignment } from '@bridge/alignment';
 import { sk } from '../i18n/sk.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
+import { ProfileView } from '../views/ProfileView.tsx';
 
 export type ViewMode = '3d' | '2d';
 
@@ -10,6 +11,7 @@ interface Props {
   alignment: Alignment | undefined;
   cursorS: number | undefined;
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
+  onProfileCursor: (s: number | undefined) => void;
 }
 
 const TABS: { mode: ViewMode; label: string }[] = [
@@ -17,7 +19,14 @@ const TABS: { mode: ViewMode; label: string }[] = [
   { mode: '2d', label: sk.viewport.tabs.view2d },
 ];
 
-export function Viewport({ mode, onModeChange, alignment, cursorS, onPlanCursor }: Props) {
+export function Viewport({
+  mode,
+  onModeChange,
+  alignment,
+  cursorS,
+  onPlanCursor,
+  onProfileCursor,
+}: Props) {
   return (
     <main className="viewport">
       <div className="viewport-tabs" role="tablist">
@@ -52,6 +61,12 @@ export function Viewport({ mode, onModeChange, alignment, cursorS, onPlanCursor 
               alignment={alignment}
               cursorS={cursorS}
               onCursor={onPlanCursor}
+            />
+            <ProfileView
+              key={`${alignment.name}-profile`}
+              alignment={alignment}
+              cursorS={cursorS}
+              onCursor={onProfileCursor}
             />
           </div>
         )}
