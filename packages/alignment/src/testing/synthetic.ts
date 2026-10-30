@@ -76,6 +76,16 @@ export function syntheticAlignmentData(
     length: elements.reduce((sum, e) => sum + e.length, 0),
     horizontal: elements,
     stationEquations: [],
-    profiles: [],
+    profiles: [
+      {
+        name: 'Synthetic profile',
+        pvis: [
+          { station: staStart, elevation: 250 },
+          { station: staStart + 150, elevation: 253, curve: { kind: 'parabolic', length: 80 } },
+          { station: staStart + 330, elevation: 249.4, curve: { kind: 'parabolic', length: 100 } },
+          { station: staStart + 435, elevation: 251.5 },
+        ],
+      },
+    ],
   };
 }

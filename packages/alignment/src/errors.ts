@@ -13,3 +13,13 @@ export class StationOutOfRangeError extends Error {
     this.code = kind === 'alignment' ? 'StationOutOfRange' : 'ProfileOutOfRange';
   }
 }
+
+/** Os nemá niveletu, a preto nemá výšky. */
+export class MissingProfileError extends Error {
+  readonly code = 'MissingProfile';
+
+  constructor(readonly alignment: string) {
+    super(`alignment "${alignment}" has no vertical profile`);
+    this.name = 'MissingProfileError';
+  }
+}
