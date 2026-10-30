@@ -28,24 +28,24 @@ export function supportMesh<S>(kernel: GeometryKernel<S>, r: SupportResult): Tri
     );
   }
 
-  // priečna poloha x od osi NK; horná hrana je lineárna medzi ložiskami → hranol sa delí na pásy medzi nimi
+  // priečna poloha x od osi NK; horná hrana je lineárna medzi ložiskami → pôdorys sa delí na pásy medzi nimi
   const n = vec2(axis.frame.normal.x, axis.frame.normal.y);
   const o = vec2(axis.point.x, axis.point.y);
   const xOf = (p: Vec2) => (p.x - o.x) * n.x + (p.y - o.y) * n.y;
   const cuts = [...new Set(r.bearings.map((b) => b.x))].sort((a, b) => a - b);
   const slabs = [-Infinity, ...cuts, Infinity];
   for (const body of plan.body) {
-    for (let i = 0; i + 1 < slabs.length; i++) {
-      const piece = clipToSlab(body, xOf, slabs[i] as number, slabs[i + 1] as number);
-      if (piece.length < 3) continue;
-      solids.push(
-        kernel.prism(
-          piece,
-          () => top,
-          (p) => seatAt(r, xOf(p)),
-        ),
-      );
-    }
+    const pieces = slabs
+      .slice(1)
+      .map((hi, i) => clipToSlab(body, xOf, slabs[i] as number, hi))
+      .filter((piece) => piece.length >= 3);
+    solids.push(
+      kernel.prism(
+        pieces,
+        () => top,
+        (p) => seatAt(r, xOf(p)),
+      ),
+    );
   }
 
   const d = r.direction;

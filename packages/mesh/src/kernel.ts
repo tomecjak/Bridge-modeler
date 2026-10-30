@@ -36,8 +36,16 @@ export interface GeometryKernel<S> {
   readonly name: string;
   /** teleso medzi postupnosťou prierezov s rovnakou topológiou, s uzávermi na koncoch */
   loft(sections: readonly LoftSection[]): S;
-  /** zvislý hranol nad pôdorysom `outline`, spodná a horná plocha dané výškou v každom bode pôdorysu */
-  prism(outline: Polygon2D, bottom: (p: Vec2) => number, top: (p: Vec2) => number): S;
+  /**
+   * Zvislý hranol nad pôdorysom, spodná a horná plocha dané výškou v každom bode pôdorysu. Pôdorys môže byť
+   * rozdelený na časti (napr. medzi ložiskami), v ktorých je horná plocha rovinná; spoločné hrany častí
+   * sa nestanú stenami.
+   */
+  prism(
+    outline: Polygon2D | readonly Polygon2D[],
+    bottom: (p: Vec2) => number,
+    top: (p: Vec2) => number,
+  ): S;
   tessellate(solid: S): TriangleMesh;
 }
 
@@ -140,38 +148,54 @@ export class MeshKernel implements GeometryKernel<TriangleMesh> {
     return builder.build();
   }
 
-  prism(outline: Polygon2D, bottom: (p: Vec2) => number, top: (p: Vec2) => number): TriangleMesh {
+  prism(
+    outline: Polygon2D | readonly Polygon2D[],
+    bottom: (p: Vec2) => number,
+    top: (p: Vec2) => number,
+  ): TriangleMesh {
     const builder = new MeshBuilder();
-    if (outline.length < 3) return builder.build();
-    const plan = signedArea(outline) < 0 ? [...outline].reverse() : outline;
-    const lo = plan.map((p) => vec3(p.x, p.y, bottom(p)));
-    const hi = plan.map((p) => vec3(p.x, p.y, top(p)));
-    const m = plan.length;
-    for (let i = 0; i < m; i++) {
-      const i1 = (i + 1) % m;
-      const e = sub3(lo[i1] as Vec3, lo[i] as Vec3);
-      const len = Math.hypot(e.x, e.y);
-      if (len === 0) continue;
-      const n = vec3(e.y / len, -e.x / len, 0);
-      const a = builder.vertex(lo[i] as Vec3, n);
-      const b = builder.vertex(lo[i1] as Vec3, n);
-      const c = builder.vertex(hi[i1] as Vec3, n);
-      const d = builder.vertex(hi[i] as Vec3, n);
-      builder.triangle(a, b, c);
-      builder.triangle(a, c, d);
+    const pieces = (isPolygon(outline) ? [outline] : outline)
+      .filter((p) => p.length >= 3 && signedArea(p) !== 0)
+      .map((p) => (signedArea(p) < 0 ? [...p].reverse() : p));
+    // hrana, ktorú majú dve časti (opačne orientovanú), je vnútorná → bez steny
+    const key = (a: Vec2, b: Vec2) => `${a.x},${a.y}|${b.x},${b.y}`;
+    const edges = new Set<string>();
+    for (const piece of pieces) {
+      piece.forEach((a, i) => {
+        edges.add(key(a, piece[(i + 1) % piece.length] as Vec2));
+      });
     }
-    const tris = triangulatePolygon(plan);
-    const flipped = tris.slice();
-    for (let i = 0; i < flipped.length; i += 3) {
-      flipped[i + 1] = tris[i + 2] as number;
-      flipped[i + 2] = tris[i + 1] as number;
+    for (const plan of pieces) {
+      const lo = plan.map((p) => vec3(p.x, p.y, bottom(p)));
+      const hi = plan.map((p) => vec3(p.x, p.y, top(p)));
+      const m = plan.length;
+      for (let i = 0; i < m; i++) {
+        const i1 = (i + 1) % m;
+        if (edges.has(key(plan[i1] as Vec2, plan[i] as Vec2))) continue;
+        const e = sub3(lo[i1] as Vec3, lo[i] as Vec3);
+        const len = Math.hypot(e.x, e.y);
+        if (len === 0) continue;
+        const n = vec3(e.y / len, -e.x / len, 0);
+        const a = builder.vertex(lo[i] as Vec3, n);
+        const b = builder.vertex(lo[i1] as Vec3, n);
+        const c = builder.vertex(hi[i1] as Vec3, n);
+        const d = builder.vertex(hi[i] as Vec3, n);
+        builder.triangle(a, b, c);
+        builder.triangle(a, c, d);
+      }
+      const tris = triangulatePolygon(plan);
+      const flipped = tris.slice();
+      for (let i = 0; i < flipped.length; i += 3) {
+        flipped[i + 1] = tris[i + 2] as number;
+        flipped[i + 2] = tris[i + 1] as number;
+      }
+      const flatBottom = lo.every((p) => p.z === (lo[0] as Vec3).z);
+      if (flatBottom) builder.face(lo, flipped, DOWN);
+      else facets(builder, lo, flipped);
+      const flatTop = hi.every((p) => p.z === (hi[0] as Vec3).z);
+      if (flatTop) builder.face(hi, tris, UP);
+      else facets(builder, hi, tris);
     }
-    const flatBottom = lo.every((p) => p.z === (lo[0] as Vec3).z);
-    if (flatBottom) builder.face(lo, flipped, DOWN);
-    else facets(builder, lo, flipped);
-    const flatTop = hi.every((p) => p.z === (hi[0] as Vec3).z);
-    if (flatTop) builder.face(hi, tris, UP);
-    else facets(builder, hi, tris);
     return builder.build();
   }
 
@@ -179,6 +203,9 @@ export class MeshKernel implements GeometryKernel<TriangleMesh> {
     return solid;
   }
 }
+
+const isPolygon = (o: Polygon2D | readonly Polygon2D[]): o is Polygon2D =>
+  o.length === 0 || !Array.isArray(o[0]);
 
 /** Nerovinná plocha: každý trojuholník s vlastnou normálou. */
 function facets(builder: MeshBuilder, points: readonly Vec3[], tris: readonly number[]): void {

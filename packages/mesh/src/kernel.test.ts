@@ -99,6 +99,25 @@ describe('MeshKernel.prism', () => {
     expect(meshVolume(mesh)).toBeCloseTo(2 * 1 * (5 + 0.5), 9);
   });
 
+  it('builds a prism with a folded top over plan pieces without inner walls', () => {
+    const pieces = [rect(0, 0, 1, 1), rect(1, 0, 3, 1)];
+    // horná plocha: 5 na x ≤ 1, potom stúpa 0,5 na meter
+    const mesh = kernel.prism(
+      pieces,
+      () => 0,
+      (p) => 5 + 0.5 * Math.max(0, p.x - 1),
+    );
+    expectClosed(mesh);
+    expect(meshVolume(mesh)).toBeCloseTo(5 + 2 * 5.5, 9);
+    // žiadna zvislá stena v x = 1 (vnútorná hrana častí)
+    const p = mesh.positions;
+    const n = mesh.normals;
+    for (let i = 0; i < p.length / 3; i++) {
+      if (p[3 * i] === 1 && Math.abs(n[3 * i] as number) === 1)
+        throw new Error('inner wall at x = 1');
+    }
+  });
+
   it('builds a circular column with a clockwise outline', () => {
     const n = 32;
     const circle: Polygon2D = Array.from({ length: n }, (_, i) => {
