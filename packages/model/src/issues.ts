@@ -1,12 +1,18 @@
 import type { ExprError } from '@bridge/expr';
 
-export type ExpressionField = 'value' | 'expr' | 'v0' | 'v1';
+export type ExpressionField = 'value' | 'expr' | 'v0' | 'v1' | 'x' | 'y' | 'default';
+
+/** Prvok modelu, ktorého sa problém týka (prierez, NK, os mosta). */
+export interface IssueOwner {
+  kind: 'profile' | 'superstructure' | 'bridgeAxis';
+  name: string;
+}
 
 /**
  * Typované problémy modelu (parametre, staničné funkcie, projektový súbor). Bez textov — hlášky skladá UI.
  * `parameter` je názov parametra, ak sa problém týka konkrétneho parametra.
  */
-export type ModelIssue = { parameter?: string } & (
+export type ModelIssue = { parameter?: string; owner?: IssueOwner; point?: string } & (
   | {
       code: 'ExpressionError';
       field: ExpressionField;
@@ -28,6 +34,21 @@ export type ModelIssue = { parameter?: string } & (
   | { code: 'Cycle'; path: string[] }
   | { code: 'DependsOnInvalid'; dependency: string }
   | { code: 'StationNotOnAlignment'; station: number }
+  | { code: 'DuplicatePointName'; name: string }
+  | { code: 'ForwardPointReference'; reference: string }
+  | { code: 'UnknownPoint'; loop: string; name: string }
+  | { code: 'UnknownReferencePoint'; name: string }
+  | { code: 'MissingOuterLoop' }
+  | { code: 'OpenLoop'; loop: string }
+  | { code: 'DuplicateVertex'; loop: string; name: string }
+  | { code: 'SelfIntersection'; loop: string; edges: [string, string] }
+  | { code: 'LoopReversed'; loop: string }
+  | { code: 'VoidOutsideOuter'; loop: string }
+  | { code: 'UnknownAlignment'; name: string }
+  | { code: 'UnknownBridgeAxis'; id: string }
+  | { code: 'UnknownProfile'; id: string }
+  | { code: 'UnknownProfileParameter'; name: string }
+  | { code: 'StationOutsideSuperstructure'; station: number; from: number; to: number }
   | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
   | { code: 'UnsupportedSchemaVersion'; version: string }

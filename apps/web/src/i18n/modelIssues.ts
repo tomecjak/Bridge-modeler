@@ -7,7 +7,12 @@ const FIELD: Record<ExpressionField, string> = {
   expr: 'výraz',
   v0: 'hodnota na začiatku úseku',
   v1: 'hodnota na konci úseku',
+  x: 'súradnica x',
+  y: 'súradnica y',
+  default: 'predvolená hodnota',
 };
+
+const OWNER = { profile: 'Prierez', superstructure: 'NK', bridgeAxis: 'Os mosta' } as const;
 
 const TYPE = { number: 'číslo', boolean: 'logická hodnota' } as const;
 
@@ -50,7 +55,9 @@ export function formatExprError(e: ExprError): string {
 
 /** Slovenská hláška k problému modelu (parametre, staničné funkcie, projektový súbor). */
 export function formatModelIssue(issue: ModelIssue): string {
-  const prefix = issue.parameter ? `${issue.parameter}: ` : '';
+  const owner = issue.owner ? `${OWNER[issue.owner.kind]} „${issue.owner.name}“ › ` : '';
+  const target = [issue.parameter, issue.point && `bod ${issue.point}`].filter(Boolean).join(' › ');
+  const prefix = owner || target ? `${owner}${target}${target ? ': ' : ''}` : '';
   const seg = (i: number) => `úsek ${i + 1}`;
   switch (issue.code) {
     case 'ExpressionError':
@@ -85,6 +92,36 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}staničenie ${formatStation(issue.station)} na osi neexistuje (medzera v skoku staničenia).`;
     case 'AmbiguousStation':
       return `${prefix}staničenie ${formatStation(issue.station)} je na osi dvakrát (prekryv v skoku staničenia).`;
+    case 'DuplicatePointName':
+      return `${prefix}názov bodu „${issue.name}“ je použitý viackrát.`;
+    case 'ForwardPointReference':
+      return `${prefix}odkazuje na bod „${issue.reference}“, ktorý je definovaný až neskôr (presuňte ho vyššie).`;
+    case 'UnknownPoint':
+      return `${prefix}obrys „${issue.loop}“ obsahuje neexistujúci bod „${issue.name}“.`;
+    case 'UnknownReferencePoint':
+      return `${prefix}referenčný bod „${issue.name}“ neexistuje.`;
+    case 'MissingOuterLoop':
+      return `${prefix}prierez nemá vonkajší obrys.`;
+    case 'OpenLoop':
+      return `${prefix}obrys „${issue.loop}“ má menej ako 3 body.`;
+    case 'DuplicateVertex':
+      return `${prefix}v obryse „${issue.loop}“ splýva bod „${issue.name}“ s nasledujúcim.`;
+    case 'SelfIntersection':
+      return `${prefix}obrys „${issue.loop}“ sa pretína (hrany od bodov ${issue.edges[0]} a ${issue.edges[1]}).`;
+    case 'LoopReversed':
+      return `${prefix}obrys „${issue.loop}“ mal opačné poradie bodov — bol otočený.`;
+    case 'VoidOutsideOuter':
+      return `${prefix}dutina „${issue.loop}“ nie je celá vnútri obrysu.`;
+    case 'UnknownAlignment':
+      return `${prefix}os cesty „${issue.name}“ v projekte neexistuje.`;
+    case 'UnknownBridgeAxis':
+      return `${prefix}os mosta neexistuje.`;
+    case 'UnknownProfile':
+      return `${prefix}prierez neexistuje.`;
+    case 'UnknownProfileParameter':
+      return `${prefix}prierez nemá parameter „${issue.name}“.`;
+    case 'StationOutsideSuperstructure':
+      return `${prefix}staničenie ${formatStation(issue.station)} je mimo NK (${formatStation(issue.from)} – ${formatStation(issue.to)}).`;
     case 'InvalidJson':
       return `Súbor nie je platný JSON (${issue.detail}).`;
     case 'UnsupportedSchemaVersion':

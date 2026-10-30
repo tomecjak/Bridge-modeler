@@ -1,4 +1,5 @@
 export * from './issues.ts';
+export * from './laws.ts';
 export * from './migrations.ts';
 export * from './parameters.ts';
 export * from './project.ts';
