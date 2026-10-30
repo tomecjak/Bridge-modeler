@@ -180,15 +180,24 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** parabolický nábeh má správnu hodnotu aj dotyčnicu na oboch koncoch (test), cyklus v parametroch dáva zrozumiteľnú chybu a projekt sa uloží a načíta bez straty.
 
 ### Fáza 3 — Prierez NK
-- [ ] `ProfileDefinition`: pomenované body s výrazmi, obrysy a dutiny, parametre s predvolenými hodnotami
-- [ ] os mosta: posun od osi cesty (vodorovný a zvislý ako staničné funkcie), predvolene na osi cesty so zvislým posunom o hrúbku vozovky
-- [ ] základný editor prierezu: definovanie základných prvkov (body, obrysy, dutiny, parametre); plný editor vo Fáze 8
-- [ ] `evaluateProfile(superstructure, s) → Polygon2D[]` s dosadením staničných funkcií v `s`
-- [ ] väzba referenčného bodu profilu na os mosta
-- [ ] priečny sklon ako parameter profilu (MVP), nie z LandXML
-- [ ] kontroly: uzavretosť, samopretínanie, orientácia; plocha a ťažisko prierezu
-- [ ] fixture: dvojica NK podľa rezu E–E (`Dvojica NK.png`): celkom 29 400 mm, ľavá NK 15 400 / pravá 13 800, spodná šírka trámu 5 000 / 4 000, výška v osi 1 700 (zvislo), konzola 200 na konci a 500 pri nábehu, priečny sklon 4,5 %
-- [ ] UI: náhľad prierezu s posuvníkom staničenia a kótami hlavných rozmerov
+- [x] `ProfileDefinition`: pomenované body s výrazmi, obrysy a dutiny, parametre s predvolenými hodnotami
+  - body vidia parametre profilu, globálne parametre, `sta` a skoršie body ako `Bod_x`, `Bod_y` (ADR 0007). Schéma v2 + migrácia 1 → 2.
+- [x] os mosta: posun od osi cesty (vodorovný a zvislý ako staničné funkcie), predvolene na osi cesty so zvislým posunom o hrúbku vozovky
+  - `evaluateBridgeAxis`; pri premennom vodorovnom posune sa smer berie z osi cesty (zanedbateľná odchýlka).
+- [x] základný editor prierezu: definovanie základných prvkov (body, obrysy, dutiny, parametre); plný editor vo Fáze 8
+  - tabuľky parametrov, bodov a obrysov v pravom paneli; premenovanie parametra / bodu prepíše odkazy. Editory NK a osi mosta (priebehy cez `StationFunctionEditor`).
+- [x] `evaluateProfile(superstructure, s) → Polygon2D[]` s dosadením staničných funkcií v `s`
+  - `evaluateSuperstructure(ctx, nk, s)` v `packages/sections` vráti obrysy, plochu, ťažisko, bod osi mosta a transformáciu do lokálnych súradníc.
+- [x] väzba referenčného bodu profilu na os mosta
+  - orientácia roviny prierezu `vertical` / `normalToGrade` (test kolmosti na niveletu).
+- [x] priečny sklon ako parameter profilu (MVP), nie z LandXML
+  - parameter `q` šablóny (kladný = klesá doprava); spodok rovnobežný alebo vodorovný (`spodokRovnobezny`).
+- [x] kontroly: uzavretosť, samopretínanie, orientácia; plocha a ťažisko prierezu
+  - `geom/polygon.ts`; obrys sa pri opačnom poradí otočí s upozornením, dutina musí byť vnútri obrysu.
+- [x] fixture: dvojica NK podľa rezu E–E (`Dvojica NK.png`): celkom 29 400 mm, ľavá NK 15 400 / pravá 13 800, spodná šírka trámu 5 000 / 4 000, výška v osi 1 700 (zvislo), konzola 200 na konci a 500 pri nábehu, priečny sklon 4,5 %
+  - šablóna „Jednotrám s nábehmi“ + `twinDeckExample`; test kót: šírky betónu 14 650 / 13 050, spodok 4 850 + 5 000 + 4 800 a 4 550 + 4 000 + 4 500, výška 1 700 (s vozovkou 1 790), konzola 200 / 500, sklon 4,5 %, medzera 900 s osou R2 uprostred.
+- [x] UI: náhľad prierezu s posuvníkom staničenia a kótami hlavných rozmerov
+  - záložka Prierez (šírka, výška v osi, plocha, ťažisko), vloženie príkladu dvojice NK; 1 000 prierezov za ~33 ms (test), v prehliadači 0,4–3 ms na zmenu.
 
 **Hotové, keď:** fixture sedí s výkresom na všetkých kótach a zmena parametra sa prejaví v náhľade do 100 ms.
 
@@ -284,7 +293,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
-- Sklon stien trámu a vodorovná dĺžka nábehu nie sú na výkrese okótované. *Predpoklad:* steny 5 : 1 (vodorovne : zvislo = 1 : 5) a nábeh ako priamka; obe hodnoty sú parametre, ktoré projektant upraví.
+- Sklon stien trámu a vodorovná dĺžka nábehu nie sú na výkrese okótované. *Predpoklad:* steny 5 : 1 (zvislo : vodorovne), výška steny `hW` = 300 mm, vodorovná dĺžka nábehu `bN` = 1 450 mm, nábeh priamkový; sú to parametre šablóny, ktoré projektant upraví.
+- Os mosta pri dvojici NK: vodorovné posuny −7,75 m / +7,00 m sú odvodené z výkresu za predpokladu, že os R2 (os cesty) leží v strede medzi NK. Ak je os cesty v LandXML inde (napr. na okraji vozovky), posuny treba upraviť.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
