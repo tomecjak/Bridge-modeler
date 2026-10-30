@@ -20,39 +20,48 @@ export function SectionPanel({ results, selectedId }: Props) {
       {shown.map((r) => (
         <section key={r.superstructure.id} className="result">
           <h3 className="panel-subtitle">{r.superstructure.name}</h3>
-          {r.drawn && r.section && (
-            <dl className="props">
-              <dt>{sk.section.width}</dt>
-              <dd>{formatNumber(r.drawn.width * 1000, 0)} mm</dd>
-              <dt>{sk.section.height}</dt>
-              <dd>
-                {r.drawn.heightAtAxis === undefined
-                  ? '—'
-                  : `${formatNumber(r.drawn.heightAtAxis * 1000, 0)} mm`}
-              </dd>
-              <dt>{sk.section.area}</dt>
-              <dd>{formatNumber(r.section.area, 4)} m²</dd>
-              <dt>{sk.section.centroid}</dt>
-              <dd>
-                x = {formatNumber(r.section.centroid.x * 1000, 0)} mm, y ={' '}
-                {formatNumber(r.section.centroid.y * 1000, 0)} mm
-              </dd>
-            </dl>
-          )}
-          {r.issues.length > 0 && (
-            <ul className="issues">
-              {r.issues.map((i) => (
-                <li
-                  key={formatModelIssue(i)}
-                  className={i.severity === 'warning' ? 'issue issue-warning' : 'issue issue-error'}
-                >
-                  {formatModelIssue(i)}
-                </li>
-              ))}
-            </ul>
-          )}
+          <SectionResultDetails result={r} />
         </section>
       ))}
     </aside>
+  );
+}
+
+/** Šírka, výška v osi, plocha, ťažisko a problémy jedného prierezu. */
+export function SectionResultDetails({ result: r }: { result: SectionResult }) {
+  return (
+    <>
+      {r.drawn && r.section && (
+        <dl className="props">
+          <dt>{sk.section.width}</dt>
+          <dd>{formatNumber(r.drawn.width * 1000, 0)} mm</dd>
+          <dt>{sk.section.height}</dt>
+          <dd>
+            {r.drawn.heightAtAxis === undefined
+              ? '—'
+              : `${formatNumber(r.drawn.heightAtAxis * 1000, 0)} mm`}
+          </dd>
+          <dt>{sk.section.area}</dt>
+          <dd>{formatNumber(r.section.area, 4)} m²</dd>
+          <dt>{sk.section.centroid}</dt>
+          <dd>
+            x = {formatNumber(r.section.centroid.x * 1000, 0)} mm, y ={' '}
+            {formatNumber(r.section.centroid.y * 1000, 0)} mm
+          </dd>
+        </dl>
+      )}
+      {r.issues.length > 0 && (
+        <ul className="issues">
+          {r.issues.map((i) => (
+            <li
+              key={formatModelIssue(i)}
+              className={i.severity === 'warning' ? 'issue issue-warning' : 'issue issue-error'}
+            >
+              {formatModelIssue(i)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }

@@ -1,27 +1,22 @@
 import { formatStation, parseStation } from '@bridge/alignment';
-import type { Parameter, Segment, SegmentShape, StationFunction } from '@bridge/model';
+import type { Segment, SegmentShape, StationFunction } from '@bridge/model';
 import { useEffect, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
-import { projectStore } from '../store/projectStore.ts';
 import { ExpressionInput } from './ExpressionInput.tsx';
 import { convertLaw } from './ParameterTable.tsx';
 
 interface Props {
-  parameter: Parameter;
+  law: StationFunction;
+  onChange: (law: StationFunction) => void;
+  /** rozsah zobrazovaného staničenia pre nový úsek */
   range: { from: number; to: number };
 }
 
 const SHAPES: SegmentShape[] = ['linear', 'parabolic', 'circular'];
 const KINDS: StationFunction['kind'][] = ['constant', 'piecewise', 'expression'];
 
-/** Editor staničnej funkcie vybraného parametra (druh, výraz alebo úseky). */
-export function StationFunctionEditor({ parameter, range }: Props) {
-  const law = parameter.law;
-  const setLaw = (next: StationFunction) =>
-    projectStore
-      .getState()
-      .dispatch({ type: 'updateParameter', id: parameter.id, changes: { law: next } });
-
+/** Editor staničnej funkcie (druh, výraz alebo úseky) — pre parametre, priebehy NK aj posuny osi mosta. */
+export function StationFunctionEditor({ law, onChange: setLaw, range }: Props) {
   const setSegment = (index: number, changes: Partial<Segment>) => {
     if (law.kind !== 'piecewise') return;
     const segments = law.segments.map((s, i) => {
@@ -181,7 +176,7 @@ export function StationFunctionEditor({ parameter, range }: Props) {
   );
 }
 
-function StationField({
+export function StationField({
   value,
   onCommit,
   ariaLabel,

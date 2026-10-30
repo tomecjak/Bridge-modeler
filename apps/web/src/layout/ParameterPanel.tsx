@@ -1,6 +1,7 @@
 import type { ModelIssue, Parameter, ParameterSet } from '@bridge/model';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
+import { projectStore } from '../store/projectStore.ts';
 import { chartRange } from '../views/chartSamples.ts';
 import { StationFunctionChart } from '../views/StationFunctionChart.tsx';
 import { StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
@@ -30,7 +31,15 @@ export function ParameterPanel({
       {!parameter && <p className="panel-empty">{sk.properties.nothingSelected}</p>}
       {parameter && range && (
         <>
-          <StationFunctionEditor parameter={parameter} range={alignmentRange ?? range} />
+          <StationFunctionEditor
+            law={parameter.law}
+            range={alignmentRange ?? range}
+            onChange={(law) =>
+              projectStore
+                .getState()
+                .dispatch({ type: 'updateParameter', id: parameter.id, changes: { law } })
+            }
+          />
           <h3 className="panel-subtitle">{sk.stationFunction.title}</h3>
           <StationFunctionChart parameter={parameter} set={set} range={range} />
           <h3 className="panel-subtitle">{sk.properties.issues}</h3>

@@ -469,6 +469,32 @@ body {
   color: var(--muted);
 }
 
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.mini-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--muted);
+}
+
+.mini-table td {
+  padding: 2px 3px;
+  vertical-align: top;
+}
+
+.mini-table .wide {
+  width: 50%;
+}
+
+.mini-table .point-name {
+  width: 56px;
+}
+
 .parameter-table {
   width: 100%;
   border-collapse: collapse;
@@ -812,4 +838,9 @@ input[aria-invalid="true"] {
   margin-top: 8px;
   padding-top: 4px;
   border-top: 1px solid var(--border);
+}
+
+.button.danger {
+  margin-top: 16px;
+  color: var(--error);
 }

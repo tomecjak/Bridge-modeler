@@ -6,6 +6,7 @@ import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
+import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
@@ -364,7 +365,16 @@ export function App() {
         }
       />
       {mode === 'section' ? (
-        <SectionPanel results={sections.results} selectedId={selectedSuperstructureId} />
+        selectedElement ? (
+          <ElementPanel
+            collection={selectedElement.collection}
+            id={selectedElement.id}
+            result={sections.results.find((r) => r.superstructure.id === selectedElement.id)}
+            onRemoved={() => setSelectedElement(undefined)}
+          />
+        ) : (
+          <SectionPanel results={sections.results} selectedId={undefined} />
+        )
       ) : mode === 'parameters' ? (
         <ParameterPanel
           parameter={selectedParameter}
