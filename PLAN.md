@@ -162,13 +162,20 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** ≥ 20 kontrolných staničení (aj v klotoidách a výškových oblúkoch) sedí s Civil 3D ≤ 1 mm a poloha aj smer sú spojité na stykoch prvkov.
 
 ### Fáza 2 — Výrazy, parametre, staničné funkcie
-- [ ] `packages/expr`: tokenizer, parser (Pratt), AST, vyhodnotenie; `+ - * / ^`, porovnania, `and or not`, `if()`, `sin cos tan asin acos atan sqrt abs min max round roundup rounddown pi()`
-- [ ] chybové hlásenia s pozíciou vo výraze
-- [ ] graf závislostí parametrov: detekcia cyklov, topologické vyhodnotenie, cache
-- [ ] `packages/model`: `StationFunction` (constant, piecewise s tvarmi linear / parabolic / circular, expression)
-- [ ] zod schéma projektu, verzia schémy, kostra migrácií
-- [ ] uloženie a otvorenie projektu (JSON súbor), autosave do IndexedDB
-- [ ] UI: tabuľka parametrov, editor staničnej funkcie s grafom priebehu po staničení
+- [x] `packages/expr`: tokenizer, parser (Pratt), AST, vyhodnotenie; `+ - * / ^`, porovnania, `and or not`, `if()`, `sin cos tan asin acos atan sqrt abs min max round roundup rounddown pi()`
+  - aj `exp ln log`, porovnania `<= >= <>`, rovnosť s toleranciou 1e-9, typová kontrola number/boolean, lenivé `if`. Goniometria v stupňoch (ADR 0006). Bez `eval`.
+- [x] chybové hlásenia s pozíciou vo výraze
+  - každá chyba nesie `span`; UI podčiarkne miesto vlnovkou a vypíše slovenskú hlášku (vrátane rady „desatinná bodka“ pri čiarke).
+- [x] graf závislostí parametrov: detekcia cyklov, topologické vyhodnotenie, cache
+  - cyklus s cestou (`b → c → b`), neznámy odkaz, šírenie neplatnosti (`DependsOnInvalid`), rozlíšenie parametrov závislých od staničenia; nezávislé sa vyhodnotia raz.
+- [x] `packages/model`: `StationFunction` (constant, piecewise s tvarmi linear / parabolic / circular, expression)
+  - hranice úsekov a premenná `sta` = zobrazované staničenie (ADR 0006), kontrola medzier/prekryvov a hraníc v skoku staničenia (`validateStations`); kružnica len pre dĺžky; test hodnoty aj dotyčnice nábehu na oboch koncoch.
+- [x] zod schéma projektu, verzia schémy, kostra migrácií
+  - `schemaVersion: "1"`, `openProject` / `serializeProject` (stabilné poradie kľúčov), chyby s cestou v súbore; JSON Schema v `docs/schema/project.schema.json` (`pnpm schema:export`, test stráži aktuálnosť). zod/zustand/immer v ADR 0005. Zapnuté `erasableSyntaxOnly` (ADR 0001).
+- [x] uloženie a otvorenie projektu (JSON súbor), autosave do IndexedDB
+  - Nový / Otvoriť / Uložiť (`<názov>.bridge.json`), autosave s oneskorením 1 s a obnova pri štarte; store so späť/znova (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z) cez immer patches. Import LandXML ukladá os do projektu.
+- [x] UI: tabuľka parametrov, editor staničnej funkcie s grafom priebehu po staničení
+  - záložka Parametre (hodnoty na zvolenom staničení v mm/°/%), parametre v strome projektu, editor úsekov v pravom paneli, graf s hranicami úsekov a ukazovateľom hodnoty. Ostáva: premenovanie parametra neprepisuje odkazy v iných výrazoch.
 
 **Hotové, keď:** parabolický nábeh má správnu hodnotu aj dotyčnicu na oboch koncoch (test), cyklus v parametroch dáva zrozumiteľnú chybu a projekt sa uloží a načíta bez straty.
 
@@ -277,6 +284,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
+- Premenovanie parametra: má aplikácia automaticky prepísať odkazy v ostatných výrazoch (ako Revit), alebo len upozorniť na neznámy odkaz? *Predpoklad:* zatiaľ len upozorní.
+- Zaokrúhľovanie `round()`: implementované „od nuly“ (round(2,5) = 3, round(−2,5) = −3) ako v Reviti — overiť, či to vyhovuje.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
