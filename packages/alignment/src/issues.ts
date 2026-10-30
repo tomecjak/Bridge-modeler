@@ -13,6 +13,7 @@ export type AlignmentIssue = { severity: 'error' | 'warning'; alignment?: string
   | { code: 'InvalidValue'; element: string; field: string; value: string }
   | { code: 'CoordinateSystemMismatch'; x: number; y: number }
   | { code: 'GeometryMismatch'; index: number; deviation: number }
+  | { code: 'DirectionMismatch'; index: number; deviation: number }
   | { code: 'LengthMismatch'; declared: number; computed: number }
 );
 
