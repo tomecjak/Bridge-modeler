@@ -3,6 +3,16 @@ export const sk = {
   app: {
     title: 'Modelér mostov',
   },
+  persistence: {
+    newProject: 'Nový',
+    open: 'Otvoriť',
+    save: 'Uložiť',
+    defaultName: 'Nový most',
+    confirmNew: 'Začať nový projekt? Neuložené zmeny sa stratia (automatické uloženie sa prepíše).',
+    openFailed: 'Projekt sa nepodarilo otvoriť',
+    opened: (fileName: string) => `Otvorené: ${fileName}`,
+    restored: (time: string) => `Obnovené z automatického uloženia (${time})`,
+  },
   history: {
     undo: 'Späť',
     redo: 'Znova',

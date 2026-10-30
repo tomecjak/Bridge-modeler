@@ -432,3 +432,9 @@ body {
   opacity: 0.45;
   cursor: default;
 }
+
+.toolbar-separator {
+  width: 1px;
+  margin: 0 4px;
+  background: var(--border);
+}

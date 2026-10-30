@@ -1,11 +1,15 @@
 import type { AlignmentIssue } from '@bridge/alignment';
+import { createEmptyProject, openProject } from '@bridge/model';
 import { type DragEvent, useEffect, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
+import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
+import { loadAutosave, startAutosave } from './persistence/autosave.ts';
+import { downloadProject } from './persistence/fileIO.ts';
 import { useEvaluatedAlignments } from './store/derived.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 
@@ -26,9 +30,24 @@ export function App() {
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState<string>();
   const [cursor, setCursor] = useState<CursorInfo>();
+  const [openErrors, setOpenErrors] = useState<string[]>([]);
 
   const item = alignments[selected];
   const importIssuesOf = (name: string) => lastImport.issues.filter((i) => i.alignment === name);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadAutosave().then((saved) => {
+      if (cancelled || !saved) return;
+      projectStore.getState().replace(saved.project);
+      setMessage(sk.persistence.restored(saved.savedAt.toLocaleString('sk-SK')));
+    });
+    const stop = startAutosave(projectStore);
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -68,6 +87,33 @@ export function App() {
     }
   }
 
+  async function openProjectFile(file: File) {
+    try {
+      const opened = openProject(await file.text());
+      if (opened.ok) {
+        projectStore.getState().replace(opened.project);
+        setSelected(0);
+        setLastImport({ issues: [], fileIssues: [] });
+        setOpenErrors([]);
+        setMessage(sk.persistence.opened(file.name));
+      } else {
+        setOpenErrors(opened.issues.map(formatModelIssue));
+        setMessage(sk.persistence.openFailed);
+      }
+    } catch {
+      setMessage(sk.import.readFailed);
+    }
+  }
+
+  function newProject() {
+    if (!window.confirm(sk.persistence.confirmNew)) return;
+    projectStore.getState().replace(createEmptyProject(sk.persistence.defaultName));
+    setSelected(0);
+    setLastImport({ issues: [], fileIssues: [] });
+    setOpenErrors([]);
+    setMessage(undefined);
+  }
+
   function statusText(): string {
     if (message) return message;
     if (cursor && item && project.crs.origin)
@@ -98,6 +144,30 @@ export function App() {
       <header className="app-header">
         <span className="app-title">{sk.app.title}</span>
         <div className="toolbar">
+          <button type="button" className="button" onClick={newProject}>
+            {sk.persistence.newProject}
+          </button>
+          <label className="button">
+            {sk.persistence.open}
+            <input
+              type="file"
+              accept=".json,application/json"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void openProjectFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="button"
+            onClick={() => downloadProject(projectStore.getState().project)}
+          >
+            {sk.persistence.save}
+          </button>
+          <span className="toolbar-separator" />
           <button
             type="button"
             className="button"
@@ -139,6 +209,7 @@ export function App() {
           (alignments.find((a) => a.data.name === name)?.issues.length ?? 0)
         }
         fileIssues={lastImport.fileIssues}
+        notices={openErrors}
         selected={selected}
         onSelect={setSelected}
       />

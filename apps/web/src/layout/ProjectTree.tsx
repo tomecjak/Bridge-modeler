@@ -9,6 +9,8 @@ interface Props {
   /** počet problémov osi podľa názvu (parser + výpočet) */
   issueCount: (name: string) => number;
   fileIssues: readonly AlignmentIssue[];
+  /** chyby pri otvorení projektového súboru (už sformulované) */
+  notices: readonly string[];
   selected: number;
   onSelect: (index: number) => void;
 }
@@ -33,6 +35,7 @@ export function ProjectTree({
   fileIssues,
   selected,
   onSelect,
+  notices,
 }: Props) {
   return (
     <aside className="panel panel-left" aria-labelledby="project-tree-title">
@@ -58,6 +61,18 @@ export function ProjectTree({
                     <span className="badge">{issueCount(a.data.name)}</span>
                   )}
                 </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {notices.length > 0 && (
+        <>
+          <h3 className="panel-subtitle">{sk.persistence.openFailed}</h3>
+          <ul className="issues">
+            {notices.map((n) => (
+              <li key={n} className="issue issue-error">
+                {n}
               </li>
             ))}
           </ul>

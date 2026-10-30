@@ -184,6 +184,9 @@ importers:
       '@bridge/alignment':
         specifier: workspace:*
         version: link:../../packages/alignment
+      '@bridge/expr':
+        specifier: workspace:*
+        version: link:../../packages/expr
       '@bridge/geom':
         specifier: workspace:*
         version: link:../../packages/geom

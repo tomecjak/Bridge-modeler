@@ -11,8 +11,10 @@ function leaves(node: unknown, path: string[] = []): [string, unknown][] {
 describe('sk texts', () => {
   it('contains only non-empty strings', () => {
     for (const [path, value] of leaves(sk)) {
-      expect(typeof value, path).toBe('string');
-      expect((value as string).trim(), path).not.toBe('');
+      // texty s parametrami sú funkcie
+      const text = typeof value === 'function' ? String(value('x')) : value;
+      expect(typeof text, path).toBe('string');
+      expect((text as string).trim(), path).not.toBe('');
     }
   });
 });
