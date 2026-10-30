@@ -1,0 +1,170 @@
+import { type Alignment, createAlignment } from '@bridge/alignment';
+import type { Vec3 } from '@bridge/geom';
+import { buildParameterSet, type ModelIssue, type ProjectFile } from '@bridge/model';
+import { evaluateSupport, type SupportContext, type SupportResult } from '@bridge/sections';
+import { type GeometryKernel, MeshKernel } from './kernel.ts';
+import { meshBounds, type TriangleMesh } from './mesh.ts';
+import type { LawRef } from './sampling.ts';
+import { superstructureMesh } from './superstructure.ts';
+import { supportMesh } from './supports.ts';
+
+export type SceneObjectKind = 'superstructure' | 'support';
+
+export interface SceneObject {
+  kind: SceneObjectKind;
+  /** ID prvku v modeli */
+  id: string;
+  name: string;
+  mesh: TriangleMesh;
+  issues: ModelIssue[];
+}
+
+/** Siete z predchádzajúceho výpočtu podľa kľúča vstupov objektu. */
+export interface SceneCache {
+  entries: Map<string, { key: string; object: SceneObject }>;
+}
+
+export interface SceneUpdate {
+  /** všetky objekty v stabilnom poradí (NK, potom podpery, v poradí modelu) */
+  objects: SceneObject[];
+  /** `kind:id` objektov, ktoré sa prepočítali */
+  changed: string[];
+  /** `kind:id` objektov, ktoré z modelu zmizli */
+  removed: string[];
+}
+
+export const createSceneCache = (): SceneCache => ({ entries: new Map() });
+
+export const sceneObjectKey = (kind: SceneObjectKind, id: string) => `${kind}:${id}`;
+
+/**
+ * 3D scéna projektu (Fáza 5): siete NK a podpier v lokálnych súradniciach. Objekt sa prepočíta, len ak sa
+ * zmenili jeho vstupy (prvok, profil, os mosta, os cesty, počiatok, parametre; NK aj staničenia a šikmosť
+ * jej podpier). Deterministické: rovnaký projekt → rovnaké siete.
+ */
+export function buildScene(
+  project: ProjectFile,
+  cache: SceneCache,
+  kernel: GeometryKernel<unknown> = new MeshKernel(),
+): SceneUpdate {
+  const origin = project.crs.origin;
+  const changed: string[] = [];
+  const objects: SceneObject[] = [];
+  const seen = new Set<string>();
+  if (origin) {
+    const alignments = lazy(() => buildAlignments(project, origin));
+    const parameters = lazy(() => buildParameterSet(project.parameters));
+    const ctx = lazy(
+      (): SupportContext => ({
+        alignments: alignments(),
+        parameters: parameters(),
+        bridgeAxes: project.bridgeAxes,
+        profiles: project.profiles,
+        superstructures: project.superstructures,
+      }),
+    );
+    const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
+    const params = JSON.stringify(project.parameters);
+    const base = (bridgeAxis: string | undefined, profile: string | undefined) => {
+      const axis = project.bridgeAxes.find((a) => a.id === bridgeAxis);
+      return [
+        origin,
+        params,
+        axis,
+        project.alignments.find((a) => a.name === axis?.alignment),
+        project.profiles.find((p) => p.id === profile),
+      ];
+    };
+
+    // podpery sú lacné a NK potrebuje ich staničenia a šikmosť → vyhodnotia sa vždy
+    const results = lazy(() => project.supports.map((s) => evaluateSupport(ctx(), s)));
+    const reuse = (kind: SceneObjectKind, id: string, key: string, make: () => SceneObject) => {
+      const k = sceneObjectKey(kind, id);
+      seen.add(k);
+      const hit = cache.entries.get(k);
+      if (hit && hit.key === key) {
+        objects.push(hit.object);
+        return;
+      }
+      const object = make();
+      cache.entries.set(k, { key, object });
+      objects.push(object);
+      changed.push(k);
+    };
+
+    for (const sup of project.superstructures) {
+      const own = () => results().filter((r) => r.support.superstructure === sup.id);
+      const deckInputs = project.supports.some((s) => s.superstructure === sup.id)
+        ? own().map((r) => [r.support.kind, r.s, r.crossingAngle, r.bearings.map((b) => b.s)])
+        : [];
+      const key = JSON.stringify([sup, ...base(sup.bridgeAxis, sup.profile), deckInputs]);
+      reuse('superstructure', sup.id, key, () => {
+        const r = superstructureMesh(kernel, {
+          ctx: ctx(),
+          superstructure: sup,
+          supports: own(),
+          globalLaws,
+        });
+        return {
+          kind: 'superstructure',
+          id: sup.id,
+          name: sup.name,
+          mesh: r.mesh,
+          issues: r.issues,
+        };
+      });
+    }
+    project.supports.forEach((support, i) => {
+      const sup = project.superstructures.find((s) => s.id === support.superstructure);
+      const key = JSON.stringify([support, sup, ...base(sup?.bridgeAxis, sup?.profile)]);
+      reuse('support', support.id, key, () => {
+        const r = results()[i] as SupportResult;
+        return {
+          kind: 'support',
+          id: support.id,
+          name: support.name,
+          mesh: supportMesh(kernel, r),
+          issues: r.issues,
+        };
+      });
+    });
+  }
+  const removed = [...cache.entries.keys()].filter((k) => !seen.has(k));
+  for (const k of removed) cache.entries.delete(k);
+  return { objects, changed, removed };
+}
+
+function buildAlignments(project: ProjectFile, origin: Vec3): Map<string, Alignment> {
+  return new Map(project.alignments.map((a) => [a.name, createAlignment(a, origin).alignment]));
+}
+
+function lazy<T>(make: () => T): () => T {
+  let value: { v: T } | undefined;
+  return () => {
+    value ??= { v: make() };
+    return value.v;
+  };
+}
+
+/** Buffre pre GPU: polohy relatívne k stredu siete vo float32 (bez trasenia), stred v double. */
+export interface RenderBuffers {
+  center: Vec3;
+  positions: Float32Array;
+  normals: Float32Array;
+  indices: Uint32Array;
+}
+
+export function toRenderBuffers(mesh: TriangleMesh): RenderBuffers {
+  const b = meshBounds(mesh);
+  const center = b
+    ? { x: (b.min.x + b.max.x) / 2, y: (b.min.y + b.max.y) / 2, z: (b.min.z + b.max.z) / 2 }
+    : { x: 0, y: 0, z: 0 };
+  const p = mesh.positions;
+  const positions = new Float32Array(p.length);
+  for (let i = 0; i < p.length; i += 3) {
+    positions[i] = (p[i] as number) - center.x;
+    positions[i + 1] = (p[i + 1] as number) - center.y;
+    positions[i + 2] = (p[i + 2] as number) - center.z;
+  }
+  return { center, positions, normals: mesh.normals.slice(), indices: mesh.indices.slice() };
+}
