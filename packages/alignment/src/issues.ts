@@ -15,6 +15,8 @@ export type AlignmentIssue = { severity: 'error' | 'warning'; alignment?: string
   | { code: 'GeometryMismatch'; index: number; deviation: number }
   | { code: 'DirectionMismatch'; index: number; deviation: number }
   | { code: 'LengthMismatch'; declared: number; computed: number }
+  | { code: 'VerticalCurvesOverlap'; profile: string; station: number }
+  | { code: 'InvalidProfile'; profile: string }
 );
 
 export type AlignmentIssueCode = AlignmentIssue['code'];
