@@ -3,9 +3,17 @@ export const sk = {
   app: {
     title: 'Modelér mostov',
   },
+  import: {
+    button: 'Importovať LandXML',
+    dropHint: 'Pustite súbor LandXML sem',
+    reading: 'Načítavam…',
+    readFailed: 'Súbor sa nepodarilo prečítať.',
+  },
   projectTree: {
     title: 'Projekt',
     empty: 'Projekt je prázdny. Začnite importom osi z LandXML.',
+    alignments: 'Osi',
+    fileIssues: 'Problémy súboru',
   },
   viewport: {
     tabs: {
@@ -13,13 +21,44 @@ export const sk = {
       view2d: '2D',
     },
     empty3d: '3D náhľad sa zobrazí po vytvorení nosnej konštrukcie.',
-    empty2d: 'Výkresy sa zobrazia po vytvorení nosnej konštrukcie.',
+    empty2d: 'Importujte os z LandXML, zobrazí sa pôdorys a pozdĺžny profil.',
+    plan: 'Pôdorys',
+    profile: 'Pozdĺžny profil',
+    fit: 'Prispôsobiť',
+    noProfile: 'Os nemá niveletu.',
+    exaggeration: 'prevýšenie',
   },
   properties: {
     title: 'Vlastnosti',
     nothingSelected: 'Nič nie je vybrané.',
+    name: 'Názov',
+    length: 'Dĺžka',
+    stationRange: 'Staničenie',
+    elements: 'Prvky',
+    lines: 'priamky',
+    arcs: 'oblúky',
+    spirals: 'prechodnice',
+    profile: 'Niveleta',
+    noProfile: 'bez nivelety',
+    origin: 'Lokálny počiatok (S-JTSK)',
+    issues: 'Upozornenia',
+    noIssues: 'Bez upozornení.',
   },
   statusBar: {
     ready: 'Pripravené',
+    offset: 'odsadenie',
+    elevation: 'H',
+    grade: 'sklon',
+    bpv: 'm n. m.',
+    outside: 'mimo osi',
+  },
+  elementKind: {
+    line: 'priamka',
+    arc: 'oblúk',
+    spiral: 'prechodnica',
+  },
+  severity: {
+    error: 'Chyba',
+    warning: 'Upozornenie',
   },
 } as const;

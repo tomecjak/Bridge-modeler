@@ -1,17 +1,23 @@
-import { useState } from 'react';
+import type { Alignment } from '@bridge/alignment';
 import { sk } from '../i18n/sk.ts';
+import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 
-type ViewMode = '3d' | '2d';
+export type ViewMode = '3d' | '2d';
 
-const TABS: { mode: ViewMode; label: string; empty: string }[] = [
-  { mode: '3d', label: sk.viewport.tabs.view3d, empty: sk.viewport.empty3d },
-  { mode: '2d', label: sk.viewport.tabs.view2d, empty: sk.viewport.empty2d },
+interface Props {
+  mode: ViewMode;
+  onModeChange: (mode: ViewMode) => void;
+  alignment: Alignment | undefined;
+  cursorS: number | undefined;
+  onPlanCursor: (cursor: PlanCursor | undefined) => void;
+}
+
+const TABS: { mode: ViewMode; label: string }[] = [
+  { mode: '3d', label: sk.viewport.tabs.view3d },
+  { mode: '2d', label: sk.viewport.tabs.view2d },
 ];
 
-export function Viewport() {
-  const [mode, setMode] = useState<ViewMode>('3d');
-  const active = TABS.find((tab) => tab.mode === mode) ?? TABS[0];
-
+export function Viewport({ mode, onModeChange, alignment, cursorS, onPlanCursor }: Props) {
   return (
     <main className="viewport">
       <div className="viewport-tabs" role="tablist">
@@ -23,7 +29,7 @@ export function Viewport() {
             id={`viewport-tab-${tab.mode}`}
             aria-selected={tab.mode === mode}
             aria-controls="viewport-canvas"
-            onClick={() => setMode(tab.mode)}
+            onClick={() => onModeChange(tab.mode)}
           >
             {tab.label}
           </button>
@@ -35,7 +41,20 @@ export function Viewport() {
         role="tabpanel"
         aria-labelledby={`viewport-tab-${mode}`}
       >
-        <p className="panel-empty">{active?.empty}</p>
+        {mode === '3d' && <p className="panel-empty centered">{sk.viewport.empty3d}</p>}
+        {mode === '2d' && !alignment && (
+          <p className="panel-empty centered">{sk.viewport.empty2d}</p>
+        )}
+        {mode === '2d' && alignment && (
+          <div className="drawings">
+            <PlanView
+              key={alignment.name}
+              alignment={alignment}
+              cursorS={cursorS}
+              onCursor={onPlanCursor}
+            />
+          </div>
+        )}
       </div>
     </main>
   );

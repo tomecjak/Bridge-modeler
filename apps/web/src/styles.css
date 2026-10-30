@@ -136,3 +136,243 @@ body {
   place-items: center;
   background: var(--canvas);
 }
+
+/* --- Fáza 1: import, strom, vlastnosti, výkresy --- */
+
+:root {
+  --axis-line: #2563eb;
+  --axis-arc: #dc2626;
+  --axis-spiral: #16a34a;
+  --profile: #7c3aed;
+  --grid: #c9ced8;
+  --warning: #b45309;
+  --error: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --axis-line: #60a5fa;
+    --axis-arc: #f87171;
+    --axis-spiral: #4ade80;
+    --profile: #c4b5fd;
+    --grid: #343b48;
+    --warning: #fbbf24;
+    --error: #f87171;
+  }
+}
+
+.app {
+  position: relative;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.button,
+.drawing-toolbar button {
+  padding: 4px 12px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button:hover,
+.drawing-toolbar button:hover {
+  border-color: var(--accent);
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  border: 3px dashed var(--accent);
+  pointer-events: none;
+}
+
+.panel-subtitle {
+  margin: 16px 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.file-name {
+  margin: 0;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tree-item {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tree-item[aria-current="true"] {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.badge {
+  min-width: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  text-align: center;
+  color: var(--panel);
+  background: var(--warning);
+  border-radius: 9px;
+}
+
+.props {
+  margin: 0;
+}
+
+.props dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.props dd {
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.issues {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+}
+
+.issue {
+  margin-bottom: 6px;
+}
+
+.issue-warning strong {
+  color: var(--warning);
+}
+
+.issue-error strong {
+  color: var(--error);
+}
+
+.centered {
+  text-align: center;
+}
+
+.viewport-canvas {
+  position: relative;
+  min-height: 0;
+}
+
+.drawings {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 3fr 2fr;
+  gap: 1px;
+  background: var(--border);
+}
+
+.drawing {
+  position: relative;
+  overflow: hidden;
+  background: var(--canvas);
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+
+.drawing svg {
+  display: block;
+}
+
+.drawing-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.drawing-toolbar > * {
+  pointer-events: auto;
+}
+
+.drawing-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.axis {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.axis-line {
+  stroke: var(--axis-line);
+}
+
+.axis-arc {
+  stroke: var(--axis-arc);
+}
+
+.axis-spiral {
+  stroke: var(--axis-spiral);
+}
+
+.joint {
+  fill: var(--canvas);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.tick line {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.tick text,
+.grid text {
+  font-size: 11px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cursor-marker {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
