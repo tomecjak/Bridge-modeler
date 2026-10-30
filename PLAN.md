@@ -142,14 +142,22 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** CI je zelené a `pnpm dev` zobrazí prázdnu aplikáciu s rozložením.
 
 ### Fáza 1 — Os z LandXML
-- [ ] `packages/geom`: Vec2/Vec3, `Frame` (počiatok, tangenta, normála, binormála), rotácie, tolerancie
-- [ ] parser LandXML: `Alignments/Alignment/CoordGeom` (Line, Curve, Spiral), `Profile/ProfAlign` (PVI, ParaCurve, CircCurve), `StaEquation`, `Units`; poradie bodov N E
-- [ ] smerové vedenie: priamka, kružnicový oblúk, klotoida (Fresnelove integrály, presnosť ≤ 0,1 mm); iné typy prechodníc → chyba `UnsupportedSpiralType`
-- [ ] niveleta: tangenty, parabolické a kružnicové výškové oblúky
-- [ ] API: `evaluate(s) → { point, azimuth, grade, frame }` a `project(point) → { s, offset }`
-- [ ] staničenie: prevod `s` ↔ zobrazované staničenie so skokmi, formátovač
-- [ ] golden testy proti `fixtures/` (výpis z Civil 3D)
-- [ ] UI: import LandXML (drag & drop), pôdorys osi so staničením, pozdĺžny profil nivelety, kurzor ukazuje staničenie a súradnice
+- [x] `packages/geom`: Vec2/Vec3, `Frame` (počiatok, tangenta, normála, binormála), rotácie, tolerancie
+  - aj normalizácia uhlov, azimut ↔ vektor, Gauss–Legendre kvadratúra. `Frame.normal` = vodorovne vpravo, `binormal` ≈ nahor.
+- [x] parser LandXML: `Alignments/Alignment/CoordGeom` (Line, Curve, Spiral), `Profile/ProfAlign` (PVI, ParaCurve, CircCurve), `StaEquation`, `Units`; poradie bodov N E
+  - fast-xml-parser (ADR 0004). Výstup `AlignmentData` (JSON, absolútne EPSG:5514) + typované problémy bez textov; kladné súradnice → `CoordinateSystemMismatch`.
+- [x] smerové vedenie: priamka, kružnicový oblúk, klotoida (Fresnelove integrály, presnosť ≤ 0,1 mm); iné typy prechodníc → chyba `UnsupportedSpiralType`
+  - všeobecná klotoida (aj R₁ → R₂) cez Gauss–Legendre; zhoda s radom Fresnelových integrálov ≤ 1e-10 m. Každý prvok začína v bode z LandXML; nesúlad konca > 1 mm → `GeometryMismatch`, zlom smeru > 1e-5 rad → `DirectionMismatch`.
+- [x] niveleta: tangenty, parabolické a kružnicové výškové oblúky
+  - kružnicový oblúk ako presná kružnica z polomeru (atribút `length` sa nepoužíva, viď Otvorené otázky). Mimo rozsahu → `ProfileOutOfRange`.
+- [x] API: `evaluate(s) → { point, azimuth, grade, frame }` a `project(point) → { s, offset }`
+  - `createAlignment(data, origin)`, `suggestOrigin` (začiatok osi na 100 m, H₀ = 0), `evaluateHorizontal`, `elevation`, `elements`, `stationing`.
+- [x] staničenie: prevod `s` ↔ zobrazované staničenie so skokmi, formátovač
+  - skoky vpred (medzera) aj späť (prekryv → región); `formatStation` / `parseStation` (`km 1,234 567`, `1+234.567`, metre). Overené len synteticky — podklad so skokom chýba.
+- [x] golden testy proti `fixtures/` (výpis z Civil 3D)
+  - SO 171-11-01: 74 bodov osi max 0,050 mm a 3,7e-9 rad, 28 bodov stykov prvkov, 89 bodov nivelety max 0,049 mm (odchýlky = zaokrúhlenie výkazov). Dáta sa neverzujú: `pnpm fixtures:convert` → `fixtures/local/`; bez nich sa golden testy preskočia, CI beží na syntetickej osi (round trip LandXML). Os 101-00: `it.todo` (chýbajú výkazy).
+- [x] UI: import LandXML (drag & drop), pôdorys osi so staničením, pozdĺžny profil nivelety, kurzor ukazuje staničenie a súradnice
+  - SVG s vlastným pan/zoom (koliesko, ťahanie, dvojklik = prispôsobiť), farby podľa typu prvku, profil s prevýšením 10×, kurzor synchronizovaný medzi pôdorysom a profilom, problémy po slovensky v paneli vlastností. Ostáva: výber nivelety, ak je ich v súbore viac (berie sa prvá); parsovanie vo Workeri (Fáza 5).
 
 **Hotové, keď:** ≥ 20 kontrolných staničení (aj v klotoidách a výškových oblúkoch) sedí s Civil 3D ≤ 1 mm a poloha aj smer sú spojité na stykoch prvkov.
 
@@ -267,6 +275,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 ## 7. Otvorené otázky
 
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
+- `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
+- Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
@@ -281,12 +291,14 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Kontrolné body k osi 101-00 zatiaľ nie sú; golden testy používajú os SO 171-11-01 (nižšie).
 
 `fixtures/inbox/SO 171-11-01.xml` + `CivilReport*.html` (Civil 3D 2023 export osi, výkazy z českej lokalizácie Civil 3D, 2026-10-29) — **hlavný podklad pre golden testy Fázy 1**:
-- Os „Trasa 171-11-01“, dĺžka 723,35 m, staničenie od 0. Prvky: 4× Line (jedna len 0,042 m medzi dvoma prechodnicami), 8× Spiral (`clothoid`, aj nesymetrické dĺžky 89,998 / 69,939 m), 4× Curve (R 65,14 – 290 m). Súradnice EPSG:5514, záporné, poradie N E, hlavička opäť `epsgCode="2065"`.
+- Os „Trasa 171-11-01“, dĺžka 723,35 m, staničenie od 0. Prvky: 4× Line (jedna len 0,042 m medzi dvoma prechodnicami), 6× Spiral (`clothoid`, aj nesymetrické dĺžky 89,998 / 69,939 m), 4× Curve (R 65,14 – 290 m). Súradnice EPSG:5514, záporné, poradie N E, hlavička opäť `epsgCode="2065"`.
 - Niveleta pokrýva celú os: 2× PVI, 5× ParaCurve.
 - `CivilReport.html` — prírastkové staničenie osi, krok 10 m, 74 bodov: staničenie, súradnice na 0,1 mm, smer dotyčnice. **Pozor na označenie stĺpcov:** stĺpec „Y“ obsahuje Northing (≈ −1 069 538), stĺpec „X“ Easting (≈ −617 210). Smer je zapísaný ako `S 126.4824.3992 (smv)` = severný azimut v tvare stupne.minútyseknudy (126°48′24,3992″), meraný od severu v smere hodinových ručičiek. Overené na prvej priamke: z LandXML `dir` = 323,193222° vychádza azimut 90° − 323,193222° = 126,806778° = 126°48′24,40″.
 - `CivilReport2.html` — Station and Curve Report: styky prvkov (TS, SC, CS, ST, PC, PT), súradnice na 1 mm, smery ako kvadrantové smerníky (`S 53° 11' 35.6008" E`), staničenie v stovkovom tvare `1+58.761` = 158,761 m, parametre prechodníc (A, X, Y, P, K, Theta).
 - `CivilReport3.html` — prírastkové staničenie nivelety, krok 10 m + body PVC, PVT, PVI, najnižšie body; výška na 0,1 mm, sklon v % na 6 desatinných miest; 89 riadkov.
 - Pokrytie stačí na kritérium Fázy 1 (≥ 20 bodov vrátane prechodníc a výškových oblúkov).
+- **Sklon vo výkaze nivelety** nie je dotyčnicový sklon v bode, ale sklon sečnice od predchádzajúceho riadku výkazu (overené: km 0,040 → (293,9135 − 294,0061) / 7,5345 = −1,2293 %). Golden test porovnáva sečnicu.
+- **Zlom smeru 7,0″ v podkladoch:** 0,042 m priamka medzi prechodnicami (prvok č. 5, km 0,248 759) má `dir` 353,297799°, predchádzajúca prechodnica končí smerom 353,299737°. Aplikácia to hlási ako upozornenie; ide o nepresnosť návrhu v Civil 3D, nie chybu výpočtu.
 
 ### Rozhodnuté (2026-10-29)
 
