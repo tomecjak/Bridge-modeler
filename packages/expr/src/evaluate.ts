@@ -11,7 +11,10 @@ const EQUALITY_TOLERANCE = 1e-9;
 const DEG = Math.PI / 180;
 
 class EvaluationFailure {
-  constructor(readonly error: ExprError) {}
+  readonly error: ExprError;
+  constructor(error: ExprError) {
+    this.error = error;
+  }
 }
 
 const fail = (error: ExprError): never => {

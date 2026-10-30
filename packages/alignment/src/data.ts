@@ -68,7 +68,7 @@ export interface PviData {
   /** spojité staničenie PVI = staStart + s [m] */
   station: number;
   elevation: number;
-  curve?: VerticalCurveData;
+  curve?: VerticalCurveData | undefined;
 }
 
 export interface VerticalProfileData {

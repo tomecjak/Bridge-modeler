@@ -130,12 +130,14 @@ export function buildVertical(
 class PiecewiseProfile implements VerticalProfile {
   readonly startS: number;
   readonly endS: number;
+  readonly name: string;
+  readonly keyPoints: readonly ProfileKeyPoint[];
+  private readonly pieces: readonly Piece[];
 
-  constructor(
-    readonly name: string,
-    private readonly pieces: readonly Piece[],
-    readonly keyPoints: readonly ProfileKeyPoint[],
-  ) {
+  constructor(name: string, pieces: readonly Piece[], keyPoints: readonly ProfileKeyPoint[]) {
+    this.name = name;
+    this.pieces = pieces;
+    this.keyPoints = keyPoints;
     this.startS = (pieces[0] as Piece).s0;
     this.endS = (pieces[pieces.length - 1] as Piece).s1;
   }

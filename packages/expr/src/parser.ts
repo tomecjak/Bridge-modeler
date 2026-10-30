@@ -22,7 +22,10 @@ const BINDING: Partial<Record<string, { left: number; right: number }>> = {
 const UNARY_BINDING = 40;
 
 class ParseError {
-  constructor(readonly error: ExprError) {}
+  readonly error: ExprError;
+  constructor(error: ExprError) {
+    this.error = error;
+  }
 }
 
 const join = (a: Span, b: Span): Span => ({ start: a.start, end: b.end });

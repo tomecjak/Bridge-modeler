@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
+    "name": {
+      "type": "string"
+    },
+    "crs": {
+      "type": "object",
+      "properties": {
+        "epsg": {
+          "type": "number",
+          "const": 5514
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "z"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "epsg",
+        "origin"
+      ],
+      "additionalProperties": false
+    },
+    "alignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "staStart": {
+            "type": "number"
+          },
+          "length": {
+            "type": "number"
+          },
+          "horizontal": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "line"
+                    },
+                    "length": {
+                      "type": "number"
+                    },
+                    "start": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "end": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "length",
+                    "start",
+                    "end"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "arc"
+                    },
+                    "length": {
+                      "type": "number"
+                    },
+                    "start": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "end": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "center": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "radius": {
+                      "type": "number"
+                    },
+                    "rotation": {
+                      "type": "string",
+                      "enum": [
+                        "cw",
+                        "ccw"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "length",
+                    "start",
+                    "end",
+                    "center",
+                    "radius",
+                    "rotation"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "spiral"
+                    },
+                    "spiralType": {
+                      "type": "string",
+                      "const": "clothoid"
+                    },
+                    "length": {
+                      "type": "number"
+                    },
+                    "start": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "end": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "startAzimuth": {
+                      "type": "number"
+                    },
+                    "radiusStart": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "radiusEnd": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "rotation": {
+                      "type": "string",
+                      "enum": [
+                        "cw",
+                        "ccw"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "spiralType",
+                    "length",
+                    "start",
+                    "end",
+                    "startAzimuth",
+                    "radiusStart",
+                    "radiusEnd",
+                    "rotation"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "stationEquations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "staInternal": {
+                  "type": "number"
+                },
+                "staBack": {
+                  "type": "number"
+                },
+                "staAhead": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "staInternal",
+                "staBack",
+                "staAhead"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "profiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "pvis": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "station": {
+                        "type": "number"
+                      },
+                      "elevation": {
+                        "type": "number"
+                      },
+                      "curve": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "parabolic"
+                              },
+                              "length": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "length"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "circular"
+                              },
+                              "length": {
+                                "type": "number"
+                              },
+                              "radius": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "length",
+                              "radius"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "station",
+                      "elevation"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "pvis"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name",
+          "staStart",
+          "length",
+          "horizontal",
+          "stationEquations",
+          "profiles"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "length",
+              "angle",
+              "slope",
+              "none"
+            ]
+          },
+          "law": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "constant"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "piecewise"
+                  },
+                  "segments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "number"
+                        },
+                        "to": {
+                          "type": "number"
+                        },
+                        "v0": {
+                          "type": "string"
+                        },
+                        "v1": {
+                          "type": "string"
+                        },
+                        "shape": {
+                          "type": "string",
+                          "enum": [
+                            "linear",
+                            "parabolic",
+                            "circular"
+                          ]
+                        },
+                        "vertexAt": {
+                          "type": "string",
+                          "enum": [
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "v0",
+                        "v1",
+                        "shape"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "segments"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "expression"
+                  },
+                  "expr": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expr"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "law"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "name",
+    "crs",
+    "alignments",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$id": "https://bridge-modeler.local/schema/project-1.json",
+  "title": "Projekt modelára mostov (schemaVersion 1)"
+}

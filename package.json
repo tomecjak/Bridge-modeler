@@ -15,7 +15,8 @@
     "typecheck": "pnpm -r --no-bail typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "fixtures:convert": "node tools/src/convert-civil-reports.ts"
+    "fixtures:convert": "node tools/src/convert-civil-reports.ts",
+    "schema:export": "node tools/src/export-schema.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",

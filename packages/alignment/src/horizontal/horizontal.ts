@@ -97,11 +97,12 @@ export function buildHorizontal(
 
 class ChainedHorizontal implements HorizontalAlignment {
   readonly length: number;
+  readonly segments: readonly HorizontalSegment[];
+  readonly boundaries: readonly number[];
 
-  constructor(
-    readonly segments: readonly HorizontalSegment[],
-    readonly boundaries: readonly number[],
-  ) {
+  constructor(segments: readonly HorizontalSegment[], boundaries: readonly number[]) {
+    this.segments = segments;
+    this.boundaries = boundaries;
     this.length = boundaries[boundaries.length - 1] as number;
   }
 

@@ -30,7 +30,10 @@ const ANGLE_UNITS: Record<string, AngleUnit> = {
 /** Zberač problémov pre jednu os; `failed` = os sa nedá použiť. */
 class IssueSink {
   readonly issues: AlignmentIssue[] = [];
-  constructor(private readonly alignment?: string) {}
+  private readonly alignment: string | undefined;
+  constructor(alignment?: string) {
+    this.alignment = alignment;
+  }
 
   get failed(): boolean {
     return this.issues.some((i) => i.severity === 'error');

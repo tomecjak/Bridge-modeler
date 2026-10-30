@@ -79,14 +79,22 @@ class EvaluatedAlignment implements Alignment {
   readonly staStart: number;
   readonly length: number;
   readonly stationing: Stationing;
+  readonly origin: Vec3;
+  readonly horizontal: HorizontalAlignment;
+  readonly profile: VerticalProfile | undefined;
+  readonly elements: readonly ElementInfo[];
 
   constructor(
     data: AlignmentData,
-    readonly origin: Vec3,
-    readonly horizontal: HorizontalAlignment,
-    readonly profile: VerticalProfile | undefined,
-    readonly elements: readonly ElementInfo[],
+    origin: Vec3,
+    horizontal: HorizontalAlignment,
+    profile: VerticalProfile | undefined,
+    elements: readonly ElementInfo[],
   ) {
+    this.origin = origin;
+    this.horizontal = horizontal;
+    this.profile = profile;
+    this.elements = elements;
     this.name = data.name;
     this.staStart = data.staStart;
     this.length = horizontal.length;

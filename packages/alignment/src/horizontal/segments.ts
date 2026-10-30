@@ -38,11 +38,10 @@ export class LineSegment implements HorizontalSegment {
   readonly length: number;
   private readonly azimuth: number;
   private readonly dir: Vec2;
+  readonly start: Vec2;
 
-  constructor(
-    readonly start: Vec2,
-    end: Vec2,
-  ) {
+  constructor(start: Vec2, end: Vec2) {
+    this.start = start;
     this.length = distance2(start, end);
     this.azimuth = vectorToAzimuth(sub2(end, start));
     this.dir = azimuthToVector(this.azimuth);
@@ -73,14 +72,16 @@ export class ArcSegment implements HorizontalSegment {
   private readonly sign: 1 | -1;
   /** smerník spojnice stred → začiatok */
   private readonly phi0: number;
+  readonly start: Vec2;
+  readonly center: Vec2;
+  readonly radius: number;
+  readonly length: number;
 
-  constructor(
-    readonly start: Vec2,
-    readonly center: Vec2,
-    readonly radius: number,
-    rotation: 'cw' | 'ccw',
-    readonly length: number,
-  ) {
+  constructor(start: Vec2, center: Vec2, radius: number, rotation: 'cw' | 'ccw', length: number) {
+    this.start = start;
+    this.center = center;
+    this.radius = radius;
+    this.length = length;
     this.sign = rotation === 'cw' ? 1 : -1;
     this.phi0 = vectorToAzimuth(sub2(start, center));
   }
@@ -129,14 +130,18 @@ const SPIRAL_STEP = 5;
 export class SpiralSegment implements HorizontalSegment {
   readonly kind = 'spiral';
   private readonly dk: number;
+  readonly start: Vec2;
+  readonly startAzimuth: number;
+  readonly length: number;
+  readonly k0: number;
+  readonly k1: number;
 
-  constructor(
-    readonly start: Vec2,
-    readonly startAzimuth: number,
-    readonly length: number,
-    readonly k0: number,
-    readonly k1: number,
-  ) {
+  constructor(start: Vec2, startAzimuth: number, length: number, k0: number, k1: number) {
+    this.start = start;
+    this.startAzimuth = startAzimuth;
+    this.length = length;
+    this.k0 = k0;
+    this.k1 = k1;
     this.dk = (k1 - k0) / length;
   }
 

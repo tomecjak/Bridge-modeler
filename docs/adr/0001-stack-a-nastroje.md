@@ -17,6 +17,8 @@ jeden človek s Claude Code, takže nástroje majú byť jednoduché, rýchle a 
   `exactOptionalPropertyTypes`, `noImplicitOverride`, `verbatimModuleSyntax`, `moduleResolution: "bundler"`, `ES2023`.
 - Balíky v `packages/*` majú `lib` **bez `DOM`** — prístup k `window`/`document` je chyba kompilácie
   (princíp 5 vynútený nástrojom, nie len dohodou). `apps/web` má `DOM`.
+- *Doplnené 2026-10-30:* `erasableSyntaxOnly` — len syntax, ktorú Node vie spustiť odstránením typov
+  (bez parametrických vlastností, `enum`, `namespace`), aby skripty v `tools/` mohli importovať balíky priamo.
 - Interné balíky sa nebuildujú: `"exports": { ".": "./src/index.ts" }`. Vite aj Vitest čítajú TS priamo.
   Ak bude niekedy treba balík publikovať, pridá sa build krok.
 - Typecheck: `pnpm -r typecheck` → `tsc --noEmit` v každom balíku. Project references sa pridajú, ak to bude pomalé.
