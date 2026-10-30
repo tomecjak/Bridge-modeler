@@ -785,6 +785,40 @@ input[aria-invalid="true"] {
   flex: 1;
 }
 
+.viewer3d-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.viewer3d-canvas canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.viewer3d-notice {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 1;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 6px 12px;
+  transform: translateX(-50%);
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.viewer3d-controls {
+  margin-left: auto;
+}
+
 .road-axis {
   stroke: var(--muted);
   stroke-width: 1;

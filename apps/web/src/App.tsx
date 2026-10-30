@@ -7,7 +7,7 @@ import {
   supportElevation,
   twinDeckExample,
 } from '@bridge/sections';
-import { type DragEvent, useEffect, useMemo, useState } from 'react';
+import { type DragEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
@@ -28,6 +28,9 @@ import { useSectionResults } from './store/sections.ts';
 import { defaultSupport, useSupportState } from './store/supports.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
+
+// three.js je veľký → 3D náhľad sa načíta až pri otvorení záložky (samostatný chunk)
+const Viewer3D = lazy(() => import('./viewer/Viewer3D.tsx'));
 
 /** Posledný import LandXML: problémy parsera sa neukladajú do projektu, len sa zobrazia. */
 interface LastImport {
@@ -426,10 +429,12 @@ export function App() {
         selectedElement={selectedElement}
         onSelectElement={(collection, id) => {
           setSelectedElement({ collection, id });
-          // podpery sa ukazujú v pôdoryse a profile, ostatné prvky v priereze
-          if (collection !== 'supports') setMode('section');
           const support = project.supports.find((x) => x.id === id);
           if (support) setSectionStation(support.station);
+          // 3D ukazuje NK aj podpery; inak podpery v pôdoryse a profile, ostatné prvky v priereze
+          if (mode === '3d' && (collection === 'supports' || collection === 'superstructures'))
+            return;
+          if (collection !== 'supports') setMode('section');
           else if (mode !== '2d' && mode !== 'section') setMode('2d');
         }}
         notices={openErrors}
@@ -459,6 +464,31 @@ export function App() {
         }
         supports={roadSupports}
         onAddSupport={addSupportAt}
+        view3d={
+          <Suspense fallback={<p className="panel-empty centered">{sk.viewer3d.loading}</p>}>
+            <Viewer3D
+              project={project}
+              alignment={item?.alignment}
+              selected={
+                selectedElement?.collection === 'superstructures'
+                  ? { kind: 'superstructure', id: selectedElement.id }
+                  : selectedElement?.collection === 'supports'
+                    ? { kind: 'support', id: selectedElement.id }
+                    : undefined
+              }
+              onSelect={(picked) => {
+                if (!picked) {
+                  setSelectedElement(undefined);
+                  return;
+                }
+                const collection = picked.kind === 'support' ? 'supports' : 'superstructures';
+                setSelectedElement({ collection, id: picked.id });
+                const support = project.supports.find((x) => x.id === picked.id);
+                if (support) setSectionStation(support.station);
+              }}
+            />
+          </Suspense>
+        }
         sectionView={
           <SectionView
             sections={sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []))}

@@ -18,6 +18,7 @@ interface Props {
   supports: readonly SupportResult[];
   onAddSupport: (s: number, offset: number) => void;
   sectionView: ReactNode;
+  view3d: ReactNode;
 }
 
 const TABS: { mode: ViewMode; label: string }[] = [
@@ -38,6 +39,7 @@ export function Viewport({
   sectionView,
   supports,
   onAddSupport,
+  view3d,
 }: Props) {
   return (
     <main className="viewport">
@@ -62,7 +64,7 @@ export function Viewport({
         role="tabpanel"
         aria-labelledby={`viewport-tab-${mode}`}
       >
-        {mode === '3d' && <p className="panel-empty centered">{sk.viewport.empty3d}</p>}
+        {mode === '3d' && view3d}
         {mode === 'parameters' && parametersView}
         {mode === 'section' && sectionView}
         {mode === '2d' && !alignment && (
