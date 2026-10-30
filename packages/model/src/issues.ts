@@ -27,6 +27,8 @@ export type ModelIssue = { parameter?: string } & (
   | { code: 'UnknownReference'; name: string }
   | { code: 'Cycle'; path: string[] }
   | { code: 'DependsOnInvalid'; dependency: string }
+  | { code: 'StationNotOnAlignment'; station: number }
+  | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
   | { code: 'UnsupportedSchemaVersion'; version: string }
   | { code: 'SchemaViolation'; path: string; message: string }
