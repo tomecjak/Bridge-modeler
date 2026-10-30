@@ -284,7 +284,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
-- Výkres priečneho rezu dvojice NK (28 900 mm) pre fixture Fázy 3 ešte chýba — dodané schémy sú typologické náčrty bez kót.
+- Fixture Fázy 3 podľa `Dvojica NK.png` (rez E–E, 29 400 mm) namiesto pôvodných 28 900 mm z plánu? Chýbajúce kóty tvaru sú v otázkach nižšie (hrúbka konca konzoly, nábeh, steny trámu, rímsy).
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
@@ -312,6 +312,15 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Typologické schémy prierezov NK bez kót: doska, doska + tyčové prefabrikáty (prefa riešenie), jednotrám / jednotrám s nábehmi, dvojtrám, komora / komora s nábehmi; v PDF navyše vyľahčená doska, doskotrám, mestský viadukt (nízka komora), zavesený / visutý.
 - Tabuľka ekonomických rozpätí medziľahlých polí spojitých betónových mostov v ČR: doska ~21 m, vyľahčená doska ~30, doskotrám ~30, jednotrám ~35, jednotrám s nábehmi ~45, dvojtrám ~45, mestský viadukt ~35–45, prefa ~40, komora ~70, komora s nábehmi ~150, oblúk ~150, zavesený ~90–150, visutý ~90–250 (lávka).
 - Využitie: šablóny typov prierezu vo Fáze 3 (parametrické profily podľa typológie) a upozornenie na rozpätie mimo ekonomického rozsahu vo Fáze 4 (len informatívne).
+
+`fixtures/inbox/Dvojica NK.png` (rez E–E, M 1:100, rýchlostná cesta R2 Rožňava – Prešov; dodané 2026-10-30) — kóty v mm:
+- Celkom 29 400 = ľavá NK 15 400 + 100 + 100 (os R2 medzi nimi) + pravá NK 13 800.
+- Ľavá NK zhora: 1 750 (350 + 750 + 650; služobný chodník, zvodidlo H3) + 12 750 (500 + 500 + 3 × 3 500 + 250 + 500 + 500; jazdné pruhy) + 900 (rímsa pri strednom deliacom páse).
+  Zdola: 400 + 14 650 + 350; spodok 4 850 + **5 000** (spodná šírka trámu) + 4 800.
+- Pravá NK zhora: 900 + 11 250 (500 + 500 + 2 × 3 500 + 250 + 2 500 + 500) + 1 650 (650 + 750 + 250).
+  Zdola: 350 + 13 050 + 400; spodok 4 550 + **4 000** (2 000 + 2 000 okolo osi NK) + 4 500.
+- **Os NK = os spodnej šírky trámu**; výška NK v osi **1 700**, s vozovkou **1 790** (vozovka 90). Priečny sklon vozovky **4,5 %** jednostranne (na oboch NK rovnakým smerom — klopenie), rímsy 4 % k vozovke. Betón NK C40/50, rímsy C35/45.
+- Tvar: jednotrám s nábehmi — tenká konzola so šikmým podhľadom, prechod do trámu veľkým oblúkovým nábehom, krátke šikmé steny, spodok trámu približne rovnobežný s priečnym sklonom. Rímsy sú samostatné prvky na koncoch konzol.
 
 ### Rozhodnuté (2026-10-29)
 
