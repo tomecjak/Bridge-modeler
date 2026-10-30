@@ -4,6 +4,7 @@ import {
   globalScope,
   singleBeamHaunched,
   singleDeckExample,
+  supportElevation,
   twinDeckExample,
 } from '@bridge/sections';
 import { type DragEvent, useEffect, useMemo, useState } from 'react';
@@ -98,6 +99,26 @@ export function App() {
     return axis !== undefined && axis.alignment === item?.data.name;
   });
 
+  /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
+  const sectionSupports = roadSupports
+    .filter((r) => Math.abs(r.support.station - sectionAt) <= 0.5 && r.axis)
+    .flatMap((r) => {
+      const el = supportElevation(r);
+      if (!el || !r.axis) return [];
+      const dx = r.axis.horizontalOffset;
+      const z0 = item?.alignment.origin.z ?? 0;
+      const move = (poly: readonly { x: number; y: number }[]) =>
+        poly.map((p) => ({ x: p.x + dx, y: p.y + z0 }));
+      return [
+        {
+          id: r.support.id,
+          name: r.support.name,
+          body: el.body.map(move),
+          footing: move(el.footing),
+        },
+      ];
+    });
+
   /** Klik v pôdoryse: podpera pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie ku kliknutiu. */
   function addSupportAt(s: number, offset: number) {
     const road = item?.alignment;
@@ -135,6 +156,7 @@ export function App() {
     const support = defaultSupport(newId('sup'), `${prefix}${n}`, kind, deck.id, station, soffit);
     projectStore.getState().dispatch({ type: 'addElements', supports: [support] });
     setSelectedElement({ collection: 'supports', id: support.id });
+    setSectionStation(station);
     setMessage(undefined);
   }
 
@@ -406,6 +428,8 @@ export function App() {
           setSelectedElement({ collection, id });
           // podpery sa ukazujú v pôdoryse a profile, ostatné prvky v priereze
           if (collection !== 'supports') setMode('section');
+          const support = project.supports.find((x) => x.id === id);
+          if (support) setSectionStation(support.station);
           else if (mode !== '2d' && mode !== 'section') setMode('2d');
         }}
         notices={openErrors}
@@ -445,6 +469,7 @@ export function App() {
             selectedId={selectedSuperstructureId}
             onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
             canInsert={defaultDeckRange() !== undefined}
+            supports={sectionSupports}
             onInsert={insertExample}
             emptyActions={
               <div className="toolbar">

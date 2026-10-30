@@ -60,7 +60,7 @@ export function defaultSupport(
     geometry:
       kind === 'abutment'
         ? { type: 'abutment', seatLength: '1.5', stemThickness: '1.2', length: '12' }
-        : { type: 'wall', thickness: '1.2', length: '6' },
+        : { type: 'wall', thickness: '1.2', length: '4' },
     footing:
       kind === 'abutment'
         ? { length: '13', width: '5', thickness: '1.2' }
@@ -76,7 +76,7 @@ export function defaultSupport(
 export function defaultGeometry(type: Support['geometry']['type']): Support['geometry'] {
   switch (type) {
     case 'wall':
-      return { type, thickness: '1.2', length: '6' };
+      return { type, thickness: '1.2', length: '4' };
     case 'columns':
       return {
         type,

@@ -20,6 +20,13 @@ interface Props {
   emptyActions: React.ReactNode;
   /** je načítaná os cesty s niveletou (inak sa NK nedá vytvoriť) */
   canInsert: boolean;
+  /** pohľady na podpery na tomto staničení (X od osi cesty, Y m n. m.) */
+  supports: readonly {
+    id: string;
+    name: string;
+    body: readonly (readonly Vec2[])[];
+    footing: readonly Vec2[];
+  }[];
   onInsert: (template: 'twin' | 'single') => void;
 }
 
@@ -37,16 +44,20 @@ export function SectionView({
   emptyActions,
   canInsert,
   onInsert,
+  supports,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [draft, setDraft] = useState(formatStation(station));
   useEffect(() => setDraft(formatStation(station)), [station]);
 
   // pohľad sa prispôsobí len pri zmene zostavy NK, nie pri každom staničení
-  const layoutKey = sections.map((s) => s.id).join('|');
+  const layoutKey = [...sections.map((s) => s.id), ...supports.map((s) => s.id)].join('|');
   // biome-ignore lint/correctness/useExhaustiveDependencies: pohľad sa prepočíta zámerne len pri zmene zostavy NK
   const bounds = useMemo(() => {
-    const pts = sections.flatMap((s) => s.loops.flatMap((l) => l.points));
+    const pts = [
+      ...sections.flatMap((s) => s.loops.flatMap((l) => l.points)),
+      ...supports.flatMap((s) => [...s.footing, ...s.body.flat()]),
+    ];
     const b = boundsOf(pts);
     return { minX: b.minX, maxX: b.maxX, minY: b.minY - 1.2, maxY: b.maxY + 1.5 };
   }, [layoutKey, size.width > 0]);
@@ -131,6 +142,15 @@ export function SectionView({
               y1={0}
               y2={size.height}
             />
+            {supports.map((s) => (
+              <g key={s.id} className="support-elevation">
+                <path className="support-footing" d={path(s.footing)} />
+                {s.body.map((b, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: obrysy stĺpov sú určené poradím
+                  <path key={i} className="support-body" d={path(b)} />
+                ))}
+              </g>
+            ))}
             {sections.map((s) => {
               const selected = s.id === selectedId;
               const topY = toScreen({ x: 0, y: s.top }).y - 18;
