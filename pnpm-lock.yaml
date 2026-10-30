@@ -243,7 +243,11 @@ importers:
 
   packages/ifc: {}
 
-  packages/mesh: {}
+  packages/mesh:
+    dependencies:
+      '@bridge/geom':
+        specifier: workspace:*
+        version: link:../geom
 
   packages/model:
     dependencies:

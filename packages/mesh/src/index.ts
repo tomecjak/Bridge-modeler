@@ -1,2 +1,3 @@
-/** GeometryKernel a generovanie 3D sietí (sweep NK, podpery). */
-export const PACKAGE_NAME = '@bridge/mesh';
+export * from './kernel.ts';
+export * from './mesh.ts';
+export * from './slice.ts';

@@ -3,11 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "GeometryKernel a generovanie 3D sietí (sweep NK, podpery).",
+  "description": "GeometryKernel a generovanie 3D siet\u00ed (sweep NK, podpery).",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@bridge/geom": "workspace:*"
   }
 }
