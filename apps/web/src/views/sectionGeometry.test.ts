@@ -1,5 +1,5 @@
+import { lowestCrossing } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
-import { lowestCrossing } from './sectionGeometry.ts';
 
 describe('lowestCrossing', () => {
   it('finds the bottom of a section below the reference point', () => {

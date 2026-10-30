@@ -1,6 +1,7 @@
 import { formatStation } from '@bridge/alignment';
 import type { ExprError } from '@bridge/expr';
 import type { ExpressionField, ModelIssue } from '@bridge/model';
+import { formatNumber } from '../format/number.ts';
 
 const FIELD: Record<ExpressionField, string> = {
   value: 'hodnota',
@@ -10,9 +11,20 @@ const FIELD: Record<ExpressionField, string> = {
   x: 'súradnica x',
   y: 'súradnica y',
   default: 'predvolená hodnota',
+  crossingAngle: 'uhol kríženia',
+  offset: 'posun',
+  bearingHeight: 'výška uloženia',
+  foundationTop: 'horná hrana základu',
+  bearing: 'poloha ložiska',
+  dimension: 'rozmer',
 };
 
-const OWNER = { profile: 'Prierez', superstructure: 'NK', bridgeAxis: 'Os mosta' } as const;
+const OWNER = {
+  profile: 'Prierez',
+  superstructure: 'NK',
+  bridgeAxis: 'Os mosta',
+  support: 'Podpera',
+} as const;
 
 const TYPE = { number: 'číslo', boolean: 'logická hodnota' } as const;
 
@@ -122,6 +134,26 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}prierez nemá parameter „${issue.name}“.`;
     case 'StationOutsideSuperstructure':
       return `${prefix}staničenie ${formatStation(issue.station)} je mimo NK (${formatStation(issue.from)} – ${formatStation(issue.to)}).`;
+    case 'UnknownSuperstructure':
+      return `${prefix}nosná konštrukcia neexistuje.`;
+    case 'InvalidCrossingAngle':
+      return `${prefix}uhol kríženia ${formatNumber(issue.angle, 2)}° musí byť medzi 0° a 180° (90° = kolmá podpera).`;
+    case 'BearingOutsideDeck':
+      return `${prefix}ložisko č. ${issue.index + 1} (${formatNumber(issue.x * 1000, 0)} mm od osi NK) nie je pod spodkom NK.`;
+    case 'NonPositiveSupportHeight':
+      return `${prefix}výška podpery vychádza ${formatNumber(issue.height * 1000, 0)} mm — horná hrana základu je príliš vysoko.`;
+    case 'InvalidDimension':
+      return `${prefix}neplatný rozmer ${issue.name} = ${formatNumber(issue.value, 3)}.`;
+    case 'SupportOrder':
+      return `${prefix}podpera „${issue.support}“ by mala byť ${issue.expected === 'abutment' ? 'opora (je na konci NK)' : 'pilier (je medzi oporami)'}.`;
+    case 'DuplicateSupportStation':
+      return `${prefix}na staničení ${formatStation(issue.station)} sú dve podpery.`;
+    case 'SpanTooShort':
+      return `${prefix}pole dĺžky ${formatNumber(issue.length, 3)} m je kratšie ako minimum ${formatNumber(issue.minimum, 1)} m.`;
+    case 'SpanAboveEconomic':
+      return `${prefix}pole ${formatNumber(issue.length, 1)} m presahuje ekonomické rozpätie ~${formatNumber(issue.economic, 0)} m pre tento typ NK (informatívne, VŠB).`;
+    case 'MissingSupports':
+      return `${prefix}NK nemá aspoň dve podpery — polia sa nedajú určiť.`;
     case 'InvalidJson':
       return `Súbor nie je platný JSON (${issue.detail}).`;
     case 'UnsupportedSchemaVersion':

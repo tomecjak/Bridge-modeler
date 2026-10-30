@@ -1,10 +1,23 @@
 import type { ExprError } from '@bridge/expr';
 
-export type ExpressionField = 'value' | 'expr' | 'v0' | 'v1' | 'x' | 'y' | 'default';
+export type ExpressionField =
+  | 'value'
+  | 'expr'
+  | 'v0'
+  | 'v1'
+  | 'x'
+  | 'y'
+  | 'default'
+  | 'crossingAngle'
+  | 'offset'
+  | 'bearingHeight'
+  | 'foundationTop'
+  | 'bearing'
+  | 'dimension';
 
 /** Prvok modelu, ktorého sa problém týka (prierez, NK, os mosta). */
 export interface IssueOwner {
-  kind: 'profile' | 'superstructure' | 'bridgeAxis';
+  kind: 'profile' | 'superstructure' | 'bridgeAxis' | 'support';
   name: string;
 }
 
@@ -55,6 +68,16 @@ export type ModelIssue = {
   | { code: 'UnknownProfile'; id: string }
   | { code: 'UnknownProfileParameter'; name: string }
   | { code: 'StationOutsideSuperstructure'; station: number; from: number; to: number }
+  | { code: 'UnknownSuperstructure'; id: string }
+  | { code: 'InvalidCrossingAngle'; angle: number }
+  | { code: 'BearingOutsideDeck'; index: number; x: number }
+  | { code: 'NonPositiveSupportHeight'; height: number }
+  | { code: 'InvalidDimension'; name: string; value: number }
+  | { code: 'SupportOrder'; support: string; expected: 'abutment' | 'pier' }
+  | { code: 'DuplicateSupportStation'; station: number }
+  | { code: 'SpanTooShort'; length: number; minimum: number }
+  | { code: 'SpanAboveEconomic'; length: number; economic: number; typology: string }
+  | { code: 'MissingSupports' }
   | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
   | { code: 'UnsupportedSchemaVersion'; version: string }
