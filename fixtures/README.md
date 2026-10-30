@@ -3,7 +3,9 @@
 Vstupy a očakávané výsledky pre golden testy. Súbory sa needitujú ručne — pri zmene uveď zdroj
 (projekt, verzia Civil 3D, dátum exportu) v `SOURCES.md` v príslušnom podadresári.
 
-Surové podklady patria do [`inbox/`](inbox/README.md); odtiaľ sa spracované dáta presúvajú sem.
+Surové podklady patria do [`inbox/`](inbox/README.md). Golden dáta z nich pripraví `pnpm fixtures:convert`
+do `local/` — **inbox ani local sa neverzujú**. Golden testy sa bez týchto dát preskočia (CI ich nemá);
+CI overuje syntetické osi so známou geometriou.
 
 Potrebné dáta (PLAN.md, sekcia 5):
 

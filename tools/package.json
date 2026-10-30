@@ -1,0 +1,13 @@
+{
+  "name": "@bridge/tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pomocné skripty (Node), nie sú súčasťou aplikácie.",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
+  }
+}

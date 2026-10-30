@@ -12,3 +12,6 @@ __pycache__/
 # Podklady od Jakuba sa neverzujú (len README)
 fixtures/inbox/*
 !fixtures/inbox/README.md
+
+# Golden dáta odvodené z podkladov (pnpm fixtures:convert), neverzujú sa
+fixtures/local/

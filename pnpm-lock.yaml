@@ -209,6 +209,10 @@ importers:
       fast-xml-parser:
         specifier: 5.11.2
         version: 5.11.2
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
 
   packages/drawing: {}
 
@@ -223,6 +227,12 @@ importers:
   packages/model: {}
 
   packages/sections: {}
+
+  tools:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
 
 packages:
 

@@ -8,10 +8,13 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test"
   },
   "dependencies": {
     "@bridge/geom": "workspace:*",
     "fast-xml-parser": "5.11.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
   }
 }
