@@ -254,7 +254,20 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
-  packages/sections: {}
+  packages/sections:
+    dependencies:
+      '@bridge/alignment':
+        specifier: workspace:*
+        version: link:../alignment
+      '@bridge/expr':
+        specifier: workspace:*
+        version: link:../expr
+      '@bridge/geom':
+        specifier: workspace:*
+        version: link:../geom
+      '@bridge/model':
+        specifier: workspace:*
+        version: link:../model
 
   tools:
     dependencies:

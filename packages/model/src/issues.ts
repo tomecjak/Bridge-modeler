@@ -12,7 +12,13 @@ export interface IssueOwner {
  * Typované problémy modelu (parametre, staničné funkcie, projektový súbor). Bez textov — hlášky skladá UI.
  * `parameter` je názov parametra, ak sa problém týka konkrétneho parametra.
  */
-export type ModelIssue = { parameter?: string; owner?: IssueOwner; point?: string } & (
+export type ModelIssue = {
+  parameter?: string;
+  owner?: IssueOwner;
+  point?: string;
+  /** chýba = chyba; 'warning' = upozornenie, výsledok je použiteľný */
+  severity?: 'warning';
+} & (
   | {
       code: 'ExpressionError';
       field: ExpressionField;
