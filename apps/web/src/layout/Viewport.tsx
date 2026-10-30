@@ -1,9 +1,10 @@
 import type { Alignment } from '@bridge/alignment';
+import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { ProfileView } from '../views/ProfileView.tsx';
 
-export type ViewMode = '3d' | '2d';
+export type ViewMode = '3d' | '2d' | 'parameters';
 
 interface Props {
   mode: ViewMode;
@@ -12,11 +13,13 @@ interface Props {
   cursorS: number | undefined;
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
   onProfileCursor: (s: number | undefined) => void;
+  parametersView: ReactNode;
 }
 
 const TABS: { mode: ViewMode; label: string }[] = [
   { mode: '3d', label: sk.viewport.tabs.view3d },
   { mode: '2d', label: sk.viewport.tabs.view2d },
+  { mode: 'parameters', label: sk.parameters.tab },
 ];
 
 export function Viewport({
@@ -26,6 +29,7 @@ export function Viewport({
   cursorS,
   onPlanCursor,
   onProfileCursor,
+  parametersView,
 }: Props) {
   return (
     <main className="viewport">
@@ -51,6 +55,7 @@ export function Viewport({
         aria-labelledby={`viewport-tab-${mode}`}
       >
         {mode === '3d' && <p className="panel-empty centered">{sk.viewport.empty3d}</p>}
+        {mode === 'parameters' && parametersView}
         {mode === '2d' && !alignment && (
           <p className="panel-empty centered">{sk.viewport.empty2d}</p>
         )}

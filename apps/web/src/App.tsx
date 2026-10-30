@@ -5,13 +5,16 @@ import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
+import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject } from './persistence/fileIO.ts';
 import { useEvaluatedAlignments } from './store/derived.ts';
+import { issuesOf, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
+import { ParameterTable } from './views/ParameterTable.tsx';
 
 /** Posledný import LandXML: problémy parsera sa neukladajú do projektu, len sa zobrazia. */
 interface LastImport {
@@ -31,8 +34,19 @@ export function App() {
   const [message, setMessage] = useState<string>();
   const [cursor, setCursor] = useState<CursorInfo>();
   const [openErrors, setOpenErrors] = useState<string[]>([]);
+  const [selectedParameterId, setSelectedParameterId] = useState<string>();
+  const [referenceStation, setReferenceStation] = useState<number>();
 
   const item = alignments[selected];
+  const parameterState = useParameterState(item?.alignment.stationing);
+  const displayRange = item
+    ? {
+        from: item.alignment.stationing.toDisplay(0).station,
+        to: item.alignment.stationing.toDisplay(item.alignment.length).station,
+      }
+    : undefined;
+  const station = referenceStation ?? displayRange?.from ?? 0;
+  const selectedParameter = project.parameters.find((p) => p.id === selectedParameterId);
   const importIssuesOf = (name: string) => lastImport.issues.filter((i) => i.alignment === name);
 
   useEffect(() => {
@@ -208,6 +222,16 @@ export function App() {
           importIssuesOf(name).length +
           (alignments.find((a) => a.data.name === name)?.issues.length ?? 0)
         }
+        parameters={project.parameters.map((p) => ({
+          id: p.id,
+          name: p.name,
+          issues: issuesOf(parameterState.issues, p.name).length,
+        }))}
+        selectedParameterId={mode === 'parameters' ? selectedParameterId : undefined}
+        onSelectParameter={(id) => {
+          setSelectedParameterId(id);
+          setMode('parameters');
+        }}
         fileIssues={lastImport.fileIssues}
         notices={openErrors}
         selected={selected}
@@ -220,12 +244,30 @@ export function App() {
         cursorS={cursor?.s}
         onPlanCursor={(c) => setCursor(c && { source: 'plan', ...c })}
         onProfileCursor={(s) => setCursor(s === undefined ? undefined : { source: 'profile', s })}
+        parametersView={
+          <ParameterTable
+            parameters={project.parameters}
+            state={parameterState}
+            referenceStation={station}
+            onReferenceStation={setReferenceStation}
+            range={displayRange}
+            selectedId={selectedParameterId}
+            onSelect={setSelectedParameterId}
+          />
+        }
       />
-      <PropertiesPanel
-        item={item}
-        importIssues={item ? importIssuesOf(item.data.name) : []}
-        origin={project.crs.origin}
-      />
+      {mode === 'parameters' ? (
+        <ParameterPanel
+          parameter={selectedParameter}
+          issues={selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []}
+        />
+      ) : (
+        <PropertiesPanel
+          item={item}
+          importIssues={item ? importIssuesOf(item.data.name) : []}
+          origin={project.crs.origin}
+        />
+      )}
       <footer className="app-status">{statusText()}</footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
     </div>

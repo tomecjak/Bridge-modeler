@@ -29,6 +29,7 @@ export const sk = {
     title: 'Projekt',
     empty: 'Projekt je prázdny. Začnite importom osi z LandXML.',
     alignments: 'Osi',
+    parameters: 'Parametre',
     fileIssues: 'Problémy súboru',
   },
   viewport: {
@@ -43,6 +44,24 @@ export const sk = {
     fit: 'Prispôsobiť',
     noProfile: 'Os nemá niveletu.',
     exaggeration: 'prevýšenie',
+  },
+  parameters: {
+    tab: 'Parametre',
+    add: 'Pridať parameter',
+    empty: 'Projekt nemá parametre. Pridajte prvý parameter.',
+    referenceStation: 'Hodnoty na staničení',
+    unitsHint: 'Vo výrazoch: dĺžky v m, uhly v °, sklony v m/m; staničenie ako sta.',
+    name: 'Názov',
+    unit: 'Jednotka',
+    kind: 'Priebeh',
+    definition: 'Definícia',
+    value: 'Hodnota',
+    status: 'Stav',
+    remove: 'Odstrániť',
+    units: { length: 'dĺžka', angle: 'uhol', slope: 'sklon', none: 'bez jednotky' },
+    kinds: { constant: 'konštanta', piecewise: 'po častiach', expression: 'výraz so sta' },
+    segments: (n: number) =>
+      `po častiach: ${n} ${n === 1 ? 'úsek' : n < 5 ? 'úseky' : 'úsekov'} — upraviť`,
   },
   properties: {
     title: 'Vlastnosti',

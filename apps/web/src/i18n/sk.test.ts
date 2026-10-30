@@ -12,7 +12,7 @@ describe('sk texts', () => {
   it('contains only non-empty strings', () => {
     for (const [path, value] of leaves(sk)) {
       // texty s parametrami sú funkcie
-      const text = typeof value === 'function' ? String(value('x')) : value;
+      const text = typeof value === 'function' ? String(value(1)) : value;
       expect(typeof text, path).toBe('string');
       expect((text as string).trim(), path).not.toBe('');
     }

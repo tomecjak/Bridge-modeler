@@ -8,6 +8,9 @@ interface Props {
   alignments: readonly EvaluatedAlignment[];
   /** počet problémov osi podľa názvu (parser + výpočet) */
   issueCount: (name: string) => number;
+  parameters: readonly { id: string; name: string; issues: number }[];
+  selectedParameterId: string | undefined;
+  onSelectParameter: (id: string) => void;
   fileIssues: readonly AlignmentIssue[];
   /** chyby pri otvorení projektového súboru (už sformulované) */
   notices: readonly string[];
@@ -36,6 +39,9 @@ export function ProjectTree({
   selected,
   onSelect,
   notices,
+  parameters,
+  selectedParameterId,
+  onSelectParameter,
 }: Props) {
   return (
     <aside className="panel panel-left" aria-labelledby="project-tree-title">
@@ -60,6 +66,26 @@ export function ProjectTree({
                   {issueCount(a.data.name) > 0 && (
                     <span className="badge">{issueCount(a.data.name)}</span>
                   )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {parameters.length > 0 && (
+        <>
+          <h3 className="panel-subtitle">{sk.projectTree.parameters}</h3>
+          <ul className="tree">
+            {parameters.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  className="tree-item mono"
+                  aria-current={p.id === selectedParameterId}
+                  onClick={() => onSelectParameter(p.id)}
+                >
+                  {p.name || '—'}
+                  {p.issues > 0 && <span className="badge badge-error">{p.issues}</span>}
                 </button>
               </li>
             ))}
