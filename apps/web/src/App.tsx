@@ -26,6 +26,7 @@ import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
 import { defaultSupport, useSupportState } from './store/supports.ts';
+import type { Cut } from './viewer/sceneView.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
 
@@ -81,6 +82,26 @@ export function App() {
   const supportState = useSupportState(alignmentMap, parameterState.set);
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
+
+  /** Rez v 3D: rovina kolmá na os mosta prvej NK na staničení prierezu, uzávery z prierezov NK. */
+  const cut = useMemo((): Cut | undefined => {
+    const withAxis = sections.results.flatMap((r) => (r.section?.axis ? [r.section] : []));
+    const axis = withAxis[0]?.axis;
+    if (!axis) return undefined;
+    const t = axis.frame.tangent;
+    const th = Math.hypot(t.x, t.y);
+    return {
+      origin: axis.point,
+      normal: { x: t.x / th, y: t.y / th, z: 0 },
+      sections: withAxis.map((sec) =>
+        sec.loops.map((l) => ({
+          role: l.role,
+          plane: l.polygon,
+          points: l.polygon.map(sec.toWorld),
+        })),
+      ),
+    };
+  }, [sections.results]);
 
   /** Rozsah novej NK: štvrtina rozsahu nivelety, najviac 200 m (zobrazované staničenie). */
   function defaultDeckRange():
@@ -486,6 +507,10 @@ export function App() {
                 const support = project.supports.find((x) => x.id === picked.id);
                 if (support) setSectionStation(support.station);
               }}
+              station={sectionAt}
+              stationRange={sectionRange}
+              onStation={setSectionStation}
+              cut={cut}
             />
           </Suspense>
         }

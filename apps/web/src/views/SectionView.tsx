@@ -1,8 +1,8 @@
-import { formatStation, parseStation } from '@bridge/alignment';
 import type { Vec2 } from '@bridge/geom';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
+import { StationControl } from './StationControl.tsx';
 import type { DrawnSection } from './sectionGeometry.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
@@ -47,8 +47,6 @@ export function SectionView({
   supports,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
-  const [draft, setDraft] = useState(formatStation(station));
-  useEffect(() => setDraft(formatStation(station)), [station]);
 
   // pohľad sa prispôsobí len pri zmene zostavy NK, nie pri každom staničení
   const layoutKey = [...sections.map((s) => s.id), ...supports.map((s) => s.id)].join('|');
@@ -74,34 +72,7 @@ export function SectionView({
   return (
     <div className="section-view">
       <div className="section-toolbar">
-        <label className="station-input">
-          {sk.section.station}
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => {
-              const v = parseStation(draft);
-              if (v === undefined) setDraft(formatStation(station));
-              else onStation(v);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') e.currentTarget.blur();
-            }}
-          />
-        </label>
-        {range && (
-          <input
-            type="range"
-            className="station-slider"
-            aria-label={sk.section.station}
-            min={range.from}
-            max={range.to}
-            step={0.5}
-            value={station}
-            onChange={(e) => onStation(Number(e.target.value))}
-          />
-        )}
+        <StationControl station={station} range={range} onStation={onStation} />
         <button type="button" className="button" onClick={reset}>
           {sk.viewport.fit}
         </button>

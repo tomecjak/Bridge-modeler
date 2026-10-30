@@ -48,6 +48,8 @@ export const sk = {
     title: '3D',
     fit: 'Prispôsobiť',
     fitTitle: 'Pohľad na vybraný objekt; bez výberu na celý model',
+    cut: 'Rez',
+    cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako v záložke Prierez)',
     loading: 'Načítavam 3D náhľad…',
     noDeck: 'Vložte nosnú konštrukciu (záložka Prierez), zobrazí sa jej 3D model.',
     objects: (n: number) =>
