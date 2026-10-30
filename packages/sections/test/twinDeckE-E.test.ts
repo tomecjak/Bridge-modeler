@@ -6,7 +6,12 @@ import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { buildParameterSet, type Superstructure } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
-import { evaluateSuperstructure, type SectionContext, twinDeckExample } from '../src/index.ts';
+import {
+  evaluateSuperstructure,
+  type SectionContext,
+  singleDeckExample,
+  twinDeckExample,
+} from '../src/index.ts';
 
 const mm = (v: number) => v / 1000;
 const TOL = 1e-9;
@@ -132,5 +137,25 @@ describe('rez E–E dvojice NK — kóty z výkresu', () => {
     const elapsed = performance.now() - start;
     console.info(`1 000 prierezov: ${elapsed.toFixed(1)} ms`);
     expect(elapsed).toBeLessThan(100);
+  });
+});
+
+describe('singleDeckExample', () => {
+  it('creates one deck on the road axis 90 mm below the grade line', () => {
+    const single = singleDeckExample(data.name, 1050, 1300, {
+      deck: 'N',
+      profile: 'pr',
+      axis: 'ax',
+    });
+    const r = evaluateSuperstructure(
+      { ...ctx, bridgeAxes: single.bridgeAxes, profiles: [single.profile] },
+      single.superstructures[0] as Superstructure,
+      100,
+    );
+    expect(r.issues).toEqual([]);
+    const road = alignment.evaluate(100);
+    const ref = r.toWorld({ x: 0, y: 0 });
+    expect(Math.hypot(ref.x - road.point.x, ref.y - road.point.y)).toBeLessThan(1e-9);
+    expect(ref.z).toBeCloseTo(road.point.z - 0.09, 12);
   });
 });

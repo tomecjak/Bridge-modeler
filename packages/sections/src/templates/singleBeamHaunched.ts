@@ -113,3 +113,39 @@ export function twinDeckExample(
     ],
   };
 }
+
+/**
+ * Jedna NK so šablónou „Jednotrám s nábehmi“ na osi mosta totožnej s osou cesty
+ * (vodorovný posun 0, zvislý −0,09 m = hrúbka vozovky; rozhodnutie z 2026-10-29).
+ */
+export function singleDeckExample(
+  alignment: string,
+  from: number,
+  to: number,
+  ids: { deck: string; profile: string; axis: string },
+): { bridgeAxes: BridgeAxis[]; profile: ProfileDefinition; superstructures: Superstructure[] } {
+  return {
+    bridgeAxes: [
+      {
+        id: ids.axis,
+        name: 'Os mosta',
+        alignment,
+        horizontalOffset: constant('0'),
+        verticalOffset: constant('-0.09'),
+      },
+    ],
+    profile: singleBeamHaunched(ids.profile),
+    superstructures: [
+      {
+        id: ids.deck,
+        name: 'NK',
+        bridgeAxis: ids.axis,
+        from,
+        to,
+        profile: ids.profile,
+        parameterLaws: {},
+        orientation: 'vertical',
+      },
+    ],
+  };
+}

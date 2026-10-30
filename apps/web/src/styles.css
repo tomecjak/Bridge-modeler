@@ -844,3 +844,12 @@ input[aria-invalid="true"] {
   margin-top: 16px;
   color: var(--error);
 }
+
+.notice {
+  max-width: 420px;
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  border-radius: 4px;
+}

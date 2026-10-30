@@ -18,6 +18,9 @@ interface Props {
   selectedId: string | undefined;
   onSelect: (id: string) => void;
   emptyActions: React.ReactNode;
+  /** je načítaná os cesty s niveletou (inak sa NK nedá vytvoriť) */
+  canInsert: boolean;
+  onInsert: (template: 'twin' | 'single') => void;
 }
 
 const mm = (m: number) => formatNumber(m * 1000, 0);
@@ -32,6 +35,8 @@ export function SectionView({
   selectedId,
   onSelect,
   emptyActions,
+  canInsert,
+  onInsert,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [draft, setDraft] = useState(formatStation(station));
@@ -89,6 +94,16 @@ export function SectionView({
         <button type="button" className="button" onClick={reset}>
           {sk.viewport.fit}
         </button>
+        {sections.length > 0 && (
+          <button
+            type="button"
+            className="button"
+            disabled={!canInsert}
+            onClick={() => onInsert('single')}
+          >
+            {sk.section.addDeck}
+          </button>
+        )}
         <span className="hint">{sk.section.elapsed(formatNumber(elapsed, 1))}</span>
       </div>
       <div
@@ -103,6 +118,7 @@ export function SectionView({
         {sections.length === 0 && (
           <div className="section-empty">
             <p className="panel-empty">{sk.section.empty}</p>
+            {!canInsert && <p className="notice">{sk.section.needsAlignment}</p>}
             {emptyActions}
           </div>
         )}

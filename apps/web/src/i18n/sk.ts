@@ -88,8 +88,10 @@ export const sk = {
     station: 'Staničenie',
     empty: 'Projekt nemá nosnú konštrukciu.',
     insertExample: 'Vložiť príklad dvojice NK (rez E–E)',
-    insertTemplate: 'Vložiť šablónu „Jednotrám s nábehmi“',
-    needsAlignment: 'Najprv importujte os z LandXML (s niveletou).',
+    insertTemplate: 'Vložiť NK so šablónou „Jednotrám s nábehmi“',
+    addDeck: 'Pridať NK',
+    needsAlignment:
+      'Na vytvorenie NK treba os cesty s niveletou — najprv importujte LandXML (záložka 2D alebo tlačidlo Importovať LandXML).',
     elapsed: (ms: string) => `výpočet ${ms} ms`,
     area: 'Plocha',
     centroid: 'Ťažisko (od osi mosta)',

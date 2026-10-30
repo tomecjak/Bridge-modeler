@@ -1,6 +1,6 @@
 import type { AlignmentIssue } from '@bridge/alignment';
 import { createEmptyProject, openProject } from '@bridge/model';
-import { singleBeamHaunched, twinDeckExample } from '@bridge/sections';
+import { singleBeamHaunched, singleDeckExample, twinDeckExample } from '@bridge/sections';
 import { type DragEvent, useEffect, useMemo, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
@@ -71,39 +71,62 @@ export function App() {
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
 
-  function insertExample(template: 'twin' | 'profile') {
-    if (template === 'profile') {
-      projectStore
-        .getState()
-        .dispatch({ type: 'addElements', profiles: [singleBeamHaunched(newId('prof'))] });
-      return;
-    }
+  /** Rozsah novej NK: štvrtina rozsahu nivelety, najviac 200 m (zobrazované staničenie). */
+  function defaultDeckRange():
+    | { road: NonNullable<typeof item>['alignment']; from: number; to: number }
+    | undefined {
     const road = item?.alignment;
     const profile = road?.profile;
-    if (!road || !profile) {
-      setMessage(sk.section.needsAlignment);
-      return;
-    }
+    if (!road || !profile) return undefined;
     const start = road.stationing.toDisplay(profile.startS).station;
     const end = road.stationing.toDisplay(profile.endS).station;
     const from = Math.round(start + (end - start) * 0.25);
-    const to = Math.round(Math.min(end, from + 200));
-    const example = twinDeckExample(road.name, from, to, {
-      left: newId('nk'),
-      right: newId('nk'),
-      profile: newId('prof'),
-      leftAxis: newId('axis'),
-      rightAxis: newId('axis'),
-    });
+    return { road, from, to: Math.round(Math.min(end, from + 200)) };
+  }
+
+  function insertExample(template: 'twin' | 'single') {
+    const range = defaultDeckRange();
+    if (!range) {
+      // bez osi cesty aspoň vložíme prierez a otvoríme jeho editor
+      if (template === 'single') {
+        const id = newId('prof');
+        projectStore
+          .getState()
+          .dispatch({ type: 'addElements', profiles: [singleBeamHaunched(id)] });
+        setSelectedElement({ collection: 'profiles', id });
+      }
+      setMessage(sk.section.needsAlignment);
+      setMode('section');
+      return;
+    }
+    const { road, from, to } = range;
+    const example =
+      template === 'twin'
+        ? twinDeckExample(road.name, from, to, {
+            left: newId('nk'),
+            right: newId('nk'),
+            profile: newId('prof'),
+            leftAxis: newId('axis'),
+            rightAxis: newId('axis'),
+          })
+        : singleDeckExample(road.name, from, to, {
+            deck: newId('nk'),
+            profile: newId('prof'),
+            axis: newId('axis'),
+          });
     projectStore.getState().dispatch({
       type: 'addElements',
       bridgeAxes: example.bridgeAxes,
       profiles: [example.profile],
       superstructures: example.superstructures,
     });
+    const first = example.superstructures[0];
+    if (first) setSelectedElement({ collection: 'superstructures', id: first.id });
     setSectionStation((from + to) / 2);
+    setMessage(undefined);
     setMode('section');
   }
+
   const importIssuesOf = (name: string) => lastImport.issues.filter((i) => i.alignment === name);
 
   useEffect(() => {
@@ -351,12 +374,14 @@ export function App() {
             elapsed={sections.elapsed}
             selectedId={selectedSuperstructureId}
             onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
+            canInsert={defaultDeckRange() !== undefined}
+            onInsert={insertExample}
             emptyActions={
               <div className="toolbar">
                 <button type="button" className="button" onClick={() => insertExample('twin')}>
                   {sk.section.insertExample}
                 </button>
-                <button type="button" className="button" onClick={() => insertExample('profile')}>
+                <button type="button" className="button" onClick={() => insertExample('single')}>
                   {sk.section.insertTemplate}
                 </button>
               </div>
