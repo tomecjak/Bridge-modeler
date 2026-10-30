@@ -2,6 +2,7 @@ import { type PointerEvent, type RefObject, useEffect, useRef, useState } from '
 import { pan, type Size, type View, zoomAt } from './viewTransform.ts';
 
 const ZOOM_PER_WHEEL_STEP = 1.15;
+const INTERACTIVE = 'button, input, select, textarea, a, label, [role="button"]';
 
 /**
  * Pohľad s posunom ťahaním a priblížením kolieskom. `fit` je predvolený pohľad (aj po „Prispôsobiť“).
@@ -34,11 +35,14 @@ export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: 
   const handlers = {
     onPointerDown(e: PointerEvent<Element>) {
       if (e.button !== 0) return;
+      // tlačidlá a polia vo výkrese (lišta, prázdny stav) musia dostať klik — nezachytávať ukazovateľ
+      if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       drag.current = { x: e.clientX, y: e.clientY, moved: false };
     },
     onPointerUp(e: PointerEvent<Element>) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
+      if (e.currentTarget.hasPointerCapture(e.pointerId))
+        e.currentTarget.releasePointerCapture(e.pointerId);
       drag.current = undefined;
     },
   };
