@@ -202,13 +202,19 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** fixture sedí s výkresom na všetkých kótach a zmena parametra sa prejaví v náhľade do 100 ms.
 
 ### Fáza 4 — Podpery a polia
-- [ ] `Support`: opora / pilier, staničenie, šikmosť, voliteľný posun od osi
-- [ ] typy v MVP: stenový pilier, pilier z jedného alebo viacerých stĺpov (rozmery, počet, rozostup); opora ako zjednodušený blok (úložný prah, driek, základ)
-- [ ] uloženie: ložisko, vrubový kĺb alebo votknutie; výška uloženia ako parameter
-- [ ] výška podpery od spodného povrchu NK po hornú hranu základu, prepočet pri zmene nivelety alebo NK
-- [ ] ložiskové body z pomenovaných bodov profilu premietnuté na podperu
-- [ ] polia odvodené z poradia podpier, validácia poradia a minimálnej dĺžky
-- [ ] UI: zoznam podpier, pridanie podpery kliknutím na staničenie, editor parametrov
+- [x] `Support`: opora / pilier, staničenie, šikmosť, voliteľný posun od osi
+  - šikmosť = uhol kríženia (90° = kolmá, proti smeru hodín od osi mosta); podpera patrí jednej NK; schéma v3 + migrácia 2 → 3 (ADR 0008).
+- [x] typy v MVP: stenový pilier, pilier z jedného alebo viacerých stĺpov (rozmery, počet, rozostup); opora ako zjednodušený blok (úložný prah, driek, základ)
+  - stĺpy kruhové aj obdĺžnikové; pôdorys podpery a základu (`supportPlan`) a pohľad v rovine prierezu (`supportElevation`).
+- [x] uloženie: ložisko, vrubový kĺb alebo votknutie; výška uloženia ako parameter
+- [x] výška podpery od spodného povrchu NK po hornú hranu základu, prepočet pri zmene nivelety alebo NK
+  - horná hrana základu = kóta v m n. m.; spodok NK nad ložiskom z rezu prierezu; testy: niveleta +0,5 m → výška +0,5 m, h 1,7 → 1,9 m → výška −0,2 m.
+- [x] ložiskové body z pomenovaných bodov profilu premietnuté na podperu
+  - podľa rozhodnutia 2026-10-30 zadané priečnymi vzdialenosťami od osi NK (nie pomenovanými bodmi); ložisko leží na osi podpery, staničenie `s₀ − x·cot α`.
+- [x] polia odvodené z poradia podpier, validácia poradia a minimálnej dĺžky
+  - opory na koncoch, piliere medzi, duplicitné staničenie, `minSpan` (globálny parameter, predvolene 5 m); informatívne upozornenie nad ekonomickým rozpätím (VŠB) podľa `typology` profilu.
+- [x] UI: zoznam podpier, pridanie podpery kliknutím na staničenie, editor parametrov
+  - „Pridať podperu“ v pôdoryse (klik na os → NK s najbližšou osou, pri konci NK opora); obrysy v pôdoryse, značky v profile, pohľad v priereze, editor s výškami pri ložiskách, polia v editore NK.
 
 **Hotové, keď:** výšky podpier sa správne prepočítajú pri zmene nivelety alebo hrúbky NK a šikmá podpera má v pôdoryse správnu orientáciu (test).
 
@@ -295,6 +301,9 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
 - Sklon stien trámu a vodorovná dĺžka nábehu nie sú na výkrese okótované. *Predpoklad:* steny 5 : 1 (zvislo : vodorovne), výška steny `hW` = 300 mm, vodorovná dĺžka nábehu `bN` = 1 450 mm, nábeh priamkový; sú to parametre šablóny, ktoré projektant upraví.
 - Os mosta pri dvojici NK: vodorovné posuny −7,75 m / +7,00 m sú odvodené z výkresu za predpokladu, že os R2 (os cesty) leží v strede medzi NK. Ak je os cesty v LandXML inde (napr. na okraji vozovky), posuny treba upraviť.
+- Podpera v oblúku: os podpery a staničenia ložísk sa počítajú od dotyčnice osi mosta v mieste podpery (`s₀ − x·cot α`). Pri malých polomeroch a veľkej šikmosti môže byť treba presnejšie riešenie — overiť na reálnom moste.
+- Predvolené rozmery novej podpery (stena 1,2 × 4 m, ložiská ±1,8 m, výška uloženia 0,35 m, základ 8 m pod NK pri pilieri a 5 m pri opore) sú len východisko — chceš firemné predvolené hodnoty?
+- Referenčný most s 2–3 poliami (dĺžky polí, šikmosti) na end-to-end test stále chýba.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
