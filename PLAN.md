@@ -219,12 +219,18 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** výšky podpier sa správne prepočítajú pri zmene nivelety alebo hrúbky NK a šikmá podpera má v pôdoryse správnu orientáciu (test).
 
 ### Fáza 5 — 3D model
-- [ ] rozhranie `GeometryKernel` a implementácia `MeshKernel`
-- [ ] sweep NK: adaptívne vzorkovanie (hustejšie v oblúkoch, na zlomoch staničných funkcií a pri podperách), triangulácia medzi prierezmi s rovnakou topológiou, uzavretie koncov
-- [ ] orientácia prierezu podľa `Superstructure.orientation`
-- [ ] podpery ako jednoduché telesá v lokálnych súradniciach
-- [ ] generovanie vo Web Workeri, prenos cez transferable buffers, regenerácia len zmenených objektov
-- [ ] viewer: lokálne súradnice, orbit, rezová rovina, výber objektu → panel vlastností
+- [x] rozhranie `GeometryKernel` a implementácia `MeshKernel`
+  - `loft`, `prism` (aj po častiach so zalomenou hornou plochou), `tessellate`; sieť v double, normály a indexy pre GPU; triangulácia s dutinami v `geom`; rez siete rovinou `sliceMesh` (ADR 0009).
+- [x] sweep NK: adaptívne vzorkovanie (hustejšie v oblúkoch, na zlomoch staničných funkcií a pri podperách), triangulácia medzi prierezmi s rovnakou topológiou, uzavretie koncov
+  - tolerancia tetivy 2 mm, krok najviac 2 m, vzorka 1 mm pred skokom priebehu; pri zmene topológie nový loft. Konce NK rovnobežné s krajnou oporou (rozhodnutie 2026-10-30), inak kolmé.
+- [x] orientácia prierezu podľa `Superstructure.orientation`
+  - cez `toWorld` z Fázy 3; test zhody rezu pre `vertical` aj `normalToGrade`.
+- [x] podpery ako jednoduché telesá v lokálnych súradniciach
+  - základ, driek / stĺpy (kruh, obdĺžnik) / opora po hornú hranu podpery (rovinná medzi ložiskami), ložiská 0,6 × 0,6 m.
+- [x] generovanie vo Web Workeri, prenos cez transferable buffers, regenerácia len zmenených objektov
+  - Comlink, „posledná vyhráva“; cache podľa kľúča vstupov objektu (rozmer piliera prepočíta len pilier, šikmosť opory aj jej NK).
+- [x] viewer: lokálne súradnice, orbit, rezová rovina, výber objektu → panel vlastností
+  - three.js priamo (bez fiber, ADR 0009), lenivý chunk; siete relatívne k stredu + logaritmický hĺbkový buffer; „Prispôsobiť“ na výber alebo celý model; rez na staničení prierezu s uzávermi NK; výber v 3D aj v strome otvorí editor.
 
 **Hotové, keď:** most dĺžky 200 m sa regeneruje do 1 s, pri priblížení nič netrasie a rez 3D siete na ľubovoľnom staničení sa zhoduje s 2D prierezom z fázy 3 (test).
 
@@ -304,6 +310,9 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Podpera v oblúku: os podpery a staničenia ložísk sa počítajú od dotyčnice osi mosta v mieste podpery (`s₀ − x·cot α`). Pri malých polomeroch a veľkej šikmosti môže byť treba presnejšie riešenie — overiť na reálnom moste.
 - Predvolené rozmery novej podpery (stena 1,2 × 4 m, ložiská ±1,8 m, výška uloženia 0,35 m, základ 8 m pod NK pri pilieri a 5 m pri opore) sú len východisko — chceš firemné predvolené hodnoty?
 - Referenčný most s 2–3 poliami (dĺžky polí, šikmosti) na end-to-end test stále chýba.
+- Opora v 3D je zjednodušený blok po úložný prah (pôdorys dĺžka × max(prah, driek)), bez záverného múrika a krídel. Stačí to pre koncepciu, alebo má MVP mať aj záverný múrik a krídla (a s akými predvolenými rozmermi)?
+- Šikmý koniec NK: *predpoklad:* koncová plocha je rovina rovnobežná s osou opory, vedená cez staničenie „od/do“ v osi NK, a prierez sa za ňu predlžuje pozdĺž dotyčnice (lokálne priamy úsek). Ložiská opory za staničením „od/do“ sa preto akceptujú, ak ležia v šikmom konci.
+- Rez v 3D vyplní len prierezy NK; prerezané podpery sú zobrazené otvorené (bez výplne). Výplň podpier sa doplní s výkresmi (Fáza 6), ak bude treba.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
