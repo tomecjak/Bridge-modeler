@@ -1,6 +1,7 @@
 import type { AlignmentIssue } from '@bridge/alignment';
 import { createEmptyProject, openProject } from '@bridge/model';
-import { type DragEvent, useEffect, useState } from 'react';
+import { singleBeamHaunched, twinDeckExample } from '@bridge/sections';
+import { type DragEvent, useEffect, useMemo, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
@@ -8,13 +9,17 @@ import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
+import { SectionPanel } from './layout/SectionPanel.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject } from './persistence/fileIO.ts';
-import { useEvaluatedAlignments } from './store/derived.ts';
-import { issuesOf, useParameterState } from './store/parameters.ts';
+import type { ElementCollection } from './store/commands.ts';
+import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
+import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
+import { useSectionResults } from './store/sections.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
+import { SectionView } from './views/SectionView.tsx';
 
 /** Posledný import LandXML: problémy parsera sa neukladajú do projektu, len sa zobrazia. */
 interface LastImport {
@@ -36,6 +41,11 @@ export function App() {
   const [openErrors, setOpenErrors] = useState<string[]>([]);
   const [selectedParameterId, setSelectedParameterId] = useState<string>();
   const [referenceStation, setReferenceStation] = useState<number>();
+  const [selectedElement, setSelectedElement] = useState<{
+    collection: ElementCollection;
+    id: string;
+  }>();
+  const [sectionStation, setSectionStation] = useState<number>();
 
   const item = alignments[selected];
   const parameterState = useParameterState(item?.alignment.stationing);
@@ -47,6 +57,52 @@ export function App() {
     : undefined;
   const station = referenceStation ?? displayRange?.from ?? 0;
   const selectedParameter = project.parameters.find((p) => p.id === selectedParameterId);
+  const alignmentMap = useMemo(() => alignmentsByName(alignments), [alignments]);
+  const sectionRange = project.superstructures.length
+    ? {
+        from: Math.min(...project.superstructures.map((s) => s.from)),
+        to: Math.max(...project.superstructures.map((s) => s.to)),
+      }
+    : displayRange;
+  const sectionAt =
+    sectionStation ?? (sectionRange ? (sectionRange.from + sectionRange.to) / 2 : 0);
+  const sections = useSectionResults(alignmentMap, parameterState.set, sectionAt);
+  const selectedSuperstructureId =
+    selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
+
+  function insertExample(template: 'twin' | 'profile') {
+    if (template === 'profile') {
+      projectStore
+        .getState()
+        .dispatch({ type: 'addElements', profiles: [singleBeamHaunched(newId('prof'))] });
+      return;
+    }
+    const road = item?.alignment;
+    const profile = road?.profile;
+    if (!road || !profile) {
+      setMessage(sk.section.needsAlignment);
+      return;
+    }
+    const start = road.stationing.toDisplay(profile.startS).station;
+    const end = road.stationing.toDisplay(profile.endS).station;
+    const from = Math.round(start + (end - start) * 0.25);
+    const to = Math.round(Math.min(end, from + 200));
+    const example = twinDeckExample(road.name, from, to, {
+      left: newId('nk'),
+      right: newId('nk'),
+      profile: newId('prof'),
+      leftAxis: newId('axis'),
+      rightAxis: newId('axis'),
+    });
+    projectStore.getState().dispatch({
+      type: 'addElements',
+      bridgeAxes: example.bridgeAxes,
+      profiles: [example.profile],
+      superstructures: example.superstructures,
+    });
+    setSectionStation((from + to) / 2);
+    setMode('section');
+  }
   const importIssuesOf = (name: string) => lastImport.issues.filter((i) => i.alignment === name);
 
   useEffect(() => {
@@ -237,6 +293,32 @@ export function App() {
           setMode('parameters');
         }}
         fileIssues={lastImport.fileIssues}
+        elements={[
+          {
+            collection: 'bridgeAxes',
+            title: sk.tree.bridgeAxes,
+            items: project.bridgeAxes.map((a) => ({ id: a.id, name: a.name, issues: 0 })),
+          },
+          {
+            collection: 'profiles',
+            title: sk.tree.profiles,
+            items: project.profiles.map((p) => ({ id: p.id, name: p.name, issues: 0 })),
+          },
+          {
+            collection: 'superstructures',
+            title: sk.tree.superstructures,
+            items: sections.results.map((r) => ({
+              id: r.superstructure.id,
+              name: r.superstructure.name,
+              issues: r.issues.filter((i) => i.severity !== 'warning').length,
+            })),
+          },
+        ]}
+        selectedElement={selectedElement}
+        onSelectElement={(collection, id) => {
+          setSelectedElement({ collection, id });
+          setMode('section');
+        }}
         notices={openErrors}
         selected={selected}
         onSelect={setSelected}
@@ -259,8 +341,31 @@ export function App() {
             onSelect={setSelectedParameterId}
           />
         }
+        sectionView={
+          <SectionView
+            sections={sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []))}
+            station={sectionAt}
+            range={sectionRange}
+            onStation={setSectionStation}
+            elapsed={sections.elapsed}
+            selectedId={selectedSuperstructureId}
+            onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
+            emptyActions={
+              <div className="toolbar">
+                <button type="button" className="button" onClick={() => insertExample('twin')}>
+                  {sk.section.insertExample}
+                </button>
+                <button type="button" className="button" onClick={() => insertExample('profile')}>
+                  {sk.section.insertTemplate}
+                </button>
+              </div>
+            }
+          />
+        }
       />
-      {mode === 'parameters' ? (
+      {mode === 'section' ? (
+        <SectionPanel results={sections.results} selectedId={selectedSuperstructureId} />
+      ) : mode === 'parameters' ? (
         <ParameterPanel
           parameter={selectedParameter}
           issues={selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []}

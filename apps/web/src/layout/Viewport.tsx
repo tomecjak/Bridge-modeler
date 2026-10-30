@@ -4,7 +4,7 @@ import { sk } from '../i18n/sk.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { ProfileView } from '../views/ProfileView.tsx';
 
-export type ViewMode = '3d' | '2d' | 'parameters';
+export type ViewMode = '3d' | '2d' | 'section' | 'parameters';
 
 interface Props {
   mode: ViewMode;
@@ -14,11 +14,13 @@ interface Props {
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
   onProfileCursor: (s: number | undefined) => void;
   parametersView: ReactNode;
+  sectionView: ReactNode;
 }
 
 const TABS: { mode: ViewMode; label: string }[] = [
   { mode: '3d', label: sk.viewport.tabs.view3d },
   { mode: '2d', label: sk.viewport.tabs.view2d },
+  { mode: 'section', label: sk.section.tab },
   { mode: 'parameters', label: sk.parameters.tab },
 ];
 
@@ -30,6 +32,7 @@ export function Viewport({
   onPlanCursor,
   onProfileCursor,
   parametersView,
+  sectionView,
 }: Props) {
   return (
     <main className="viewport">
@@ -56,6 +59,7 @@ export function Viewport({
       >
         {mode === '3d' && <p className="panel-empty centered">{sk.viewport.empty3d}</p>}
         {mode === 'parameters' && parametersView}
+        {mode === 'section' && sectionView}
         {mode === '2d' && !alignment && (
           <p className="panel-empty centered">{sk.viewport.empty2d}</p>
         )}

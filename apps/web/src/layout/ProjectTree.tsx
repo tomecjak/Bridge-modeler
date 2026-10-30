@@ -1,6 +1,7 @@
 import type { AlignmentIssue } from '@bridge/alignment';
 import { formatIssue } from '../i18n/issues.ts';
 import { sk } from '../i18n/sk.ts';
+import type { ElementCollection } from '../store/commands.ts';
 import type { EvaluatedAlignment } from '../store/derived.ts';
 
 interface Props {
@@ -12,6 +13,13 @@ interface Props {
   selectedParameterId: string | undefined;
   onSelectParameter: (id: string) => void;
   fileIssues: readonly AlignmentIssue[];
+  elements: readonly {
+    collection: ElementCollection;
+    title: string;
+    items: readonly { id: string; name: string; issues: number }[];
+  }[];
+  selectedElement: { collection: ElementCollection; id: string } | undefined;
+  onSelectElement: (collection: ElementCollection, id: string) => void;
   /** chyby pri otvorení projektového súboru (už sformulované) */
   notices: readonly string[];
   selected: number;
@@ -42,6 +50,9 @@ export function ProjectTree({
   parameters,
   selectedParameterId,
   onSelectParameter,
+  elements,
+  selectedElement,
+  onSelectElement,
 }: Props) {
   return (
     <aside className="panel panel-left" aria-labelledby="project-tree-title">
@@ -72,6 +83,30 @@ export function ProjectTree({
           </ul>
         </>
       )}
+      {elements
+        .filter((g) => g.items.length > 0)
+        .map((g) => (
+          <section key={g.collection}>
+            <h3 className="panel-subtitle">{g.title}</h3>
+            <ul className="tree">
+              {g.items.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="tree-item"
+                    aria-current={
+                      selectedElement?.collection === g.collection && selectedElement.id === item.id
+                    }
+                    onClick={() => onSelectElement(g.collection, item.id)}
+                  >
+                    {item.name || '—'}
+                    {item.issues > 0 && <span className="badge badge-error">{item.issues}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
       {parameters.length > 0 && (
         <>
           <h3 className="panel-subtitle">{sk.projectTree.parameters}</h3>
