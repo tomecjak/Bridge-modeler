@@ -44,6 +44,24 @@ describe('project store', () => {
     expect(store.getState().revision).toBe(4);
   });
 
+  it('renames a parameter with its references in one undoable step', () => {
+    const store = createProjectStore();
+    const s = store.getState();
+    s.dispatch({ type: 'addParameter', parameter: param('a', 'h0', '1.0') });
+    s.dispatch({ type: 'addParameter', parameter: param('b', 'h1', 'h0 + 0.6') });
+    s.dispatch({ type: 'renameParameter', id: 'a', name: 'hNK' });
+    expect(store.getState().project.parameters[1]?.law).toEqual({
+      kind: 'constant',
+      value: 'hNK + 0.6',
+    });
+    store.getState().undo();
+    expect(store.getState().project.parameters.map((p) => p.name)).toEqual(['h0', 'h1']);
+    expect(store.getState().project.parameters[1]?.law).toEqual({
+      kind: 'constant',
+      value: 'h0 + 0.6',
+    });
+  });
+
   it('ignores commands that change nothing', () => {
     const store = createProjectStore();
     store.getState().dispatch({ type: 'removeParameter', id: 'missing' });

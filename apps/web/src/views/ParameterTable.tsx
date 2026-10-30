@@ -135,7 +135,14 @@ export function ParameterTable({
                   onClick={() => onSelect(p.id)}
                 >
                   <td>
-                    <NameInput value={p.name} onCommit={(name) => update(p.id, { name })} />
+                    <NameInput
+                      value={p.name}
+                      onCommit={(name) =>
+                        projectStore
+                          .getState()
+                          .dispatch({ type: 'renameParameter', id: p.id, name })
+                      }
+                    />
                   </td>
                   <td>
                     <select

@@ -175,7 +175,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - [x] uloženie a otvorenie projektu (JSON súbor), autosave do IndexedDB
   - Nový / Otvoriť / Uložiť (`<názov>.bridge.json`), autosave s oneskorením 1 s a obnova pri štarte; store so späť/znova (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z) cez immer patches. Import LandXML ukladá os do projektu.
 - [x] UI: tabuľka parametrov, editor staničnej funkcie s grafom priebehu po staničení
-  - záložka Parametre (hodnoty na zvolenom staničení v mm/°/%), parametre v strome projektu, editor úsekov v pravom paneli, graf s hranicami úsekov a ukazovateľom hodnoty. Ostáva: premenovanie parametra neprepisuje odkazy v iných výrazoch.
+  - záložka Parametre (hodnoty na zvolenom staničení v mm/°/%), parametre v strome projektu, editor úsekov v pravom paneli, graf s hranicami úsekov a ukazovateľom hodnoty. Premenovanie parametra prepíše odkazy vo všetkých výrazoch (na úrovni tokenov, jeden krok späť/znova).
 
 **Hotové, keď:** parabolický nábeh má správnu hodnotu aj dotyčnicu na oboch koncoch (test), cyklus v parametroch dáva zrozumiteľnú chybu a projekt sa uloží a načíta bez straty.
 
@@ -284,8 +284,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
-- Premenovanie parametra: má aplikácia automaticky prepísať odkazy v ostatných výrazoch (ako Revit), alebo len upozorniť na neznámy odkaz? *Predpoklad:* zatiaľ len upozorní.
-- Zaokrúhľovanie `round()`: implementované „od nuly“ (round(2,5) = 3, round(−2,5) = −3) ako v Reviti — overiť, či to vyhovuje.
+- Výkres priečneho rezu dvojice NK (28 900 mm) pre fixture Fázy 3 ešte chýba — dodané schémy sú typologické náčrty bez kót.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
@@ -309,6 +308,11 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - **Sklon vo výkaze nivelety** nie je dotyčnicový sklon v bode, ale sklon sečnice od predchádzajúceho riadku výkazu (overené: km 0,040 → (293,9135 − 294,0061) / 7,5345 = −1,2293 %). Golden test porovnáva sečnicu.
 - **Zlom smeru 7,0″ v podkladoch:** 0,042 m priamka medzi prechodnicami (prvok č. 5, km 0,248 759) má `dir` 353,297799°, predchádzajúca prechodnica končí smerom 353,299737°. Aplikácia to hlási ako upozornenie; ide o nepresnosť návrhu v Civil 3D, nie chybu výpočtu.
 
+`fixtures/inbox/*.png` + `Rozpätia mostov.pdf` (VŠB-TU Ostrava, Betonové mosty; dodané 2026-10-30):
+- Typologické schémy prierezov NK bez kót: doska, doska + tyčové prefabrikáty (prefa riešenie), jednotrám / jednotrám s nábehmi, dvojtrám, komora / komora s nábehmi; v PDF navyše vyľahčená doska, doskotrám, mestský viadukt (nízka komora), zavesený / visutý.
+- Tabuľka ekonomických rozpätí medziľahlých polí spojitých betónových mostov v ČR: doska ~21 m, vyľahčená doska ~30, doskotrám ~30, jednotrám ~35, jednotrám s nábehmi ~45, dvojtrám ~45, mestský viadukt ~35–45, prefa ~40, komora ~70, komora s nábehmi ~150, oblúk ~150, zavesený ~90–150, visutý ~90–250 (lávka).
+- Využitie: šablóny typov prierezu vo Fáze 3 (parametrické profily podľa typológie) a upozornenie na rozpätie mimo ekonomického rozsahu vo Fáze 4 (len informatívne).
+
 ### Rozhodnuté (2026-10-29)
 
 | Otázka | Rozhodnutie |
@@ -327,6 +331,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 | Zdroj terénu | povrch z Civil 3D (LandXML `Surface`) aj DMR 5.0 z ÚGKK |
 | Terén a podpery | v MVP len vizuálny podklad a terénna čiara vo výkresoch; výška podpier ani hĺbka základov sa od terénu neodvíja |
 | Terén v IFC | voliteľný export, rozhodne sa vo fáze 7 |
+| Premenovanie parametra | automaticky prepíše odkazy v ostatných výrazoch (2026-10-30) |
+| `round()` | zaokrúhľuje „od nuly“ ako Revit: round(2,5) = 3, round(−2,5) = −3 (2026-10-30) |
 | Hosting | statický web bez backendu |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
 | GitHub | repo vytvoril Jakub (`tomecjak/Bridge-modeler`); podklady sa nahrávajú do `fixtures/inbox/` |

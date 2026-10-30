@@ -2,6 +2,7 @@ export * from './issues.ts';
 export * from './migrations.ts';
 export * from './parameters.ts';
 export * from './project.ts';
+export * from './rename.ts';
 export * from './schema.ts';
 export * from './stationFunction.ts';
 export * from './types.ts';

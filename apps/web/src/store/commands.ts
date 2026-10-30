@@ -1,6 +1,6 @@
 import type { AlignmentData } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
-import type { Parameter, ProjectFile } from '@bridge/model';
+import { type Parameter, type ProjectFile, renameParameter } from '@bridge/model';
 
 /** Príkazy menia projekt; každý je jedna položka v histórii späť/znova (ADR 0005). */
 export type Command =
@@ -8,7 +8,9 @@ export type Command =
   | { type: 'importAlignments'; alignments: AlignmentData[]; origin: Vec3 }
   | { type: 'addParameter'; parameter: Parameter }
   | { type: 'updateParameter'; id: string; changes: Partial<Omit<Parameter, 'id'>> }
-  | { type: 'removeParameter'; id: string };
+  | { type: 'removeParameter'; id: string }
+  /** premenovanie vrátane prepisu odkazov v ostatných výrazoch */
+  | { type: 'renameParameter'; id: string; name: string };
 
 /** Aplikuje príkaz na draft projektu (immer). Čistá funkcia nad draftom. */
 export function applyCommand(draft: ProjectFile, command: Command): void {
@@ -32,6 +34,16 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
     case 'updateParameter': {
       const p = draft.parameters.find((x) => x.id === command.id);
       if (p) Object.assign(p, command.changes);
+      return;
+    }
+    case 'renameParameter': {
+      const renamed = renameParameter(draft.parameters, command.id, command.name);
+      renamed.forEach((p, i) => {
+        const current = draft.parameters[i];
+        if (!current) return;
+        if (current.name !== p.name) current.name = p.name;
+        if (JSON.stringify(current.law) !== JSON.stringify(p.law)) current.law = p.law;
+      });
       return;
     }
     case 'removeParameter': {
