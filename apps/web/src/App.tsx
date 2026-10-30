@@ -65,8 +65,12 @@ export function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, [contenteditable]')) return;
+      // v textových poliach necháme natívne späť/znova prehliadača
+      if (
+        e.target instanceof Element &&
+        e.target.closest('input, textarea, select, [contenteditable]')
+      )
+        return;
       if (!(e.metaKey || e.ctrlKey)) return;
       const key = e.key.toLowerCase();
       if (key === 'z' || key === 'y') {
