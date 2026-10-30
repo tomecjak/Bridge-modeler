@@ -193,6 +193,9 @@ importers:
       '@bridge/model':
         specifier: workspace:*
         version: link:../../packages/model
+      '@bridge/sections':
+        specifier: workspace:*
+        version: link:../../packages/sections
       immer:
         specifier: 11.2.9
         version: 11.2.9

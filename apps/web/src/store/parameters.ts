@@ -41,9 +41,11 @@ export function nextParameterName(parameters: readonly Parameter[]): string {
 }
 
 let counter = 0;
-/** Stabilné ID nového parametra (uloží sa do projektu; ADR 0002 — ID sa už nemení). */
-export function newParameterId(): string {
+/** Stabilné ID nového prvku (uloží sa do projektu; ADR 0002 — ID sa už nemení). */
+export function newId(prefix: string): string {
   counter++;
   const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${counter}`;
-  return `par-${random}`;
+  return `${prefix}-${random}`;
 }
+
+export const newParameterId = (): string => newId('par');

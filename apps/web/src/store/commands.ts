@@ -1,6 +1,30 @@
 import type { AlignmentData } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
-import { type Parameter, type ProjectFile, renameParameter } from '@bridge/model';
+import {
+  type BridgeAxis,
+  type Parameter,
+  type ProfileDefinition,
+  type ProjectFile,
+  renameParameter,
+  type Superstructure,
+} from '@bridge/model';
+
+/** Kolekcie prvkov mosta s rovnakými príkazmi (pridať / upraviť / odstrániť). */
+export interface ElementCollections {
+  bridgeAxes: BridgeAxis;
+  profiles: ProfileDefinition;
+  superstructures: Superstructure;
+}
+export type ElementCollection = keyof ElementCollections;
+
+type ElementUpdate = {
+  [K in ElementCollection]: {
+    type: 'updateElement';
+    collection: K;
+    id: string;
+    changes: Partial<Omit<ElementCollections[K], 'id'>>;
+  };
+}[ElementCollection];
 
 /** Príkazy menia projekt; každý je jedna položka v histórii späť/znova (ADR 0005). */
 export type Command =
@@ -10,7 +34,16 @@ export type Command =
   | { type: 'updateParameter'; id: string; changes: Partial<Omit<Parameter, 'id'>> }
   | { type: 'removeParameter'; id: string }
   /** premenovanie vrátane prepisu odkazov v ostatných výrazoch */
-  | { type: 'renameParameter'; id: string; name: string };
+  | { type: 'renameParameter'; id: string; name: string }
+  /** pridá prvky naraz (napr. príklad dvojice NK) — jeden krok späť/znova */
+  | {
+      type: 'addElements';
+      bridgeAxes?: BridgeAxis[];
+      profiles?: ProfileDefinition[];
+      superstructures?: Superstructure[];
+    }
+  | ElementUpdate
+  | { type: 'removeElement'; collection: ElementCollection; id: string };
 
 /** Aplikuje príkaz na draft projektu (immer). Čistá funkcia nad draftom. */
 export function applyCommand(draft: ProjectFile, command: Command): void {
@@ -44,6 +77,23 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
         if (current.name !== p.name) current.name = p.name;
         if (JSON.stringify(current.law) !== JSON.stringify(p.law)) current.law = p.law;
       });
+      return;
+    }
+    case 'addElements':
+      draft.bridgeAxes.push(...(command.bridgeAxes ?? []));
+      draft.profiles.push(...(command.profiles ?? []));
+      draft.superstructures.push(...(command.superstructures ?? []));
+      return;
+    case 'updateElement': {
+      const list = draft[command.collection] as { id: string }[];
+      const item = list.find((x) => x.id === command.id);
+      if (item) Object.assign(item, command.changes);
+      return;
+    }
+    case 'removeElement': {
+      const list = draft[command.collection] as { id: string }[];
+      const i = list.findIndex((x) => x.id === command.id);
+      if (i >= 0) list.splice(i, 1);
       return;
     }
     case 'removeParameter': {

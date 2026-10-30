@@ -62,6 +62,44 @@ describe('project store', () => {
     });
   });
 
+  it('adds, updates and removes bridge elements; adding several is one undo step', () => {
+    const store = createProjectStore();
+    const s = store.getState();
+    const law = { kind: 'constant' as const, value: '0' };
+    s.dispatch({
+      type: 'addElements',
+      bridgeAxes: [
+        { id: 'a', name: 'Os', alignment: 'A', horizontalOffset: law, verticalOffset: law },
+      ],
+      superstructures: [
+        {
+          id: 'n',
+          name: 'NK',
+          bridgeAxis: 'a',
+          from: 0,
+          to: 10,
+          profile: 'p',
+          parameterLaws: {},
+          orientation: 'vertical',
+        },
+      ],
+    });
+    s.dispatch({
+      type: 'updateElement',
+      collection: 'superstructures',
+      id: 'n',
+      changes: { to: 20 },
+    });
+    expect(store.getState().project.superstructures[0]?.to).toBe(20);
+    s.dispatch({ type: 'removeElement', collection: 'bridgeAxes', id: 'a' });
+    expect(store.getState().project.bridgeAxes).toEqual([]);
+    store.getState().undo();
+    store.getState().undo();
+    store.getState().undo();
+    expect(store.getState().project.superstructures).toEqual([]);
+    expect(store.getState().project.bridgeAxes).toEqual([]);
+  });
+
   it('ignores commands that change nothing', () => {
     const store = createProjectStore();
     store.getState().dispatch({ type: 'removeParameter', id: 'missing' });

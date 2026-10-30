@@ -26,3 +26,8 @@ export function useEvaluatedAlignments(): EvaluatedAlignment[] {
     });
   }, [alignments, origin]);
 }
+
+/** Vyhodnocovače osí podľa názvu (pre os mosta, ktorá odkazuje na os cesty menom). */
+export function alignmentsByName(evaluated: readonly EvaluatedAlignment[]): Map<string, Alignment> {
+  return new Map(evaluated.map((e) => [e.data.name, e.alignment]));
+}
