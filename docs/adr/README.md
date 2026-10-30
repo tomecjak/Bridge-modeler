@@ -12,6 +12,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0004](0004-xml-parser.md) | XML parser pre LandXML | Prijaté |
 | [0005](0005-schema-a-stav-aplikacie.md) | Schéma projektu a stav aplikácie (zod, zustand, immer) | Prijaté |
 | [0006](0006-vyrazy-a-stanicne-funkcie.md) | Výrazy parametrov a staničné funkcie | Prijaté |
+| [0007](0007-os-mosta-a-prierez.md) | Os mosta a parametrický prierez NK | Prijaté |
 
 ## Šablóna
 

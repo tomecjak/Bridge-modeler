@@ -1,8 +1,13 @@
 import { z } from 'zod';
-import { ParameterSchema } from './types.ts';
+import {
+  BridgeAxisSchema,
+  ParameterSchema,
+  ProfileDefinitionSchema,
+  SuperstructureSchema,
+} from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '1';
+export const SCHEMA_VERSION = '2';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -70,6 +75,9 @@ export const ProjectFileSchema = z.strictObject({
   }),
   alignments: z.array(AlignmentDataSchema),
   parameters: z.array(ParameterSchema),
+  bridgeAxes: z.array(BridgeAxisSchema),
+  profiles: z.array(ProfileDefinitionSchema),
+  superstructures: z.array(SuperstructureSchema),
 });
 
 export type ProjectFile = z.infer<typeof ProjectFileSchema>;
@@ -81,5 +89,8 @@ export function createEmptyProject(name: string): ProjectFile {
     crs: { epsg: 5514, origin: null },
     alignments: [],
     parameters: [],
+    bridgeAxes: [],
+    profiles: [],
+    superstructures: [],
   };
 }

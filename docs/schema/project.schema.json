@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "1"
+      "const": "2"
     },
     "name": {
       "type": "string"
@@ -524,6 +524,480 @@
         ],
         "additionalProperties": false
       }
+    },
+    "bridgeAxes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "alignment": {
+            "type": "string"
+          },
+          "horizontalOffset": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "constant"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "piecewise"
+                  },
+                  "segments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "number"
+                        },
+                        "to": {
+                          "type": "number"
+                        },
+                        "v0": {
+                          "type": "string"
+                        },
+                        "v1": {
+                          "type": "string"
+                        },
+                        "shape": {
+                          "type": "string",
+                          "enum": [
+                            "linear",
+                            "parabolic",
+                            "circular"
+                          ]
+                        },
+                        "vertexAt": {
+                          "type": "string",
+                          "enum": [
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "v0",
+                        "v1",
+                        "shape"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "segments"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "expression"
+                  },
+                  "expr": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expr"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "verticalOffset": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "constant"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "piecewise"
+                  },
+                  "segments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "number"
+                        },
+                        "to": {
+                          "type": "number"
+                        },
+                        "v0": {
+                          "type": "string"
+                        },
+                        "v1": {
+                          "type": "string"
+                        },
+                        "shape": {
+                          "type": "string",
+                          "enum": [
+                            "linear",
+                            "parabolic",
+                            "circular"
+                          ]
+                        },
+                        "vertexAt": {
+                          "type": "string",
+                          "enum": [
+                            "start",
+                            "end"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "v0",
+                        "v1",
+                        "shape"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "segments"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "expression"
+                  },
+                  "expr": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expr"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "alignment",
+          "horizontalOffset",
+          "verticalOffset"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "length",
+                    "angle",
+                    "slope",
+                    "none"
+                  ]
+                },
+                "default": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "unit",
+                "default"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "x": {
+                  "type": "string"
+                },
+                "y": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "x",
+                "y"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "loops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "outer",
+                    "void"
+                  ]
+                },
+                "points": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "role",
+                "points"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "referencePoint": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "parameters",
+          "points",
+          "loops",
+          "referencePoint"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "superstructures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "bridgeAxis": {
+            "type": "string"
+          },
+          "from": {
+            "type": "number"
+          },
+          "to": {
+            "type": "number"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "parameterLaws": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "constant"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "piecewise"
+                    },
+                    "segments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "number"
+                          },
+                          "to": {
+                            "type": "number"
+                          },
+                          "v0": {
+                            "type": "string"
+                          },
+                          "v1": {
+                            "type": "string"
+                          },
+                          "shape": {
+                            "type": "string",
+                            "enum": [
+                              "linear",
+                              "parabolic",
+                              "circular"
+                            ]
+                          },
+                          "vertexAt": {
+                            "type": "string",
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "to",
+                          "v0",
+                          "v1",
+                          "shape"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "segments"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "expression"
+                    },
+                    "expr": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "expr"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "vertical",
+              "normalToGrade"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "bridgeAxis",
+          "from",
+          "to",
+          "profile",
+          "parameterLaws",
+          "orientation"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -531,9 +1005,12 @@
     "name",
     "crs",
     "alignments",
-    "parameters"
+    "parameters",
+    "bridgeAxes",
+    "profiles",
+    "superstructures"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-1.json",
-  "title": "Projekt modelára mostov (schemaVersion 1)"
+  "$id": "https://bridge-modeler.local/schema/project-2.json",
+  "title": "Projekt modelára mostov (schemaVersion 2)"
 }

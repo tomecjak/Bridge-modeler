@@ -5,11 +5,16 @@ type RawProject = Record<string, unknown>;
 
 /**
  * Reťaz migrácií `verzia → nasledujúca verzia`. Každá migrácia je čistá funkcia s vlastným testom.
- * Zatiaľ existuje len verzia 1; prvá migrácia pribudne s prvou zmenou schémy.
  */
 export const MIGRATIONS: Readonly<
   Record<string, { to: string; migrate: (raw: RawProject) => RawProject }>
-> = {};
+> = {
+  /** 1 → 2: os mosta, prierezy a NK (ADR 0007) */
+  '1': {
+    to: '2',
+    migrate: (raw) => ({ ...raw, bridgeAxes: [], profiles: [], superstructures: [] }),
+  },
+};
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */
 export function migrateProject(

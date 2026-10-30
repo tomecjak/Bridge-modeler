@@ -82,18 +82,35 @@ describe('project file', () => {
 });
 
 describe('migrateProject', () => {
+  it('migrates a version 1 file (Phase 2) to the current schema', () => {
+    const v1 = {
+      schemaVersion: '1',
+      name: 'Starý projekt',
+      crs: { epsg: 5514, origin: null },
+      alignments: [],
+      parameters: [{ id: 'p', name: 'h0', unit: 'length', law: { kind: 'constant', value: '1' } }],
+    };
+    const r = openProject(JSON.stringify(v1));
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.project.schemaVersion).toBe('2');
+      expect(r.project.bridgeAxes).toEqual([]);
+      expect(r.project.parameters).toHaveLength(1);
+    }
+  });
+
   it('applies a chain of migrations up to the current version', () => {
     const migrations = {
       '0.1': {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '1', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '2', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '1', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '2', name: 'Starý most', parameters: [] },
     });
   });
 });
