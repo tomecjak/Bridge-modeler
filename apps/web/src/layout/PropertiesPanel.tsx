@@ -1,35 +1,46 @@
+import type { AlignmentIssue } from '@bridge/alignment';
 import { formatStation } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
-import type { ImportedAlignment } from '../import/importLandXml.ts';
+import type { EvaluatedAlignment } from '../store/derived.ts';
 import { IssueList } from './ProjectTree.tsx';
 
 interface Props {
-  item: ImportedAlignment | undefined;
-  origin: Vec3 | undefined;
+  item: EvaluatedAlignment | undefined;
+  /** problémy parsera k tejto osi z posledného importu */
+  importIssues: readonly AlignmentIssue[];
+  origin: Vec3 | null;
 }
 
-export function PropertiesPanel({ item, origin }: Props) {
+export function PropertiesPanel({ item, importIssues, origin }: Props) {
   return (
     <aside className="panel panel-right" aria-labelledby="properties-title">
       <h2 id="properties-title" className="panel-title">
         {sk.properties.title}
       </h2>
       {!item && <p className="panel-empty">{sk.properties.nothingSelected}</p>}
-      {item && <AlignmentProperties item={item} origin={origin} />}
+      {item && (
+        <AlignmentProperties
+          item={item}
+          issues={[...importIssues, ...item.issues]}
+          origin={origin}
+        />
+      )}
     </aside>
   );
 }
 
 function AlignmentProperties({
   item,
+  issues,
   origin,
 }: {
-  item: ImportedAlignment;
-  origin: Vec3 | undefined;
+  item: EvaluatedAlignment;
+  issues: readonly AlignmentIssue[];
+  origin: Vec3 | null;
 }) {
-  const { alignment, issues } = item;
+  const { alignment } = item;
   const st = alignment.stationing;
   const count = (kind: string) => alignment.elements.filter((e) => e.kind === kind).length;
   const profile = alignment.profile;

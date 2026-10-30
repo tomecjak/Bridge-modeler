@@ -3,6 +3,12 @@ export const sk = {
   app: {
     title: 'Modelér mostov',
   },
+  history: {
+    undo: 'Späť',
+    redo: 'Znova',
+    undoShortcut: 'Späť (Ctrl/Cmd+Z)',
+    redoShortcut: 'Znova (Ctrl/Cmd+Shift+Z)',
+  },
   import: {
     button: 'Importovať LandXML',
     dropHint: 'Pustite súbor LandXML sem',

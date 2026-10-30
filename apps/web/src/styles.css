@@ -422,3 +422,13 @@ body {
   font-variant-numeric: tabular-nums;
   white-space: pre;
 }
+
+.toolbar {
+  display: flex;
+  gap: 6px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
