@@ -14,6 +14,8 @@ export const MIGRATIONS: Readonly<
     to: '2',
     migrate: (raw) => ({ ...raw, bridgeAxes: [], profiles: [], superstructures: [] }),
   },
+  /** 2 → 3: podpery (ADR 0008) */
+  '2': { to: '3', migrate: (raw) => ({ ...raw, supports: [] }) },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

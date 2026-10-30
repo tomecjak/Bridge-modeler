@@ -93,7 +93,8 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('2');
+      expect(r.project.schemaVersion).toBe('3');
+      expect(r.project.supports).toEqual([]);
       expect(r.project.bridgeAxes).toEqual([]);
       expect(r.project.parameters).toHaveLength(1);
     }
@@ -105,12 +106,12 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '2', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '3', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '2', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '3', name: 'Starý most', parameters: [] },
     });
   });
 });

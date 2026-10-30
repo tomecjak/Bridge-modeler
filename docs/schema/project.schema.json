@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "2"
+      "const": "3"
     },
     "name": {
       "type": "string"
@@ -840,6 +840,9 @@
           },
           "referencePoint": {
             "type": "string"
+          },
+          "typology": {
+            "type": "string"
           }
         },
         "required": [
@@ -998,6 +1001,187 @@
         ],
         "additionalProperties": false
       }
+    },
+    "supports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "abutment",
+              "pier"
+            ]
+          },
+          "superstructure": {
+            "type": "string"
+          },
+          "station": {
+            "type": "number"
+          },
+          "crossingAngle": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "string"
+          },
+          "geometry": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "wall"
+                  },
+                  "thickness": {
+                    "type": "string"
+                  },
+                  "length": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "thickness",
+                  "length"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "columns"
+                  },
+                  "shape": {
+                    "type": "string",
+                    "enum": [
+                      "circle",
+                      "rect"
+                    ]
+                  },
+                  "diameter": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "string"
+                  },
+                  "depth": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "string"
+                  },
+                  "spacing": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "shape",
+                  "diameter",
+                  "width",
+                  "depth",
+                  "count",
+                  "spacing"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "abutment"
+                  },
+                  "seatLength": {
+                    "type": "string"
+                  },
+                  "stemThickness": {
+                    "type": "string"
+                  },
+                  "length": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "seatLength",
+                  "stemThickness",
+                  "length"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "footing": {
+            "type": "object",
+            "properties": {
+              "length": {
+                "type": "string"
+              },
+              "width": {
+                "type": "string"
+              },
+              "thickness": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "length",
+              "width",
+              "thickness"
+            ],
+            "additionalProperties": false
+          },
+          "connection": {
+            "type": "string",
+            "enum": [
+              "bearing",
+              "hinge",
+              "fixed"
+            ]
+          },
+          "bearingHeight": {
+            "type": "string"
+          },
+          "bearings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "foundationTop": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "superstructure",
+          "station",
+          "crossingAngle",
+          "offset",
+          "geometry",
+          "footing",
+          "connection",
+          "bearingHeight",
+          "bearings",
+          "foundationTop"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -1008,9 +1192,10 @@
     "parameters",
     "bridgeAxes",
     "profiles",
-    "superstructures"
+    "superstructures",
+    "supports"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-2.json",
-  "title": "Projekt modelára mostov (schemaVersion 2)"
+  "$id": "https://bridge-modeler.local/schema/project-3.json",
+  "title": "Projekt modelára mostov (schemaVersion 3)"
 }

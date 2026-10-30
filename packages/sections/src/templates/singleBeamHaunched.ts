@@ -64,6 +64,7 @@ export function singleBeamHaunched(id: string, name = 'Jednotrám s nábehmi'): 
       },
     ],
     referencePoint: 'R',
+    typology: 'singleBeamHaunched',
   };
 }
 

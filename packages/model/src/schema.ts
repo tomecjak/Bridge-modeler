@@ -4,10 +4,11 @@ import {
   ParameterSchema,
   ProfileDefinitionSchema,
   SuperstructureSchema,
+  SupportSchema,
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '2';
+export const SCHEMA_VERSION = '3';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -78,6 +79,7 @@ export const ProjectFileSchema = z.strictObject({
   bridgeAxes: z.array(BridgeAxisSchema),
   profiles: z.array(ProfileDefinitionSchema),
   superstructures: z.array(SuperstructureSchema),
+  supports: z.array(SupportSchema),
 });
 
 export type ProjectFile = z.infer<typeof ProjectFileSchema>;
@@ -92,5 +94,6 @@ export function createEmptyProject(name: string): ProjectFile {
     bridgeAxes: [],
     profiles: [],
     superstructures: [],
+    supports: [],
   };
 }

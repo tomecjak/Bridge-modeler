@@ -81,6 +81,8 @@ export const ProfileDefinitionSchema = z.object({
   points: z.array(ProfilePointSchema),
   loops: z.array(ProfileLoopSchema),
   referencePoint: z.string(),
+  /** typológia NK podľa VŠB (napr. 'singleBeamHaunched') — pre informatívne ekonomické rozpätie */
+  typology: z.string().optional(),
 });
 export type ProfileDefinition = z.infer<typeof ProfileDefinitionSchema>;
 
@@ -97,3 +99,51 @@ export const SuperstructureSchema = z.object({
   orientation: z.enum(['vertical', 'normalToGrade']),
 });
 export type Superstructure = z.infer<typeof SuperstructureSchema>;
+
+/** Geometria podpery (ADR 0008); rozmery sú výrazy v m. */
+export const SupportGeometrySchema = z.discriminatedUnion('type', [
+  /** stenový pilier: hrúbka (kolmo na os podpery), dĺžka (pozdĺž osi podpery) */
+  z.object({ type: z.literal('wall'), thickness: ExprSchema, length: ExprSchema }),
+  /** pilier zo stĺpov: kruh (priemer) alebo obdĺžnik (šírka pozdĺž osi podpery × hĺbka), počet, osová vzdialenosť */
+  z.object({
+    type: z.literal('columns'),
+    shape: z.enum(['circle', 'rect']),
+    diameter: ExprSchema,
+    width: ExprSchema,
+    depth: ExprSchema,
+    count: ExprSchema,
+    spacing: ExprSchema,
+  }),
+  /** zjednodušená opora: úložný prah (šírka v smere osi mosta), hrúbka drieku, dĺžka pozdĺž osi podpery */
+  z.object({
+    type: z.literal('abutment'),
+    seatLength: ExprSchema,
+    stemThickness: ExprSchema,
+    length: ExprSchema,
+  }),
+]);
+export type SupportGeometry = z.infer<typeof SupportGeometrySchema>;
+
+/** Podpera (ADR 0008): patrí jednej NK, leží na jej osi mosta. */
+export const SupportSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  kind: z.enum(['abutment', 'pier']),
+  superstructure: z.string(),
+  /** zobrazované staničenie */
+  station: z.number(),
+  /** uhol kríženia [°], 90 = kolmá; od osi mosta v smere staničenia proti smeru hodín */
+  crossingAngle: ExprSchema,
+  /** posun stredu podpery kolmo od osi NK [m], + vpravo */
+  offset: ExprSchema,
+  geometry: SupportGeometrySchema,
+  footing: z.object({ length: ExprSchema, width: ExprSchema, thickness: ExprSchema }),
+  connection: z.enum(['bearing', 'hinge', 'fixed']),
+  /** výška uloženia [m] (ložisko + podložiskový blok) */
+  bearingHeight: ExprSchema,
+  /** priečne vzdialenosti ložísk od osi NK [m], + vpravo */
+  bearings: z.array(ExprSchema),
+  /** horná hrana základu [m n. m.] */
+  foundationTop: ExprSchema,
+});
+export type Support = z.infer<typeof SupportSchema>;
