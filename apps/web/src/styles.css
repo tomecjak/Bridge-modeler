@@ -853,3 +853,46 @@ input[aria-invalid="true"] {
   border: 1px solid var(--warning);
   border-radius: 4px;
 }
+
+.support-body {
+  fill: color-mix(in srgb, var(--text) 18%, transparent);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.support-footing {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.support-bearing {
+  fill: var(--series);
+}
+
+.support-marker line {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+
+.support-marker rect {
+  fill: color-mix(in srgb, var(--text) 18%, transparent);
+  stroke: var(--text);
+}
+
+.support-marker text {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.drawing-toolbar button[aria-pressed="true"] {
+  color: var(--panel);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.drawing[data-add-mode] {
+  cursor: copy;
+}

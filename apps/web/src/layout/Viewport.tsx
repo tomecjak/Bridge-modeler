@@ -1,4 +1,5 @@
 import type { Alignment } from '@bridge/alignment';
+import type { SupportResult } from '@bridge/sections';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
@@ -14,6 +15,8 @@ interface Props {
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
   onProfileCursor: (s: number | undefined) => void;
   parametersView: ReactNode;
+  supports: readonly SupportResult[];
+  onAddSupport: (s: number, offset: number) => void;
   sectionView: ReactNode;
 }
 
@@ -33,6 +36,8 @@ export function Viewport({
   onProfileCursor,
   parametersView,
   sectionView,
+  supports,
+  onAddSupport,
 }: Props) {
   return (
     <main className="viewport">
@@ -70,12 +75,15 @@ export function Viewport({
               alignment={alignment}
               cursorS={cursorS}
               onCursor={onPlanCursor}
+              supports={supports}
+              onAddSupport={onAddSupport}
             />
             <ProfileView
               key={`${alignment.name}-profile`}
               alignment={alignment}
               cursorS={cursorS}
               onCursor={onProfileCursor}
+              supports={supports}
             />
           </div>
         )}

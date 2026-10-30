@@ -1,6 +1,7 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
 import type { Vec2 } from '@bridge/geom';
-import { type PointerEvent, useMemo } from 'react';
+import { type SupportResult, supportPlan } from '@bridge/sections';
+import { type PointerEvent, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { sampleHorizontal, stationTicks } from './sampling.ts';
 import { useElementSize } from './useElementSize.ts';
@@ -19,18 +20,23 @@ interface Props {
   alignment: Alignment;
   cursorS: number | undefined;
   onCursor: (cursor: PlanCursor | undefined) => void;
+  supports: readonly SupportResult[];
+  /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
+  onAddSupport: (s: number, offset: number) => void;
 }
 
 const MINOR_TICK_PX = 14;
 const LABEL_TICK_PX = 110;
 const MAX_TICKS = 4000;
 
-export function PlanView({ alignment, cursorS, onCursor }: Props) {
+export function PlanView({ alignment, cursorS, onCursor, supports, onAddSupport }: Props) {
+  const [addMode, setAddMode] = useState(false);
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
   const bounds = useMemo(() => boundsOf(samples), [samples]);
   const fit = size.width > 0 ? fitView(bounds, size, 56) : undefined;
-  const { view, handlers, dragMove, reset } = usePanZoom(ref, size, fit);
+  const { view, handlers, dragMove, wasDrag, reset } = usePanZoom(ref, size, fit);
+  const plans = useMemo(() => supports.map((r) => ({ r, plan: supportPlan(r) })), [supports]);
 
   const elements = useMemo(
     () =>
@@ -71,6 +77,7 @@ export function PlanView({ alignment, cursorS, onCursor }: Props) {
   const cursor = cursorS === undefined ? undefined : alignment.evaluateHorizontal(cursorS);
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: umiestnenie podpery kliknutím do mapy; z klávesnice sa staničenie zadá v editore podpery
     <div
       ref={ref}
       className="drawing"
@@ -80,12 +87,30 @@ export function PlanView({ alignment, cursorS, onCursor }: Props) {
       onPointerMove={onPointerMove}
       onPointerLeave={() => onCursor(undefined)}
       onDoubleClick={reset}
+      onClick={(e) => {
+        if (!addMode || wasDrag() || !view) return;
+        if (e.target instanceof Element && e.target.closest('button')) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const point = screenToWorld(view, size, {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+        const projection = alignment.project(point);
+        if (!projection) return;
+        onAddSupport(projection.s, projection.offset);
+        setAddMode(false);
+      }}
+      data-add-mode={addMode || undefined}
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
         <button type="button" onClick={reset}>
           {sk.viewport.fit}
         </button>
+        <button type="button" aria-pressed={addMode} onClick={() => setAddMode((m) => !m)}>
+          {sk.supports.add}
+        </button>
+        {addMode && <span className="drawing-note">{sk.supports.addHint}</span>}
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.plan}>
@@ -128,6 +153,26 @@ export function PlanView({ alignment, cursorS, onCursor }: Props) {
             const p = toScreen(alignment.evaluateHorizontal(s).point);
             return <circle key={s} className="joint" cx={p.x} cy={p.y} r={3} />;
           })}
+          {plans.map(({ r, plan }) =>
+            plan ? (
+              <g key={r.support.id} className="support-plan">
+                <polygon className="support-footing" points={polyline(plan.footing)} />
+                {plan.body.map((b, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: obrysy stĺpov sú určené poradím
+                  <polygon key={i} className="support-body" points={polyline(b)} />
+                ))}
+                {r.bearings.map((b) => (
+                  <circle
+                    key={b.index}
+                    className="support-bearing"
+                    cx={toScreen(b.plan).x}
+                    cy={toScreen(b.plan).y}
+                    r={2.5}
+                  />
+                ))}
+              </g>
+            ) : null,
+          )}
           {cursor && (
             <circle
               className="cursor-marker"

@@ -1,5 +1,6 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
 import type { Vec2 } from '@bridge/geom';
+import type { SupportResult } from '@bridge/sections';
 import { type PointerEvent, useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
@@ -12,6 +13,7 @@ interface Props {
   alignment: Alignment;
   cursorS: number | undefined;
   onCursor: (s: number | undefined) => void;
+  supports: readonly SupportResult[];
 }
 
 /** Prevýšenie pozdĺžneho profilu (výšky : dĺžky). */
@@ -19,7 +21,7 @@ const EXAGGERATION = 10;
 const STATION_LABEL_PX = 110;
 const ELEVATION_LINE_PX = 32;
 
-export function ProfileView({ alignment, cursorS, onCursor }: Props) {
+export function ProfileView({ alignment, cursorS, onCursor, supports }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleProfile(alignment, 1), [alignment]);
   const profile = alignment.profile;
@@ -153,6 +155,23 @@ export function ProfileView({ alignment, cursorS, onCursor }: Props) {
             <circle key={`${p.x},${p.y}`} className="pvi" cx={p.x} cy={p.y} r={3} />
           ))}
           <polyline className="profile-line" points={line} />
+          {supports.map((r) => {
+            if (r.bearings.length === 0) return null;
+            const z0 = alignment.origin.z;
+            const top = toScreen({ x: r.s, y: Math.max(...r.bearings.map((b) => b.seat)) + z0 });
+            const bottom = toScreen({ x: r.s, y: r.foundationTop + z0 });
+            const half = (r.footing.width / 2) * (view?.sx ?? 0);
+            const thick = r.footing.thickness * (view?.sy ?? 0);
+            return (
+              <g key={r.support.id} className="support-marker">
+                <line x1={top.x} x2={bottom.x} y1={top.y} y2={bottom.y} />
+                <rect x={bottom.x - half} y={bottom.y} width={2 * half} height={thick} />
+                <text x={top.x} y={top.y - 6} textAnchor="middle">
+                  {r.support.name}
+                </text>
+              </g>
+            );
+          })}
           {cursorPoint && (
             <g className="cursor">
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />

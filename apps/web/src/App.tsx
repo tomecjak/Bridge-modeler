@@ -1,6 +1,11 @@
 import type { AlignmentIssue } from '@bridge/alignment';
-import { createEmptyProject, openProject } from '@bridge/model';
-import { singleBeamHaunched, singleDeckExample, twinDeckExample } from '@bridge/sections';
+import { createEmptyProject, evaluateLaw, openProject } from '@bridge/model';
+import {
+  globalScope,
+  singleBeamHaunched,
+  singleDeckExample,
+  twinDeckExample,
+} from '@bridge/sections';
 import { type DragEvent, useEffect, useMemo, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
@@ -19,7 +24,7 @@ import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
-import { useSupportState } from './store/supports.ts';
+import { defaultSupport, useSupportState } from './store/supports.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
 
@@ -84,6 +89,53 @@ export function App() {
     const end = road.stationing.toDisplay(profile.endS).station;
     const from = Math.round(start + (end - start) * 0.25);
     return { road, from, to: Math.round(Math.min(end, from + 200)) };
+  }
+
+  /** Podpery na osiach mosta vedených po zobrazenej osi cesty (pre pôdorys a profil). */
+  const roadSupports = supportState.supports.filter((r) => {
+    const deck = project.superstructures.find((d) => d.id === r.support.superstructure);
+    const axis = project.bridgeAxes.find((a) => a.id === deck?.bridgeAxis);
+    return axis !== undefined && axis.alignment === item?.data.name;
+  });
+
+  /** Klik v pôdoryse: podpera pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie ku kliknutiu. */
+  function addSupportAt(s: number, offset: number) {
+    const road = item?.alignment;
+    if (!road) return;
+    const station = Math.round(road.stationing.toDisplay(s).station * 1000) / 1000;
+    const scope = globalScope(parameterState.set, station);
+    const candidates = project.superstructures
+      .filter((d) => station >= d.from && station <= d.to)
+      .map((d) => {
+        const axis = project.bridgeAxes.find(
+          (a) => a.id === d.bridgeAxis && a.alignment === road.name,
+        );
+        const h = axis ? evaluateLaw(axis.horizontalOffset, 'length', scope, station) : undefined;
+        return { d, distance: h?.ok ? Math.abs(h.value - offset) : Number.POSITIVE_INFINITY };
+      })
+      .filter((c) => Number.isFinite(c.distance))
+      .sort((a, b) => a.distance - b.distance);
+    const deck = candidates[0]?.d;
+    if (!deck) {
+      setMessage(sk.supports.noDeckHere);
+      return;
+    }
+    const nearEnd = station - deck.from < 2 || deck.to - station < 2;
+    const kind = nearEnd ? 'abutment' : 'pier';
+    const prefix = kind === 'abutment' ? 'O' : 'P';
+    const existing = new Set(project.supports.map((x) => x.name));
+    let n = 1;
+    while (existing.has(`${prefix}${n}`)) n++;
+    let soffit = 0;
+    try {
+      soffit = road.elevation(s).z + road.origin.z - 1.8;
+    } catch {
+      soffit = 0;
+    }
+    const support = defaultSupport(newId('sup'), `${prefix}${n}`, kind, deck.id, station, soffit);
+    projectStore.getState().dispatch({ type: 'addElements', supports: [support] });
+    setSelectedElement({ collection: 'supports', id: support.id });
+    setMessage(undefined);
   }
 
   function insertExample(template: 'twin' | 'single') {
@@ -352,11 +404,16 @@ export function App() {
         selectedElement={selectedElement}
         onSelectElement={(collection, id) => {
           setSelectedElement({ collection, id });
-          setMode('section');
+          // podpery sa ukazujú v pôdoryse a profile, ostatné prvky v priereze
+          if (collection !== 'supports') setMode('section');
+          else if (mode !== '2d' && mode !== 'section') setMode('2d');
         }}
         notices={openErrors}
         selected={selected}
-        onSelect={setSelected}
+        onSelect={(i) => {
+          setSelected(i);
+          setSelectedElement(undefined);
+        }}
       />
       <Viewport
         mode={mode}
@@ -376,6 +433,8 @@ export function App() {
             onSelect={setSelectedParameterId}
           />
         }
+        supports={roadSupports}
+        onAddSupport={addSupportAt}
         sectionView={
           <SectionView
             sections={sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []))}
@@ -400,19 +459,17 @@ export function App() {
           />
         }
       />
-      {mode === 'section' ? (
-        selectedElement ? (
-          <ElementPanel
-            collection={selectedElement.collection}
-            id={selectedElement.id}
-            result={sections.results.find((r) => r.superstructure.id === selectedElement.id)}
-            supportResult={supportState.supports.find((r) => r.support.id === selectedElement.id)}
-            spans={supportState.spans.get(selectedElement.id)}
-            onRemoved={() => setSelectedElement(undefined)}
-          />
-        ) : (
-          <SectionPanel results={sections.results} selectedId={undefined} />
-        )
+      {mode !== 'parameters' && selectedElement ? (
+        <ElementPanel
+          collection={selectedElement.collection}
+          id={selectedElement.id}
+          result={sections.results.find((r) => r.superstructure.id === selectedElement.id)}
+          supportResult={supportState.supports.find((r) => r.support.id === selectedElement.id)}
+          spans={supportState.spans.get(selectedElement.id)}
+          onRemoved={() => setSelectedElement(undefined)}
+        />
+      ) : mode === 'section' ? (
+        <SectionPanel results={sections.results} selectedId={undefined} />
       ) : mode === 'parameters' ? (
         <ParameterPanel
           parameter={selectedParameter}

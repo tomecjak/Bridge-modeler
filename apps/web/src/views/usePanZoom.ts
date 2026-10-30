@@ -13,7 +13,10 @@ export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: 
   const view = custom ?? fit;
   const viewRef = useRef(view);
   viewRef.current = view;
-  const drag = useRef<{ x: number; y: number; moved: boolean } | undefined>(undefined);
+  const drag = useRef<{ x: number; y: number; x0: number; y0: number; moved: boolean } | undefined>(
+    undefined,
+  );
+  const lastWasDrag = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -38,11 +41,12 @@ export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: 
       // tlačidlá a polia vo výkrese (lišta, prázdny stav) musia dostať klik — nezachytávať ukazovateľ
       if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return;
       e.currentTarget.setPointerCapture(e.pointerId);
-      drag.current = { x: e.clientX, y: e.clientY, moved: false };
+      drag.current = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false };
     },
     onPointerUp(e: PointerEvent<Element>) {
       if (e.currentTarget.hasPointerCapture(e.pointerId))
         e.currentTarget.releasePointerCapture(e.pointerId);
+      lastWasDrag.current = drag.current?.moved ?? false;
       drag.current = undefined;
     },
   };
@@ -56,10 +60,18 @@ export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: 
     const dy = e.clientY - d.y;
     d.x = e.clientX;
     d.y = e.clientY;
-    d.moved = true;
+    // posun o viac ako 3 px = ťahanie (nie klik)
+    if (Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > 3) d.moved = true;
     setCustom(pan(current, dx, dy));
     return true;
   }
 
-  return { view, handlers, dragMove, reset: () => setCustom(undefined) };
+  return {
+    view,
+    handlers,
+    dragMove,
+    /** skončilo posledné stlačenie ťahaním? (vtedy klik neznamená akciu) */
+    wasDrag: () => lastWasDrag.current,
+    reset: () => setCustom(undefined),
+  };
 }
