@@ -164,9 +164,21 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
     vec2(axis.point.x - (perpendicular / sin) * d.x, axis.point.y - (perpendicular / sin) * d.y);
   result.center = along(offset);
 
+  // koniec NK je rovnobežný s krajnou oporou (ADR 0009) → ložisko opory môže ležať za staničením „od/do“
+  // v osi NK; prierez sa vtedy vezme na konci NK a posunie pozdĺž dotyčnice (ako sieť NK)
+  const sFrom = alignment.stationing.fromDisplay(sup.from);
+  const sTo = alignment.stationing.fromDisplay(sup.to);
+  const deckStation = (s: number, x: number): number => {
+    if (support.kind !== 'abutment' || sFrom === undefined || sTo === undefined) return s;
+    if (s < sFrom && s >= sFrom - x * cot - 1e-9) return sFrom;
+    if (s > sTo && s <= sTo - x * cot + 1e-9) return sTo;
+    return s;
+  };
+
   (xs as number[]).forEach((x, index) => {
     const s = s0 - x * cot;
-    const section = evaluateSuperstructure(ctx, sup, s);
+    const sDeck = deckStation(s, x);
+    const section = evaluateSuperstructure(ctx, sup, sDeck);
     const blocking = section.issues.filter((i) => i.severity !== 'warning');
     if (blocking.length > 0) {
       issues.push(...blocking);
@@ -178,7 +190,9 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
       issues.push({ code: 'BearingOutsideDeck', index, x });
       return;
     }
-    const soffit = section.toWorld({ x, y: bottom }).z;
+    const t = section.axis?.frame.tangent;
+    const rise = t ? ((s - sDeck) * t.z) / Math.hypot(t.x, t.y) : 0;
+    const soffit = section.toWorld({ x, y: bottom }).z + rise;
     const seat = soffit - bearingHeight;
     result.bearings.push({
       index,

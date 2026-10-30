@@ -137,3 +137,28 @@ describe('evaluateSupport — problémy', () => {
     ]);
   });
 });
+
+describe('evaluateSupport — opora pri šikmom konci NK', () => {
+  it('accepts an abutment bearing beyond the deck station that lies inside the skewed deck end', () => {
+    const ctx = context();
+    // NK od km 1,020; opora 1 m za začiatkom s uhlom 60° → ložisko vpravo (x = 1,8) na km 1,018 96
+    const r = evaluateSupport(
+      ctx,
+      pier({
+        kind: 'abutment',
+        station: 1021,
+        crossingAngle: '60',
+        geometry: { type: 'abutment', seatLength: '1.5', stemThickness: '1.2', length: '12' },
+      }),
+    );
+    expect(r.issues).toEqual([]);
+    const right = r.bearings.find((b) => b.x === 1.8);
+    expect(right?.station).toBeCloseTo(1021 - 1.8 / Math.tan(Math.PI / 3), 9);
+    expect(right?.station).toBeLessThan(1020);
+  });
+
+  it('still rejects a pier bearing outside the deck', () => {
+    const r = evaluateSupport(context(), pier({ station: 1021, crossingAngle: '60' }));
+    expect(r.issues.some((i) => i.code === 'StationOutsideSuperstructure')).toBe(true);
+  });
+});
