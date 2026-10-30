@@ -11,6 +11,10 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "@bridge/geom": "workspace:*"
+    "@bridge/alignment": "workspace:*",
+    "@bridge/expr": "workspace:*",
+    "@bridge/geom": "workspace:*",
+    "@bridge/model": "workspace:*",
+    "@bridge/sections": "workspace:*"
   }
 }

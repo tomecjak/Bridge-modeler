@@ -245,9 +245,21 @@ importers:
 
   packages/mesh:
     dependencies:
+      '@bridge/alignment':
+        specifier: workspace:*
+        version: link:../alignment
+      '@bridge/expr':
+        specifier: workspace:*
+        version: link:../expr
       '@bridge/geom':
         specifier: workspace:*
         version: link:../geom
+      '@bridge/model':
+        specifier: workspace:*
+        version: link:../model
+      '@bridge/sections':
+        specifier: workspace:*
+        version: link:../sections
 
   packages/model:
     dependencies:
