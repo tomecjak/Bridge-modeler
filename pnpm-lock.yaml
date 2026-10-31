@@ -304,6 +304,27 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
+  packages/occt:
+    dependencies:
+      '@bridge/alignment':
+        specifier: workspace:*
+        version: link:../alignment
+      '@bridge/geom':
+        specifier: workspace:*
+        version: link:../geom
+      '@bridge/mesh':
+        specifier: workspace:*
+        version: link:../mesh
+      '@bridge/model':
+        specifier: workspace:*
+        version: link:../model
+      '@bridge/sections':
+        specifier: workspace:*
+        version: link:../sections
+      occt-wasm:
+        specifier: 5.11.0
+        version: 5.11.0
+
   packages/sections:
     dependencies:
       '@bridge/alignment':
@@ -888,6 +909,9 @@ packages:
     resolution: {integrity: sha512-5vvB5+W7ePv+p3uqxi+RcW1XAzLW0/hxt3/4X4Lc4qHudzOhmBiBwOY6DRob4WnanAEGvNcLjF+KNOufrUoEQw==}
     engines: {node: '>=12.20.0'}
 
+  occt-wasm@5.11.0:
+    resolution: {integrity: sha512-TZ/uR6hDJx6IDusE2u6atZjD5bxJEDUsAIIszH3MXmdyn47n1AHe6Eubd+GKCy+7P8LyuWeMiBKvuiTPmct3RQ==}
+
   pako@2.2.0:
     resolution: {integrity: sha512-zJq6RP/5q+TO2OpFV3FHzlPnFjmkb7Nc99a5SNjJE+uu/PkpChs+NIZSSzbBoD+6kjiISXjfYdwj1ZRQ81dz/w==}
 
@@ -1425,6 +1449,10 @@ snapshots:
   nanoid@3.3.20: {}
 
   obug@3.0.0: {}
+
+  occt-wasm@5.11.0:
+    dependencies:
+      comlink: 4.4.2
 
   pako@2.2.0: {}
 

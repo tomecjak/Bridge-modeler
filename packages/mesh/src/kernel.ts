@@ -47,6 +47,15 @@ export interface GeometryKernel<S> {
     top: (p: Vec2) => number,
   ): S;
   tessellate(solid: S): TriangleMesh;
+  /**
+   * Presné operácie (ADR 0014) — len jadrá s B-rep telesami (OpenCascade). `MeshKernel` ich nemá a scéna
+   * pri ňom ponechá aproximácie (ADR 0009).
+   */
+  /** odreže časť telesa na strane, kam smeruje normála roviny */
+  cut?(solid: S, plane: { origin: Vec3; normal: Vec3 }): S;
+  union?(solids: readonly S[]): S;
+  subtract?(solid: S, tool: S): S;
+  volume?(solid: S): number;
 }
 
 const UP = vec3(0, 0, 1);

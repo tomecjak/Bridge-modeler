@@ -1,0 +1,21 @@
+{
+  "name": "@bridge/occt",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenCascade (WASM, occt-wasm) ako GeometryKernel: presné telesá, booleovské operácie, STEP (ADR 0014).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@bridge/alignment": "workspace:*",
+    "@bridge/geom": "workspace:*",
+    "@bridge/mesh": "workspace:*",
+    "@bridge/model": "workspace:*",
+    "@bridge/sections": "workspace:*",
+    "occt-wasm": "5.11.0"
+  }
+}
