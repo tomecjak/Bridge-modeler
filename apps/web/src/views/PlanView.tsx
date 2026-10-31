@@ -43,6 +43,8 @@ interface Props {
   studyArea?: SRange | undefined;
   /** úsek, na ktorý sa pohľad prispôsobí (oblasť mosta, inak NK); bez neho celá os */
   focus?: SRange | undefined;
+  /** prejsť na staničenie: nová hodnota `nonce` vycentruje pohľad na spojité staničenie `s` */
+  goTo?: { s: number; nonce: number } | undefined;
   /** ďalšie osi projektu (napr. okraje vozovky z LandXML) */
   otherAlignments: readonly Alignment[];
   /** čiary v pôdoryse; vybraná čiara má ťahateľné vrcholy */
@@ -74,6 +76,7 @@ export function PlanView({
   supportToolRequest = 0,
   studyArea,
   focus,
+  goTo,
   otherAlignments,
   planLines,
   onAddPlanLine,
@@ -98,7 +101,13 @@ export function PlanView({
     return boundsOf([...inRange, ...ends]);
   }, [samples, focus, whole, alignment]);
   const fit = size.width > 0 ? fitView(bounds, size, 56) : undefined;
-  const { view, handlers, dragMove, wasDrag, reset } = usePanZoom(ref, size, fit);
+  const { view, handlers, dragMove, wasDrag, reset, centerOn } = usePanZoom(ref, size, fit);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: vycentruje sa len pri novej žiadosti (nonce), nie pri zmene pohľadu
+  useEffect(() => {
+    if (!goTo) return;
+    const s = Math.min(alignment.length, Math.max(0, goTo.s));
+    centerOn(alignment.evaluateHorizontal(s).point);
+  }, [goTo?.nonce]);
   const others = useMemo(
     () => otherAlignments.map((a) => ({ name: a.name, points: sampleHorizontal(a, 1) })),
     [otherAlignments],

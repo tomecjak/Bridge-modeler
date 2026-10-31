@@ -59,6 +59,8 @@ export const sk = {
     },
     empty2d: 'Importujte os z LandXML, zobrazí sa pôdorys a pozdĺžny profil.',
     wholeAxis: 'Celá os',
+    goTo: 'Prejsť na',
+    goToTitle: 'Prejsť na staničenie (km 1,234 alebo 1+234) — vycentruje profil aj pôdorys',
     fitTitle: 'Prispôsobiť na oblasť mosta (ak nie je, na NK, inak celú os); dvojklik robí to isté',
     plan: 'Pôdorys',
     profile: 'Pozdĺžny profil',

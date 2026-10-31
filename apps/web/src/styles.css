@@ -1428,3 +1428,7 @@ text.dw-stationing {
 .drawing[data-area-mode] {
   cursor: col-resize;
 }
+
+.goto-input {
+  width: 110px;
+}

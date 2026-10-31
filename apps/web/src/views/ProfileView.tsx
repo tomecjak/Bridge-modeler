@@ -12,6 +12,7 @@ import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { type ExportFormat, ExportMenu } from './ExportMenu.tsx';
+import { GoToStation } from './GoToStation.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import {
@@ -44,6 +45,14 @@ interface Props {
   onStudyArea?: (range: SRange) => void;
   /** zmena hodnoty zapne nástroj „Oblasť mosta“ (z postupu); 0 = bez žiadosti */
   areaToolRequest?: number;
+  /** prejsť na staničenie: nová hodnota `nonce` vycentruje pohľad na spojité staničenie `s` */
+  goTo?: { s: number; nonce: number } | undefined;
+  /** zadané „Prejsť na“ (spojité staničenie) */
+  onGoTo?: (s: number) => void;
+  /** projekt nemá terén → „Stiahnuť DMR 5.0“ s priebehom a zrušením */
+  terrainDownload?:
+    | { progress: number | undefined; onDownload: () => void; onCancel: () => void }
+    | undefined;
 }
 
 /** Ponúkané prevýšenia (výšky : dĺžky); export je vždy 1 : 1. */
@@ -52,6 +61,8 @@ const EXAGGERATIONS = [1, 2, 5, 10];
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['grade']);
 const STATION_LABEL_PX = 110;
 const ELEVATION_LINE_PX = 32;
+/** šírka pásu oblasti [px], od ktorej sú popisy staničení vnútri pásu */
+const BAND_LABELS_INSIDE_PX = 160;
 /** najkratšia oblasť mosta [m]; kratší ťah sa berie ako klik */
 const MIN_AREA = 1;
 const CONTROLS = 'button, input, select, textarea, label';
@@ -83,6 +94,9 @@ export function ProfileView({
   focus,
   onStudyArea,
   areaToolRequest = 0,
+  goTo,
+  onGoTo,
+  terrainDownload,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [exaggeration, setExaggeration] = useState(10);
@@ -121,7 +135,14 @@ export function ProfileView({
   }, [samples, drawing, range, focus, whole]);
   const fit =
     size.width > 0 && samples.length > 0 ? fitView(bounds, size, 48, exaggeration) : undefined;
-  const { view, handlers, dragMove, reset } = usePanZoom(ref, size, fit, tool === 'none');
+  const { view, handlers, dragMove, reset, centerOn } = usePanZoom(ref, size, fit, tool === 'none');
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: vycentruje sa len pri novej žiadosti (nonce), nie pri zmene pohľadu
+  useEffect(() => {
+    if (!goTo || !profile) return;
+    const s = Math.min(profile.endS, Math.max(profile.startS, goTo.s));
+    centerOn({ x: s, y: alignment.elevation(s).z + alignment.origin.z });
+  }, [goTo?.nonce]);
 
   useEffect(() => {
     if (areaToolRequest > 0) setTool('area');
@@ -322,6 +343,31 @@ export function ProfileView({
           </button>
         )}
         <ExportMenu onExport={(format) => onExport(format)} disabled={!drawing} />
+        {onGoTo && (
+          <GoToStation
+            onStation={(station) => {
+              const s = alignment.stationing.fromDisplay(station);
+              if (s !== undefined) onGoTo(s);
+            }}
+          />
+        )}
+        {terrainDownload && terrainDownload.progress === undefined && (
+          <button
+            type="button"
+            title={sk.viewer3d.terrainDownloadTitle}
+            onClick={terrainDownload.onDownload}
+          >
+            {sk.terrain.download}
+          </button>
+        )}
+        {terrainDownload && terrainDownload.progress !== undefined && (
+          <>
+            <span className="drawing-note">{sk.terrain.downloading(terrainDownload.progress)}</span>
+            <button type="button" onClick={terrainDownload.onCancel}>
+              {sk.terrain.cancelDownload}
+            </button>
+          </>
+        )}
         {tool === 'area' && <span className="drawing-note">{sk.studyArea.toolHint}</span>}
       </div>
       {view && (
@@ -350,10 +396,15 @@ export function ProfileView({
               />
               {[band.sFrom, band.sTo].map((s, i) => {
                 const x = toScreen({ x: s, y: 0 }).x;
+                // v úzkom páse by sa popisy prekrývali → dajú sa von z pásu
+                const inside =
+                  toScreen({ x: band.sTo, y: 0 }).x - toScreen({ x: band.sFrom, y: 0 }).x >
+                  BAND_LABELS_INSIDE_PX;
+                const toRight = (i === 0) === inside;
                 return (
                   <g key={i === 0 ? 'from' : 'to'}>
                     <line x1={x} y1={0} x2={x} y2={size.height} />
-                    <text x={i === 0 ? x + 4 : x - 4} y={56} textAnchor={i === 0 ? 'start' : 'end'}>
+                    <text x={toRight ? x + 4 : x - 4} y={56} textAnchor={toRight ? 'start' : 'end'}>
                       {bandLabel(s)}
                     </text>
                   </g>

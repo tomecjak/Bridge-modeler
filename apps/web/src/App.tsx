@@ -122,6 +122,8 @@ export function App() {
   /** žiadosti o nástroj „Pridať podperu“ v pôdoryse a „Oblasť mosta“ v profile (počítadlá, aby sa dali zopakovať) */
   const [supportToolRequest, setSupportToolRequest] = useState(0);
   const [areaToolRequest, setAreaToolRequest] = useState(0);
+  /** „Prejsť na“ staničenie v pôdoryse aj profile (spojité s; nonce zopakuje rovnaké staničenie) */
+  const [goTo, setGoTo] = useState<{ s: number; nonce: number }>();
   const landXmlInput = useRef<HTMLInputElement>(null);
   const terrainInput = useRef<HTMLInputElement>(null);
 
@@ -990,6 +992,22 @@ export function App() {
         focus={viewFocus}
         onStudyArea={setStudyAreaFrom}
         areaToolRequest={areaToolRequest}
+        goTo={goTo}
+        onGoTo={(s) => {
+          setGoTo((g) => ({ s, nonce: (g?.nonce ?? 0) + 1 }));
+          setCursor({ source: 'profile', s });
+        }}
+        terrainDownload={
+          hasRoad && project.terrains.length === 0
+            ? {
+                progress: dmrProgress,
+                onDownload: () => void downloadDmrTerrain(),
+                onCancel: () => {
+                  dmrCancel.current = true;
+                },
+              }
+            : undefined
+        }
         otherAlignments={otherAlignments}
         planLines={project.planLines}
         onAddPlanLine={addPlanLine}

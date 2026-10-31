@@ -31,6 +31,13 @@ interface Props {
   onStudyArea: (range: SRange) => void;
   /** zmena hodnoty zapne v profile nástroj „Oblasť mosta“ */
   areaToolRequest: number;
+  /** prejsť na staničenie v pôdoryse aj profile (nová hodnota `nonce`) */
+  goTo: { s: number; nonce: number } | undefined;
+  onGoTo: (s: number) => void;
+  /** bez terénu „Stiahnuť DMR 5.0“ v profile */
+  terrainDownload:
+    | { progress: number | undefined; onDownload: () => void; onCancel: () => void }
+    | undefined;
   /** ďalšie osi projektu a čiary v pôdoryse */
   otherAlignments: readonly Alignment[];
   planLines: readonly PlanLine[];
@@ -73,6 +80,9 @@ export function Viewport({
   focus,
   onStudyArea,
   areaToolRequest,
+  goTo,
+  onGoTo,
+  terrainDownload,
   otherAlignments,
   planLines,
   onAddPlanLine,
@@ -123,6 +133,7 @@ export function Viewport({
               onAddSupport={onAddSupport}
               supportToolRequest={supportToolRequest}
               studyArea={studyArea}
+              goTo={goTo}
               focus={focus}
               otherAlignments={otherAlignments}
               planLines={planLines}
@@ -140,6 +151,9 @@ export function Viewport({
               focus={focus}
               onStudyArea={onStudyArea}
               areaToolRequest={areaToolRequest}
+              goTo={goTo}
+              onGoTo={onGoTo}
+              terrainDownload={terrainDownload}
             />
           </div>
         )}
