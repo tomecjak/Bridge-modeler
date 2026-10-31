@@ -1,10 +1,10 @@
 import { formatStation } from '@bridge/alignment';
-import type { Parameter, ParameterSet } from '@bridge/model';
+import type { Parameter, ParameterSet, ParameterUnit } from '@bridge/model';
 import { type PointerEvent, useMemo, useState } from 'react';
 import { DISPLAY_UNIT_LABEL } from '../format/displayValue.ts';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
-import { sampleParameter } from './chartSamples.ts';
+import { type ChartSample, sampleParameter } from './chartSamples.ts';
 import { useElementSize } from './useElementSize.ts';
 import { niceStep } from './viewTransform.ts';
 
@@ -17,10 +17,43 @@ interface Props {
 const HEIGHT = 200;
 const PAD = { left: 52, right: 12, top: 24, bottom: 26 };
 
-/** Priebeh parametra po staničení: jedna čiara, hranice úsekov, zameriavač s hodnotou. */
+/** Priebeh globálneho parametra po staničení s hranicami úsekov. */
 export function StationFunctionChart({ parameter, set, range }: Props) {
-  const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleParameter(set, parameter, range), [set, parameter, range]);
+  const boundaries =
+    parameter.law.kind === 'piecewise'
+      ? [...new Set(parameter.law.segments.flatMap((s) => [s.from, s.to]))]
+      : [];
+  return (
+    <ValueChart
+      samples={samples}
+      range={range}
+      unit={parameter.unit}
+      boundaries={boundaries}
+      title={parameter.name}
+    />
+  );
+}
+
+interface ValueChartProps {
+  /** hodnoty v zobrazovaných jednotkách */
+  samples: readonly ChartSample[];
+  range: { from: number; to: number };
+  unit: ParameterUnit;
+  /** zobrazované staničenia zvýraznených hraníc (úseky, zlomy krivky) */
+  boundaries?: readonly number[];
+  title: string;
+}
+
+/** Priebeh hodnoty po staničení: jedna čiara, hranice úsekov, zameriavač s hodnotou. */
+export function ValueChart({
+  samples,
+  range,
+  unit: valueUnit,
+  boundaries = [],
+  title,
+}: ValueChartProps) {
+  const [ref, size] = useElementSize<HTMLDivElement>();
   const [hover, setHover] = useState<number>();
 
   const values = samples.flatMap((s) => (s.value === undefined ? [] : [s.value]));
@@ -66,14 +99,9 @@ export function StationFunctionChart({ parameter, set, range }: Props) {
   }
   if (current) paths.push(current);
 
-  const boundaries =
-    parameter.law.kind === 'piecewise'
-      ? [...new Set(parameter.law.segments.flatMap((s) => [s.from, s.to]))]
-      : [];
-
   const hovered = hover === undefined ? undefined : samples[hover];
-  const unit = DISPLAY_UNIT_LABEL[parameter.unit];
-  const decimals = parameter.unit === 'length' ? 1 : 3;
+  const unit = DISPLAY_UNIT_LABEL[valueUnit];
+  const decimals = valueUnit === 'length' ? 1 : 3;
 
   function onPointerMove(e: PointerEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -92,7 +120,7 @@ export function StationFunctionChart({ parameter, set, range }: Props) {
         width={width}
         height={HEIGHT}
         role="img"
-        aria-label={`${sk.chart.title}: ${parameter.name}`}
+        aria-label={`${sk.chart.title}: ${title}`}
         onPointerMove={onPointerMove}
         onPointerLeave={() => setHover(undefined)}
       >

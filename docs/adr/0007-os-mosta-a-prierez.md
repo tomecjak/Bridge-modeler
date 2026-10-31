@@ -35,6 +35,14 @@ ručičiek, dutiny v smere (pri opačnom poradí sa otočia a nahlási upozornen
 
 **Súbor:** `schemaVersion` 2 pridáva `bridgeAxes`, `profiles`, `superstructures`; migrácia 1 → 2 doplní prázdne polia.
 
+**Doplnok 2026-10-31 — okraj NK podľa krivky (Fáza 8a, schéma v6).** Parameter profilu v NK môže namiesto staničnej
+funkcie sledovať krivku v pôdoryse (`parameterLaws[p] = { kind: 'edge', curve, side, add }`). Hodnota je vodorovná
+vzdialenosť od osi mosta ku krivke, meraná po vodorovnej normále osi mosta (v rovine prierezu), kladná na stranu
+`side`, plus prídavok `add` (výraz v m). Krivka je iná os z LandXML (podľa názvu, stačí smerové vedenie) alebo čiara
+v pôdoryse (`planLines`, lokálne súradnice na mm). Vrcholy čiary a styky prvkov osi sa premietnu na os cesty a vzorkujú
+sa presne. Hľadá sa najbližší priesečník na danej strane do 50 m; inak `EdgeCurveNotReached`. Globálne parametre
+a os mosta ostávajú pri staničných funkciách.
+
 ## Dôsledky
 
 - Ten istý profil slúži obom NK dvojice s inými parametrami (šírky, spodok).

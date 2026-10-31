@@ -11,7 +11,7 @@ import type {
   Support,
   TerrainSurface,
 } from '@bridge/model';
-import type { SupportResult } from '@bridge/sections';
+import type { SectionContext, SupportResult } from '@bridge/sections';
 import { useEffect, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
@@ -28,6 +28,7 @@ import type { SectionResult } from '../store/sections.ts';
 import type { DeckSpans } from '../store/supports.ts';
 import { defaultGeometry } from '../store/supports.ts';
 import { ExpressionInput } from '../views/ExpressionInput.tsx';
+import { ProfileLawEditor } from '../views/ProfileLawEditor.tsx';
 import { StationField, StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
 import { TextField } from '../views/TextField.tsx';
 import { SectionResultDetails } from './SectionPanel.tsx';
@@ -42,6 +43,8 @@ interface Props {
   /** sťahuje sa terén zo ZBGIS */
   terrainBusy: boolean;
   onRedownloadTerrain: (id: string) => void;
+  /** vstupy výpočtu prierezov (náhľad okraja NK podľa krivky) */
+  sectionContext: SectionContext | undefined;
 }
 
 const UNITS: ParameterUnit[] = ['length', 'angle', 'slope', 'none'];
@@ -64,6 +67,7 @@ export function ElementPanel({
   onRemoved,
   terrainBusy,
   onRedownloadTerrain,
+  sectionContext,
 }: Props) {
   const project = useProject((s) => s.project);
   const element = (project[collection] as { id: string; name: string }[]).find((e) => e.id === id);
@@ -77,7 +81,12 @@ export function ElementPanel({
       {element && collection === 'bridgeAxes' && <BridgeAxisEditor axis={element as BridgeAxis} />}
       {element && collection === 'profiles' && <ProfileEditor def={element as ProfileDefinition} />}
       {element && collection === 'superstructures' && (
-        <SuperstructureEditor sup={element as Superstructure} result={result} spans={spans} />
+        <SuperstructureEditor
+          sup={element as Superstructure}
+          result={result}
+          spans={spans}
+          ctx={sectionContext}
+        />
       )}
       {element && collection === 'supports' && (
         <SupportEditor support={element as Support} result={supportResult} />
@@ -582,12 +591,22 @@ function SuperstructureEditor({
   sup,
   result,
   spans,
+  ctx,
 }: {
   sup: Superstructure;
   result: SectionResult | undefined;
   spans: DeckSpans | undefined;
+  ctx: SectionContext | undefined;
 }) {
   const axes = useProject((s) => s.project.bridgeAxes);
+  const alignmentNames = useProject((s) => s.project.alignments.map((a) => a.name).join('\n'));
+  const planLines = useProject((s) => s.project.planLines);
+  const ownRoad = axes.find((a) => a.id === sup.bridgeAxis)?.alignment;
+  // okraj sa meria k inej osi než k vlastnej osi cesty
+  const curves = {
+    alignments: alignmentNames.split('\n').filter((n) => n !== '' && n !== ownRoad),
+    planLines: planLines.map((l) => ({ id: l.id, name: l.name })),
+  };
   const profiles = useProject((s) => s.project.profiles);
   const profile = profiles.find((p) => p.id === sup.profile);
   const set = (changes: Partial<Superstructure>) => update('superstructures', sup.id, changes);
@@ -685,11 +704,14 @@ function SuperstructureEditor({
               )}
             </div>
             {p.description && <p className="hint">{p.description}</p>}
-            {law && law.kind !== 'edge' && (
-              <StationFunctionEditor
+            {law && (
+              <ProfileLawEditor
                 law={law}
                 range={range}
+                defaultValue={p.default}
+                curves={curves}
                 onChange={(next) => setLaw(p.name, next)}
+                preview={ctx && { ctx, sup, parameter: p.name, unit: p.unit }}
               />
             )}
           </div>

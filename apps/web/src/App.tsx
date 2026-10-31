@@ -110,6 +110,26 @@ export function App() {
   const station = referenceStation ?? displayRange?.from ?? 0;
   const selectedParameter = project.parameters.find((p) => p.id === selectedParameterId);
   const alignmentMap = useMemo(() => alignmentsByName(alignments), [alignments]);
+  const sectionContext = useMemo(
+    () =>
+      project.crs.origin
+        ? {
+            alignments: alignmentMap,
+            parameters: parameterState.set,
+            bridgeAxes: project.bridgeAxes,
+            profiles: project.profiles,
+            planLines: project.planLines,
+          }
+        : undefined,
+    [
+      alignmentMap,
+      parameterState.set,
+      project.bridgeAxes,
+      project.profiles,
+      project.planLines,
+      project.crs.origin,
+    ],
+  );
   const sectionRange = project.superstructures.length
     ? {
         from: Math.min(...project.superstructures.map((s) => s.from)),
@@ -861,6 +881,7 @@ export function App() {
           terrainBusy={dmrProgress !== undefined}
           onRedownloadTerrain={(id) => void downloadDmrTerrain(id)}
           onRemoved={() => setSelectedElement(undefined)}
+          sectionContext={sectionContext}
         />
       ) : mode === 'section' ? (
         <SectionPanel results={sections.results} selectedId={undefined} />

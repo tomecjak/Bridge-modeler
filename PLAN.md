@@ -291,12 +291,16 @@ Rozhodnutie 2026-10-31: Fáza 7 (IFC) sa odkladá, kým nebude projekt vyladený
 plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 8c.
 
 #### 8a — Okraj NK podľa krivky
-- [ ] schéma v6: čiary v pôdoryse (`planLines`) a priebeh parametra profilu `edge` (vzdialenosť od osi mosta ku krivke kolmo na os + prídavok); migrácia 5 → 6
-- [ ] výpočet vzdialenosti ku krivke (os z LandXML alebo čiara), zlomy vo vzorkovaní NK
-- [ ] čiary v pôdoryse: kreslenie, úprava vrcholov, editor, hladina `CIARY`
-- [ ] „Okraj podľa krivky“ v editore NK s grafom výsledných hodnôt
+- [x] schéma v6: čiary v pôdoryse (`planLines`) a priebeh parametra profilu `edge` (vzdialenosť od osi mosta ku krivke kolmo na os + prídavok); migrácia 5 → 6
+  - doplnok ADR 0007; typované chyby `EdgeCurveNotFound`, `EdgeCurveNotReached`.
+- [x] výpočet vzdialenosti ku krivke (os z LandXML alebo čiara), zlomy vo vzorkovaní NK
+  - `edgeDistance` (os: odhad z polyline + sečnicová metóda, ≤ 1e-10 m), `edgeBreaks`; 3D sa prepočíta aj pri zmene krivky. Test na 212-00: obrys v pôdoryse na krivkách ± 2 mm, 3D sieť zhodná s obrysom; lokálny test na osiach 125-00 (vnútorná konzistencia ≤ 1e-6 m).
+- [x] čiary v pôdoryse: kreslenie, úprava vrcholov, editor, hladina `CIARY`
+  - „Nakresliť čiaru“ (klik, dvojklik / Enter, Esc), ťahanie vrcholov vybranej čiary, tabuľka vrcholov v S-JTSK; ďalšie osi projektu sa zobrazia v pôdoryse a idú do exportu.
+- [x] „Okraj podľa krivky“ v editore NK s grafom výsledných hodnôt
+  - „Zadanie: okraj podľa krivky“ pri parametri NK: krivka, strana, prídavok [m]; graf z prierezov so zlomami krivky. Overené v prehliadači (212-00 s rozbiehavou osou okraja: šírka na km 9,335 31 = 17 353 mm podľa výpočtu).
 
-**Hotové, keď:** NK s okrajmi podľa osí `125_L` / `125_R` z Civil 3D sa v pôdoryse aj v 3D drží krivky (± 2 mm).
+**Hotové, keď:** NK s okrajmi podľa osí z Civil 3D sa v pôdoryse aj v 3D drží krivky (± 2 mm). — *2026-10-31:* overené na syntetickej osi okraja; `125_L` / `125_R` sú krátke oblúky napojenia (≈ 23 m), nie okraje popri moste — na reálny test treba os okraja vozovky popri moste.
 
 #### 8b — Editor prierezu a knižnica
 - [ ] šablóny typológií VŠB: doska, vyľahčená doska, jednotrám, doskotrám, dvojtrám, komora, komora s nábehmi
@@ -355,6 +359,8 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 - Rez v 3D vyplní len prierezy NK; prerezané podpery sú zobrazené otvorené (bez výplne). Výplň podpier sa doplní s výkresmi (Fáza 6), ak bude treba.
 - Hladiny DXF (ADR 0012) sú predpoklad, kým nebude firemný štandard: `OS_CESTY`, `OS_MOSTA`, `OS_PODPERY`, `STANICENIE`, `NK`, `NK_DUTINY`, `PODPERY`, `ZAKLADY`, `LOZISKA`, `TEREN`, `NIVELETA`, `POPIS` (farby ACI, typy čiar CONTINUOUS / DASHED / CENTER). Výška textu 2,5 mm v mierke 1 : 200 (pôdorys, pozdĺžny rez) a 1 : 100 (priečny rez). Pošli štandard alebo iné názvy, ak treba.
 - Pozdĺžny rez sa exportuje 1 : 1 a reže sa len v osi mosta (bez pohľadu na časti za rezom, napr. krídla). Ak treba prevýšenie alebo pohľad, doplní sa.
+- Okraj NK podľa krivky (Fáza 8a), *predpoklady:* vzdialenosť sa meria vodorovne kolmo na os mosta (v rovine prierezu) a okraj sa hľadá najviac 50 m od osi (bližší priesečník na danej strane); prídavok sa zadáva výrazom v m ako ostatné výrazy. Podklad: v `125-00_C3D.xml` sú `125_L` / `125_R` krátke oblúky napojenia pri km 0,004 – 0,020 — pre skutočný test treba os okraja vozovky popri moste.
+- Premenovanie globálneho parametra dnes prepíše odkazy len v ostatných globálnych parametroch, nie v priebehoch NK, posunoch osi mosta, predvolených hodnotách profilu ani v podperách (zistené 2026-10-31). Doplniť?
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov

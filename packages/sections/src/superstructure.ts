@@ -45,6 +45,8 @@ export interface SuperstructureSection {
   station: number;
   loops: EvaluatedLoop[];
   points: Map<string, Vec2>;
+  /** hodnoty parametrov profilu na tomto staničení (aj okraje podľa krivky) */
+  parameters: Map<string, number>;
   area: number;
   centroid: Vec2;
   axis: BridgeAxisPoint | undefined;
@@ -125,6 +127,7 @@ export function evaluateSuperstructure(
     station,
     loops: [],
     points: new Map(),
+    parameters: new Map(),
     area: 0,
     centroid: vec2(0, 0),
     axis: undefined,
@@ -190,6 +193,7 @@ export function evaluateSuperstructure(
     station,
     loops: evaluated.loops,
     points: evaluated.points,
+    parameters: params.values,
     area: evaluated.area,
     centroid: evaluated.centroid,
     axis: axisValue,
