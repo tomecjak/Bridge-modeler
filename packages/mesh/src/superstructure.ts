@@ -1,14 +1,15 @@
 import type { Vec2, Vec3 } from '@bridge/geom';
-import type { IssueOwner, ModelIssue, Superstructure } from '@bridge/model';
+import type { ModelIssue, Superstructure } from '@bridge/model';
 import {
-  evaluateSuperstructure,
+  type LawRef,
+  type SamplingOptions,
   type SectionContext,
   type SuperstructureSection,
   type SupportResult,
+  sampleSuperstructure,
 } from '@bridge/sections';
 import type { GeometryKernel, LoftSection } from './kernel.ts';
 import { mergeMeshes, type TriangleMesh } from './mesh.ts';
-import { DEFAULT_SAMPLING, type LawRef, type SamplingOptions, sampleStations } from './sampling.ts';
 
 export interface SuperstructureMeshInput {
   ctx: SectionContext;
@@ -38,70 +39,17 @@ export function superstructureMesh<S>(
   kernel: GeometryKernel<S>,
   input: SuperstructureMeshInput,
 ): SuperstructureMesh {
-  const { ctx, superstructure: sup } = input;
-  const owner: IssueOwner = { kind: 'superstructure', name: sup.name };
-  let endAngles = { start: Math.PI / 2, end: Math.PI / 2 };
-  const empty = (issues: ModelIssue[]): SuperstructureMesh => ({
-    mesh: mergeMeshes([]),
-    stations: [],
-    endAngles,
-    issues: issues.map((i) => ({ owner, ...i })),
-  });
-
-  const axis = ctx.bridgeAxes.find((a) => a.id === sup.bridgeAxis);
-  const alignment = axis ? ctx.alignments.get(axis.alignment) : undefined;
-  const profile = ctx.profiles.find((p) => p.id === sup.profile);
-  if (!axis || !alignment || !profile) return empty(evaluateSuperstructure(ctx, sup, 0).issues);
-  const sFrom = alignment.stationing.fromDisplay(sup.from);
-  const sTo = alignment.stationing.fromDisplay(sup.to);
-  if (sFrom === undefined || sTo === undefined || !(sTo > sFrom)) {
-    return empty([
-      { code: 'StationNotOnAlignment', station: sFrom === undefined ? sup.from : sup.to },
-    ]);
+  const samples = sampleSuperstructure(input.ctx, input.superstructure, input.supports, input);
+  if (!('sections' in samples)) {
+    const endAngles = { start: Math.PI / 2, end: Math.PI / 2 };
+    return { mesh: mergeMeshes([]), stations: [], endAngles, issues: samples.issues };
   }
-  endAngles = endCrossingAngles(input.supports, sFrom, sTo);
-
-  const units = new Map(profile.parameters.map((p) => [p.name, p.unit]));
-  const laws: LawRef[] = [
-    ...Object.entries(sup.parameterLaws).map(([name, law]) => ({
-      law,
-      unit: units.get(name) ?? 'none',
-    })),
-    { law: axis.horizontalOffset, unit: 'length' },
-    { law: axis.verticalOffset, unit: 'length' },
-    ...(input.globalLaws ?? []),
-  ];
-  const probes = [sFrom, (sFrom + sTo) / 2, sTo].map((s) => evaluateSuperstructure(ctx, sup, s));
-  const reach = Math.max(
-    0,
-    ...probes.flatMap((p) =>
-      [...p.loops.flatMap((l) => l.polygon.map((q) => Math.abs(q.x)))].map(
-        (x) => x + Math.abs(p.axis?.horizontalOffset ?? 0),
-      ),
-    ),
-  );
-  const breaks = input.supports.flatMap((r) => [r.s, ...r.bearings.map((b) => b.s)]);
-  const stations = sampleStations(
-    {
-      alignment,
-      sFrom,
-      sTo,
-      laws,
-      scope: (station) => {
-        const values = ctx.parameters.evaluateAt(station).values;
-        return (n) => values.get(n);
-      },
-      breaks: breaks.filter((s) => Number.isFinite(s)),
-      reach,
-    },
-    input.sampling ?? DEFAULT_SAMPLING,
-  );
-
-  const sections = stations.map((s) => evaluateSuperstructure(ctx, sup, s));
-  const issues = unique(sections.flatMap((s) => s.issues));
+  const { stations, sections, endAngles, issues, sFrom, sTo } = samples;
   const first = sections[0];
   const last = sections[sections.length - 1];
-  if (!first?.axis || !last?.axis) return { ...empty([]), stations, issues };
+  if (!first?.axis || !last?.axis) {
+    return { mesh: mergeMeshes([]), stations, endAngles, issues };
+  }
 
   const cot0 = cot(endAngles.start);
   const cot1 = cot(endAngles.end);
@@ -145,23 +93,6 @@ export function superstructureMesh<S>(
 
 const cot = (a: number) => Math.cos(a) / Math.sin(a);
 
-/** Uhly kríženia koncov NK: krajná podpera, ak je to opora bližšie k danému koncu; inak kolmý koniec. */
-function endCrossingAngles(
-  supports: readonly SupportResult[],
-  sFrom: number,
-  sTo: number,
-): { start: number; end: number } {
-  const sorted = supports.filter((r) => Number.isFinite(r.s)).sort((a, b) => a.s - b.s);
-  const angle = (r: SupportResult | undefined, nearStart: boolean) =>
-    r &&
-    r.support.kind === 'abutment' &&
-    r.s - sFrom < sTo - r.s === nearStart &&
-    Math.sin(r.crossingAngle) > 1e-3
-      ? r.crossingAngle
-      : Math.PI / 2;
-  return { start: angle(sorted[0], true), end: angle(sorted[sorted.length - 1], false) };
-}
-
 /**
  * Koncová plocha z prierezu na staničení konca: bod (x, y) sa posunie pozdĺž dotyčnice osi mosta
  * o `shift(x)` (vodorovne meraná dĺžka; so sklonom nivelety) — rovinná plocha.
@@ -182,13 +113,3 @@ function endFace(section: SuperstructureSection, shift: (x: number) => number) {
 
 const topology = (s: SuperstructureSection) =>
   s.loops.map((l) => `${l.name}:${l.role}:${l.polygon.length}`).join('|');
-
-function unique(issues: readonly ModelIssue[]): ModelIssue[] {
-  const seen = new Set<string>();
-  return issues.filter((i) => {
-    const k = JSON.stringify(i);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-}

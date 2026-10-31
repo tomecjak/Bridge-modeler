@@ -1,10 +1,14 @@
 import { type Alignment, createAlignment } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
 import { buildParameterSet, type ModelIssue, type ProjectFile } from '@bridge/model';
-import { evaluateSupport, type SupportContext, type SupportResult } from '@bridge/sections';
+import {
+  evaluateSupport,
+  type LawRef,
+  type SupportContext,
+  type SupportResult,
+} from '@bridge/sections';
 import { type GeometryKernel, MeshKernel } from './kernel.ts';
 import { meshBounds, type TriangleMesh } from './mesh.ts';
-import type { LawRef } from './sampling.ts';
 import { superstructureMesh } from './superstructure.ts';
 import { supportMesh } from './supports.ts';
 
