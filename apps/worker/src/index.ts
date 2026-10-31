@@ -1,4 +1,5 @@
 /// Cloudflare Worker (ADR 0015): API `/api/*`; ostatné požiadavky obslúžia statické súbory aplikácie.
+import { identify } from './access.ts';
 import { type ApiError, deleteEntry, getEntry, listEntries, saveEntry } from './library.ts';
 
 export interface Env {
@@ -77,8 +78,11 @@ const methodNotAllowed = () =>
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    // identitu z Cloudflare Access doplní ďalší krok (ADR 0015); lokálne local@dev
-    if (url.pathname.startsWith('/api/')) return handleApi(request, env, 'local@dev');
+    if (url.pathname.startsWith('/api/')) {
+      const who = await identify(request, env);
+      if (!who.ok) return json({ code: who.code, message: who.message }, 401);
+      return handleApi(request, env, who.email);
+    }
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
