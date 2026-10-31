@@ -354,6 +354,7 @@ nová verzia + migrácia + test (dnes v6). Poradie podfáz: 10a → 10g, 10i (r�
 
 #### 10a — Zadanie, postup a oblasť mosta
 - [x] panel „Postup“ v ľavom stĺpci: kroky 1–9 so stavom (hotové / upozornenie / chýba) z projektu a issues, tlačidlá do správneho pohľadu, krátka nápoveda; nie vynútený sprievodca, strom prvkov ostáva pod ním
+  - *2026-10-31:* **zrušené** (rozhodnutie projektanta) — nahrádza ho rozhranie v štýle CAD (10a2, ADR 0016).
   - `store/workflow.ts` (`workflowSteps`, test) a `layout/WorkflowPanel.tsx`; zatiaľ 6 krokov (Zadanie, Podklady, Oblasť mosta, Prierez NK, Polia a podpery, Výstupy) — Prekážky, Kontroly a Varianty pribudnú v 10f, 10g, 10h. Rozbalený krok má nápovedu a tlačidlá (import, stiahnutie DMR, vyznačenie oblasti, vloženie NK, pridanie podpery v pôdoryse, pohľady). Strom „Prvky projektu“ je zbaliteľný pod postupom.
 - [x] krok „Zadanie“: stavba (názov, číslo), objekt (číslo a názov), kategória prevádzanej cesty → voľná šírka na moste (s ručnou úpravou pri rozšírení); návrh ďalších údajov v plan mode 10a; schéma v7
   - `brief` v projekte (schéma v7, migrácia 6 → 7): stavba, objekt, objednávateľ, zodpovedný projektant, vypracoval, druh mosta, prekážka, kategória, voľná šírka. Voľná šírka = ručná hodnota, inak b z označenia kategórie (`parseRoadCategory`, STN 73 6102; rozhodnutie 2026-10-31); v UI v mm s tlačidlom „Podľa kategórie“. Editor zadania vpravo (`layout/BriefPanel.tsx`) má aj názov projektu (súbor). Krok vyžaduje kategóriu cesty len pri cestnom moste alebo nezadanom druhu mosta.
@@ -365,6 +366,17 @@ nová verzia + migrácia + test (dnes v6). Poradie podfáz: 10a → 10g, 10i (r�
   - `layout/DeckInsertDialog.tsx`: šablóny, firemná knižnica a prierezy projektu (`useProfileSources`, spoločné s knižnicou), názov, od / do z oblasti, posun osi mosta; os, kópia prierezu a NK jedným krokom späť (`deckFromProfile`, test pre všetky šablóny). Príklad dvojice NK ostáva v dialógu.
 
 **Hotové, keď:** junior otvorí trasu dlhú 12 km, vyznačí oblasť, stiahne terén a vloží NK bez prepisovania staničení. — *2026-10-31:* overené v prehliadači na osiach SO 171-11-01 (723 m) a 125-00 (557 m); **dlhú trasu (12 km) treba overiť** — v inboxe nie je (`Trasa LandXML.xml` alebo `R4_Lip-Stroc-Trasa.xml`).
+
+#### 10a2 — Rozhranie v štýle CAD (ADR 0016)
+Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Postup sa ruší úplne.
+- [ ] ribbon ako v Revite: menu Súbor (nový, otvoriť, uložiť, export), karty Domov, Vložiť, Upraviť, Pohľad, Správa; panel rýchleho prístupu (uložiť, späť, znova); vlastné SVG ikony; pohľady bez vlastných líšt, stav nástrojov v `App.tsx`; odstránenie panela Postup
+- [ ] prehliadač projektu: pohľady, model hierarchicky (os cesty → os mosta → NK → podpery, oblasť mosta), podklady, prierezy, parametre; ikony, zbalenie, kontextové menu, dvojklik priblíži
+- [ ] vlastnosti ako mriežka v Revite (výber typu, skupiny Názov | Hodnota, dialógy „…“); bez výberu vlastnosti aktívneho pohľadu; os cesty, oblasť mosta, terén, čiara, os mosta; dialóg Informácie o projekte (zadanie)
+- [ ] vlastnosti podpery a NK v mriežke (priebehy a ložiská v dialógoch)
+- [ ] vlastnosti prierezu, dialóg bodov a obrysov, nástroje editora prierezu v kontextovej karte
+- [ ] kontextová karta „Upraviť | typ“, Duplikovať a Premenovať
+
+**Hotové, keď:** všetky doterajšie funkcie sú dostupné z ribbonu, prehliadača a vlastností, pohľady nemajú vlastné lišty a úprava podpery aj NK v mriežke má späť / znova.
 
 #### 10b — Os mosta: dĺžky, profil v ľubovoľnej osi, merania, kóty
 - [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
@@ -658,3 +670,4 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Pomer polí | krajné / vnútorné 0,7 – 0,8, len upozornenie (2026-10-31) |
 | Klopenie | kontrola len ak ho LandXML obsahuje (2026-10-31) |
 | Parametre vo variantoch | spoločné s možnosťou prepísať vo variante (2026-10-31) |
+| Rozhranie | ako projekčná aplikácia (Revit, AutoCAD): ribbon podľa druhu práce (Súbor, Domov, Vložiť, Upraviť, Pohľad, Správa), prehliadač projektu (pohľady + model hierarchicky), vlastnosti ako mriežka; panel Postup zrušený (2026-10-31, ADR 0016) |
