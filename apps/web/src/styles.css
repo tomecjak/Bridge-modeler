@@ -6,6 +6,7 @@
   --muted: #6b7280;
   --accent: #2563eb;
   --canvas: #e9ecf1;
+  --terrain: #8a6d3b;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
@@ -20,6 +21,7 @@
     --muted: #9aa1ad;
     --accent: #60a5fa;
     --canvas: #101317;
+    --terrain: #c9a66b;
   }
 }
 
@@ -400,6 +402,12 @@ body {
   fill: none;
   stroke: var(--profile);
   stroke-width: 2;
+}
+
+.terrain-line {
+  fill: none;
+  stroke: var(--terrain);
+  stroke-width: 1.5;
 }
 
 .pvi-polygon {

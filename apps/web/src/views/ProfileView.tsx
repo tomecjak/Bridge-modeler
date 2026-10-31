@@ -14,6 +14,8 @@ interface Props {
   cursorS: number | undefined;
   onCursor: (s: number | undefined) => void;
   supports: readonly SupportResult[];
+  /** terénne čiary (staničenie s, výška v m n. m.) */
+  terrain?: readonly { id: string; runs: readonly (readonly { s: number; z: number }[])[] }[];
 }
 
 /** Prevýšenie pozdĺžneho profilu (výšky : dĺžky). */
@@ -21,7 +23,7 @@ const EXAGGERATION = 10;
 const STATION_LABEL_PX = 110;
 const ELEVATION_LINE_PX = 32;
 
-export function ProfileView({ alignment, cursorS, onCursor, supports }: Props) {
+export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = [] }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleProfile(alignment, 1), [alignment]);
   const profile = alignment.profile;
@@ -154,6 +156,21 @@ export function ProfileView({ alignment, cursorS, onCursor, supports }: Props) {
           {polygon.map((p) => (
             <circle key={`${p.x},${p.y}`} className="pvi" cx={p.x} cy={p.y} r={3} />
           ))}
+          {terrain.flatMap((t) =>
+            t.runs.map((run, i) => (
+              <polyline
+                // biome-ignore lint/suspicious/noArrayIndexKey: úseky terénu sú určené poradím
+                key={`${t.id}-${i}`}
+                className="terrain-line"
+                points={run
+                  .map((p) => {
+                    const q = toScreen({ x: p.s, y: p.z });
+                    return `${q.x.toFixed(1)},${q.y.toFixed(1)}`;
+                  })
+                  .join(' ')}
+              />
+            )),
+          )}
           <polyline className="profile-line" points={line} />
           {supports.map((r) => {
             if (r.bearings.length === 0) return null;

@@ -37,6 +37,7 @@ import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
 import { defaultSupport, useSupportState } from './store/supports.ts';
+import { terrainCrossSections, terrainProfiles, useTerrainTins } from './store/terrain.ts';
 import type { Cut } from './viewer/sceneView.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
@@ -95,6 +96,16 @@ export function App() {
   const supportState = useSupportState(alignmentMap, parameterState.set);
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
+
+  const tins = useTerrainTins();
+  const road = item?.alignment;
+  const profileTerrain = useMemo(() => (road ? terrainProfiles(tins, road) : []), [tins, road]);
+  const sectionTerrain = useMemo(() => {
+    const s = road?.stationing.fromDisplay(sectionAt);
+    if (!road || s === undefined || tins.length === 0) return [];
+    const halfWidth = Math.max(...project.terrains.map((t) => t.corridor.halfWidth));
+    return terrainCrossSections(tins, road, s, halfWidth);
+  }, [tins, road, sectionAt, project.terrains]);
 
   /** Rez v 3D: rovina kolmá na os mosta prvej NK na staničení prierezu, uzávery z prierezov NK. */
   const cut = useMemo((): Cut | undefined => {
@@ -577,6 +588,7 @@ export function App() {
         }
         supports={roadSupports}
         onAddSupport={addSupportAt}
+        terrain={profileTerrain}
         view3d={
           <Suspense fallback={<p className="panel-empty centered">{sk.viewer3d.loading}</p>}>
             <Viewer3D
@@ -617,6 +629,7 @@ export function App() {
             onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
             canInsert={defaultDeckRange() !== undefined}
             supports={sectionSupports}
+            terrain={sectionTerrain}
             onInsert={insertExample}
             emptyActions={
               <div className="toolbar">

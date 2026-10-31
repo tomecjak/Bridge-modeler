@@ -28,6 +28,8 @@ interface Props {
     footing: readonly Vec2[] | undefined;
   }[];
   onInsert: (template: 'twin' | 'single') => void;
+  /** priečne terénne čiary (x od osi cesty, y v m n. m.) */
+  terrain?: readonly { id: string; runs: readonly (readonly Vec2[])[] }[];
 }
 
 const mm = (m: number) => formatNumber(m * 1000, 0);
@@ -45,6 +47,7 @@ export function SectionView({
   canInsert,
   onInsert,
   supports,
+  terrain = [],
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
 
@@ -113,6 +116,18 @@ export function SectionView({
               y1={0}
               y2={size.height}
             />
+            {terrain.flatMap((t) =>
+              t.runs.map((run, i) => (
+                <polyline
+                  // biome-ignore lint/suspicious/noArrayIndexKey: úseky terénu sú určené poradím
+                  key={`${t.id}-${i}`}
+                  className="terrain-line"
+                  points={run
+                    .map((p) => `${toScreen(p).x.toFixed(1)},${toScreen(p).y.toFixed(1)}`)
+                    .join(' ')}
+                />
+              )),
+            )}
             {supports.map((s) => (
               <g key={s.id} className="support-elevation">
                 {s.footing && <path className="support-footing" d={path(s.footing)} />}
