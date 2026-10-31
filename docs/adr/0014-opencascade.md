@@ -61,3 +61,24 @@ Výsledky s `occt-wasm` na NK 212-00 (vzorky z `sampleSuperstructure`, priamkov�
 - Riziko mladej knižnice s jedným autorom: rozhranie `GeometryKernel` umožní prejsť na `replicad-opencascadejs`
   bez zmeny modelu a scény (rovnaké jadro OCCT, iné väzby).
 - Testy jadra OCCT bežia v Node (Vitest); WASM sa načíta zo súboru balíka.
+
+**Doplnok po implementácii (2026-10-31):**
+- **Jednotky STEP:** occt-wasm berie vnútorné jednotky ako mm a pri zápise „v m“ delí 1000. Model je v metroch,
+  preto sa súbor zapíše s jednotkou mm bez prepočtu a definícia jednotky dĺžky sa v ňom prepíše na meter.
+  Zväčšenie modelu na mm by v S-JTSK dalo súradnice ~1e9 mm, pri ktorých OCCT pri spätnom načítaní stratí teleso NK.
+  CAD pracujúci interne v mm (napr. FreeCAD) môže mať so súradnicami S-JTSK rovnaký problém → pre neho export
+  v lokálnych súradniciach.
+- **Presná scéna:**
+  - NK je loft s presahom za konce, orezaný zvislou rovinou cez os opory (rovnaká rovina ako koncová plocha siete);
+  - podpera je zjednotenie častí, od ktorého sa odčíta NK, ak sa obálky prekrývajú;
+  - ložiská sú zvlášť telesá.
+- **Výsledky na moste 212-00:**
+  - objem NK zhodný so sieťou;
+  - konce v rovinách opôr ≤ 1e-6 m;
+  - zjednotená opora má menší objem ako súčet prekrývajúcich sa častí v sieti.
+- **Čas:**
+  - presná scéna mosta 212-00: 1,1 s v Node, 0,8 – 1,1 s v prehliadači;
+  - STEP 0,15 s (1,6 MB, 13 pomenovaných telies);
+  - cieľ: presná scéna mosta 200 m do ~5 s vo workeri (bežný náhľad ostáva na sieti).
+- **Build:** worker presného modelu 330 kB, WASM samostatný súbor 21,2 MB (gzip 6,9 MB). Upozornenie Vite na
+  `node:module` sa týka iba vetvy pre Node v lepiacom kóde Emscripten.

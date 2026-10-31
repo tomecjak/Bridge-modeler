@@ -317,11 +317,14 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 #### 8c — OpenCascade (WASM)
 - [x] prieskum knižníc (veľkosť, rýchlosť, licencia LGPL-2.1) → ADR na schválenie
   - ADR 0014 (schválené 2026-10-31): `occt-wasm` 5.11.0; na NK 212-00 loft 137 ms, objem zhodný so sieťou, rezy koncov 426 ms, STEP s menami 122 ms; 4,6 MB brotli.
-- [ ] `GeometryKernel` s booleovskými operáciami a exportom STEP; balík `packages/occt`
-- [ ] presná scéna: konce NK orezané rovinou opory, opora zjednotená s krídlami, vrch piliera po podhľad NK
-- [ ] 3D prepínač „Presný model“ a export STEP (deterministický)
+- [x] `GeometryKernel` s booleovskými operáciami a exportom STEP; balík `packages/occt`
+  - voliteľné `cut`, `union`, `subtract`, `volume` v rozhraní (MeshKernel ich nemá); `OcctGeometryKernel`: priamkový loft s dutinami, hranol zošitý zo stien (nerovinná stena → vejár trojuholníkov), tesselácia bez straty presnosti, STEP s menami.
+- [x] presná scéna: konce NK orezané rovinou opory, opora zjednotená s krídlami, vrch piliera po podhľad NK
+  - `exactScene`: objem NK zhodný so sieťou, konce v rovinách opôr ≤ 1e-6 m, od podpery sa odčíta NK, ak doň zasahuje; ložiská zvlášť. Most 212-00: 1,1 s.
+- [x] 3D prepínač „Presný model“ a export STEP (deterministický)
+  - vlastný worker, načíta sa len po zapnutí; pri chybe návrat na sieť. „Export STEP“ v S-JTSK alebo lokálne, v metroch (ADR 0014, doplnok k jednotkám), pevná hlavička. Oznámenie o licencii LGPL-2.1 v 3D. Overené v prehliadači a v produkčnom builde.
 
-**Hotové, keď:** presný model sa zobrazí v 3D, objemy sedia so sieťou ± 0,5 % a STEP sa otvorí vo FreeCADe / Civil 3D.
+**Hotové, keď:** presný model sa zobrazí v 3D, objemy sedia so sieťou ± 0,5 % a STEP sa otvorí vo FreeCADe / Civil 3D. — *2026-10-31:* objemy a STEP overené testami (spätné načítanie, súradnice v S-JTSK v m); **otvorenie STEP vo FreeCADe / Civil 3D overí projektant**.
 
 ### Backlog
 - IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)
