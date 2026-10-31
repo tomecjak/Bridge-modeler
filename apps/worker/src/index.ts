@@ -81,7 +81,16 @@ export default {
     if (url.pathname.startsWith('/api/')) {
       const who = await identify(request, env);
       if (!who.ok) return json({ code: who.code, message: who.message }, 401);
-      return handleApi(request, env, who.email);
+      try {
+        return await handleApi(request, env, who.email);
+      } catch (e) {
+        // chyba databázy alebo kódu: záznam do logov Workera, projektantovi zrozumiteľná hláška
+        console.error(e);
+        return json(
+          { code: 'ServerError', message: 'Chyba servera knižnice. Skúste to znova.' },
+          500,
+        );
+      }
     }
     return env.ASSETS.fetch(request);
   },

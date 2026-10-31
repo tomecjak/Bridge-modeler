@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import worker, { type Env, handleApi } from '../src/index.ts';
 
 const env = {
@@ -18,5 +18,23 @@ describe('worker routing', () => {
   it('serves everything outside /api from the static assets', async () => {
     const r = await worker.fetch(new Request('https://x/plan'), env);
     expect(await r.text()).toBe('index');
+  });
+
+  it('turns a failing database into a JSON 500 with a readable message', async () => {
+    const broken = {
+      ...env,
+      DB: {
+        prepare: () => {
+          throw new Error('D1_ERROR');
+        },
+      },
+    } as unknown as Env;
+    const output = (globalThis as unknown as { console: { error: (...a: unknown[]) => void } })
+      .console;
+    const quiet = vi.spyOn(output, 'error').mockImplementation(() => undefined);
+    const r = await worker.fetch(new Request('https://x/api/library'), broken);
+    quiet.mockRestore();
+    expect(r.status).toBe(500);
+    expect(await r.json()).toMatchObject({ code: 'ServerError' });
   });
 });

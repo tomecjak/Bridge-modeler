@@ -60,7 +60,7 @@ function fromRow(r: Row): CloudEntry {
 const conflict = (current: CloudEntry): ApiError => ({
   status: 409,
   code: 'VersionConflict',
-  message: `Položku „${current.entry.name}“ medzitým zmenil ${current.updatedBy} (${current.updatedAt}). Načítajte knižnicu znova.`,
+  message: `Položku „${current.entry.name}“ medzitým zmenil ${current.updatedBy} (${current.updatedAt.slice(0, 16).replace('T', ' ')} UTC). Načítajte knižnicu znova.`,
   current,
 });
 

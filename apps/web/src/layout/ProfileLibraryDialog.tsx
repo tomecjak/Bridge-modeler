@@ -1,5 +1,6 @@
 import {
   copyForProject,
+  entryFromProfile,
   type LibraryEntry,
   type ModelIssue,
   memoryLibrary,
@@ -11,6 +12,7 @@ import { builtinProfileLibrary } from '@bridge/sections';
 import { useEffect, useMemo, useState } from 'react';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
+import { cloudProfileLibrary, detectCloud } from '../persistence/cloudLibrary.ts';
 import { downloadText } from '../persistence/fileIO.ts';
 import { drawingFileName } from '../persistence/fileName.ts';
 import { newId } from '../store/parameters.ts';
@@ -25,11 +27,17 @@ interface Props {
   onMessage: (text: string) => void;
 }
 
-type SourceKey = 'builtin' | 'project' | 'file';
+type SourceKey = 'builtin' | 'cloud' | 'project' | 'file';
+type CloudLibrary = ReturnType<typeof cloudProfileLibrary>;
+
+/** Dátum a čas zmeny položky v slovenskom formáte. */
+const formatDate = (iso: string | undefined) =>
+  iso ? new Date(iso).toLocaleString('sk-SK', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
 /**
- * Knižnica prierezov (Fáza 8b): zabudované šablóny, prierezy projektu a importovaný súbor. Vloženie do projektu,
- * export vybraných do súboru `.json` a import. Zdroje sú za rozhraním `ProfileLibrary` (neskôr aj databáza).
+ * Knižnica prierezov (Fáza 8b, 9): zabudované šablóny, firemná knižnica (Worker + D1, ak beží), prierezy projektu
+ * a importovaný súbor. Vloženie do projektu, uloženie prierezu projektu do firemnej knižnice, export vybraných
+ * do súboru `.json` a import. Zdroje sú za rozhraním `ProfileLibrary`.
  */
 export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) {
   const t = sk.library;
@@ -44,28 +52,63 @@ export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) 
   const [issues, setIssues] = useState<ModelIssue[]>([]);
   const [entries, setEntries] = useState<Record<SourceKey, LibraryEntry[]>>({
     builtin: [],
+    cloud: [],
     project: [],
     file: [],
   });
+  /** firemná knižnica (ADR 0015), ak beží Worker s API; inak sa zdroj nezobrazí */
+  const [cloud, setCloud] = useState<{ email: string; library: CloudLibrary }>();
+  const [cloudError, setCloudError] = useState<string>();
+  const [cloudRevision, setCloudRevision] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    void detectCloud().then((who) => {
+      if (alive && who) setCloud({ email: who.email, library: cloudProfileLibrary() });
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // zdroje sú asynchrónne (rozhranie pre budúcu databázu) → načítajú sa pri zmene
   // biome-ignore lint/correctness/useExhaustiveDependencies: prierezy projektu sa načítajú znova pri ich zmene
   useEffect(() => {
     let alive = true;
-    void Promise.all([builtin.list(), project.list(), file?.library.list() ?? []]).then(
-      ([b, p, f]) => {
-        if (alive) setEntries({ builtin: b, project: p, file: f });
+    const cloudList = cloud
+      ? cloud.library.list().catch((e: unknown) => {
+          setCloudError(e instanceof Error ? e.message : String(e));
+          return [];
+        })
+      : [];
+    void Promise.all([builtin.list(), cloudList, project.list(), file?.library.list() ?? []]).then(
+      ([b, c, p, f]) => {
+        if (alive) setEntries({ builtin: b, cloud: c, project: p, file: f });
       },
     );
     return () => {
       alive = false;
     };
-  }, [builtin, project, file, profiles]);
+  }, [builtin, project, file, profiles, cloud, cloudRevision]);
+
+  /** Zmena vo firemnej knižnici; pri konflikte verzie hláška a znova načítaný zoznam. */
+  async function cloudChange(run: (lib: CloudLibrary) => Promise<void>, done: string) {
+    if (!cloud) return;
+    try {
+      await run(cloud.library);
+      setCloudError(undefined);
+      onMessage(done);
+    } catch (e) {
+      setCloudError(e instanceof Error ? e.message : String(e));
+    }
+    setCloudRevision((r) => r + 1);
+  }
 
   const key = (source: SourceKey, id: string) => `${source}:${id}`;
   const sources: { key: SourceKey; title: string }[] = [
     { key: 'builtin', title: t.sources.builtin },
+    ...(cloud ? [{ key: 'cloud' as const, title: t.sources.cloud(cloud.email) }] : []),
     { key: 'project', title: t.sources.project },
     ...(file ? [{ key: 'file' as const, title: t.sources.file(file.name) }] : []),
   ];
@@ -117,6 +160,7 @@ export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) 
           {t.title}
         </h2>
         <p className="hint">{t.hint}</p>
+        {cloudError && <p className="issue issue-error">{cloudError}</p>}
         {issues.length > 0 && (
           <ul className="issues">
             {issues.map((i) => (
@@ -151,10 +195,47 @@ export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) 
                     <span className="library-name">
                       {e.name}
                       {e.typology && <span className="hint"> · {e.typology}</span>}
+                      {s.key === 'cloud' && cloud?.library.info(e.id) && (
+                        <span className="hint">
+                          {' '}
+                          ·{' '}
+                          {t.changedBy(
+                            cloud.library.info(e.id)?.updatedBy ?? '',
+                            formatDate(cloud.library.info(e.id)?.updatedAt),
+                          )}
+                        </span>
+                      )}
                     </span>
                     {s.key !== 'project' && (
                       <button type="button" className="button" onClick={() => insert(e)}>
                         {t.insert}
+                      </button>
+                    )}
+                    {s.key === 'project' && cloud && (
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() =>
+                          void cloudChange(
+                            (lib) => lib.save(entryFromProfile(e.profile)),
+                            t.savedToCloud(e.name),
+                          )
+                        }
+                      >
+                        {t.saveToCloud}
+                      </button>
+                    )}
+                    {s.key === 'cloud' && (
+                      <button
+                        type="button"
+                        className="button danger"
+                        onClick={() => {
+                          if (window.confirm(t.confirmRemove(e.name))) {
+                            void cloudChange((lib) => lib.remove(e.id), t.removedFromCloud(e.name));
+                          }
+                        }}
+                      >
+                        {t.remove}
                       </button>
                     )}
                   </li>
