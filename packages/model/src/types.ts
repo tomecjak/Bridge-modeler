@@ -222,8 +222,15 @@ export const TerrainSurfaceSchema = z.object({
   source: z.enum(['landxml', 'geotiff', 'zbgis']),
   /** povinné uvedenie zdroja (napr. „DMR 5.0 © ÚGKK SR, CC BY 4.0“) */
   attribution: z.string().optional(),
-  /** koridor použitý pri orezaní: pol šírky okolo osi cesty a presah za NK [m] */
-  corridor: z.object({ halfWidth: z.number(), margin: z.number() }),
+  /**
+   * oblasť použitá pri orezaní: pás okolo osi cesty (pol šírky, presah za NK) alebo obdĺžnik E/N okolo mosta
+   * s okrajom `margin` (stiahnutý DMR); chýbajúci tvar = pás
+   */
+  corridor: z.object({
+    halfWidth: z.number(),
+    margin: z.number(),
+    shape: z.enum(['strip', 'rectangle']).optional(),
+  }),
   data: TerrainDataSchema,
 });
 export type TerrainSurface = z.infer<typeof TerrainSurfaceSchema>;

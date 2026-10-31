@@ -46,6 +46,10 @@ mriežka v stredoch 1 m buniek DMR v koridore a v pokrytí LLS (vrstva 0), dávk
 služba pri bode bez dát dávku ukončí, pokračuje sa za ním. Nad 120 tis. bodov sa krok mriežky zväčší.
 `fetch` sa do `packages/terrain` vstrekuje (balíky sú bez DOM, testy majú falošný server). Terén má zdroj `zbgis`
 a atribúciu „DMR 5.0 © ÚGKK SR, CC BY 4.0“. Služba nie je zmluvne garantovaná — pri výpadku ostáva import súboru.
+Stiahnutý terén pokrýva **obdĺžnik zarovnaný na E/N okolo mosta** (os v rozsahu NK ± okraj, predvolene 50 m, na celé metre;
+rozhodnutie 2026-10-31), import súboru ostáva s pásom okolo osi; tvar je v `corridor.shape`.
+Na terén sa v 3D dá položiť **ortofotomapa alebo mapa ZBGIS** (WMS `zbgis_ortofoto_wms`, `zbgis_wms_featureinfo`,
+GetMap v EPSG:5514 pre obálku terénu) — len zobrazenie, do projektu sa obrázok neukladá.
 
 ## Dôsledky
 

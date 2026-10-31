@@ -131,8 +131,12 @@ function TerrainEditor({
           {t.points(size.points)} ·{' '}
           {terrain.data.kind === 'tin' ? t.triangles(size.cells) : t.cells(size.cells)}
         </dd>
-        <dt>{t.corridor}</dt>
-        <dd>{t.corridorUsed(terrain.corridor.halfWidth, terrain.corridor.margin)}</dd>
+        <dt>{t.area}</dt>
+        <dd>
+          {terrain.corridor.shape === 'rectangle'
+            ? t.rectangleUsed(terrain.corridor.margin)
+            : t.corridorUsed(terrain.corridor.halfWidth, terrain.corridor.margin)}
+        </dd>
         {terrain.attribution && (
           <>
             <dt>{t.attribution}</dt>

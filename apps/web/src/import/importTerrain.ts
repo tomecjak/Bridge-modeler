@@ -6,10 +6,10 @@ import {
   type CorridorOptions,
   clipGrid,
   clipTin,
-  corridorAround,
   downloadDmr,
   type ParsedSurface,
   parseSurfaces,
+  rectangleAround,
   type TerrainIssue,
   ZBGIS_DMR_ATTRIBUTION,
 } from '@bridge/terrain';
@@ -80,13 +80,13 @@ export async function buildTerrain(
 }
 
 /**
- * Stiahne DMR 5.0 zo služby ZBGIS pre koridor okolo osi (ADR 0011, doplnok) a vytvorí terén projektu.
- * `ranges` = rozsahy NK na osi v spojitom staničení.
+ * Stiahne DMR 5.0 zo služby ZBGIS pre obdĺžnik E/N okolo mosta (os v rozsahu NK ± `margin`, ADR 0011, doplnok)
+ * a vytvorí terén projektu. `ranges` = rozsahy NK na osi v spojitom staničení.
  */
 export async function downloadTerrain(
   road: Alignment,
   ranges: readonly { sFrom: number; sTo: number }[],
-  options: CorridorOptions,
+  margin: number,
   origin: Vec3,
   id: string,
   name: string,
@@ -95,8 +95,8 @@ export async function downloadTerrain(
     isCancelled?: () => boolean;
   } = {},
 ): Promise<{ terrain?: TerrainSurface; issues: TerrainIssue[] }> {
-  const corridor = corridorAround(road, ranges, options);
-  const b = corridor.bounds;
+  const area = rectangleAround(road, ranges, margin);
+  const b = area.bounds;
   const read = await downloadDmr(
     {
       minX: b.minX + origin.x,
@@ -104,11 +104,11 @@ export async function downloadTerrain(
       maxX: b.maxX + origin.x,
       maxY: b.maxY + origin.y,
     },
-    (x, y) => corridor.contains(x - origin.x, y - origin.y),
+    (x, y) => area.contains(x - origin.x, y - origin.y),
     { fetch: (url, init) => fetch(url, init), ...callbacks },
   );
   if (!read.raster) return { issues: read.issues };
-  const data = clipGrid(read.raster, corridor, origin);
+  const data = clipGrid(read.raster, area, origin);
   if (!data) return { issues: [{ severity: 'error', code: 'NoData' }] };
   return {
     terrain: {
@@ -116,12 +116,15 @@ export async function downloadTerrain(
       name,
       source: 'zbgis',
       attribution: ZBGIS_DMR_ATTRIBUTION,
-      corridor: { ...options },
+      corridor: { halfWidth: margin, margin, shape: 'rectangle' },
       data,
     },
     issues: [],
   };
 }
+
+/** Predvolený okraj obdĺžnika terénu okolo mosta [m]. */
+export const DEFAULT_TERRAIN_MARGIN = 50;
 
 /** Počet bodov a trojuholníkov / buniek uloženého terénu (pre zobrazenie). */
 export function terrainSize(t: TerrainSurface): { points: number; cells: number } {

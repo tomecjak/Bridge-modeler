@@ -120,6 +120,43 @@ export function corridorAround(
   return { contains, bounds };
 }
 
+/**
+ * Obdĺžnik zarovnaný na osi E/N okolo mosta (ADR 0011, doplnok): obálka osi cesty v rozsahoch NK ± `margin`
+ * zväčšená o `margin` na všetky strany a zaokrúhlená na celé metre (bunky DMR, okraje mapy). Bez rozsahov celá os.
+ */
+export function rectangleAround(
+  alignment: Alignment,
+  ranges: readonly { sFrom: number; sTo: number }[],
+  margin: number,
+): Corridor {
+  const spans = (ranges.length > 0 ? ranges : [{ sFrom: 0, sTo: alignment.length }]).map((r) => ({
+    from: Math.max(0, Math.min(r.sFrom, r.sTo) - margin),
+    to: Math.min(alignment.length, Math.max(r.sFrom, r.sTo) + margin),
+  }));
+  const b: Bounds2 = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  for (const { from, to } of spans) {
+    const n = Math.max(1, Math.ceil((to - from) / STEP));
+    for (let k = 0; k <= n; k++) {
+      const p = alignment.evaluateHorizontal(from + ((to - from) * k) / n).point;
+      b.minX = Math.min(b.minX, p.x);
+      b.minY = Math.min(b.minY, p.y);
+      b.maxX = Math.max(b.maxX, p.x);
+      b.maxY = Math.max(b.maxY, p.y);
+    }
+  }
+  const bounds: Bounds2 = {
+    minX: Math.floor(b.minX - margin),
+    minY: Math.floor(b.minY - margin),
+    maxX: Math.ceil(b.maxX + margin),
+    maxY: Math.ceil(b.maxY + margin),
+  };
+  return {
+    bounds,
+    contains: (x, y) =>
+      x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY,
+  };
+}
+
 const mm = (v: number) => Math.round(v * 1000) / 1000;
 
 /**

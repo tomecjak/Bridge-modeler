@@ -1263,6 +1263,13 @@
               },
               "margin": {
                 "type": "number"
+              },
+              "shape": {
+                "type": "string",
+                "enum": [
+                  "strip",
+                  "rectangle"
+                ]
               }
             },
             "required": [

@@ -8,12 +8,7 @@ import {
   supportElevation,
   twinDeckExample,
 } from '@bridge/sections';
-import {
-  type CorridorOptions,
-  corridorAround,
-  DEFAULT_CORRIDOR,
-  deckRanges,
-} from '@bridge/terrain';
+import { type CorridorOptions, corridorAround, deckRanges } from '@bridge/terrain';
 import { type DragEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
@@ -22,6 +17,7 @@ import { formatTerrainIssue } from './i18n/terrainIssues.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
 import {
   buildTerrain,
+  DEFAULT_TERRAIN_MARGIN,
   downloadTerrain,
   isTerrainFile,
   readTerrainFile,
@@ -393,7 +389,7 @@ export function App() {
       return;
     }
     const previous = project.terrains.find((t) => t.id === replaceId);
-    const options = previous?.corridor ?? DEFAULT_CORRIDOR;
+    const margin = previous?.corridor.margin ?? DEFAULT_TERRAIN_MARGIN;
     dmrCancel.current = false;
     setDmrProgress(0);
     setMessage(sk.terrain.downloading(0));
@@ -401,7 +397,7 @@ export function App() {
       const r = await downloadTerrain(
         road,
         deckRanges(road, project.superstructures, project.bridgeAxes),
-        options,
+        margin,
         origin,
         previous?.id ?? newId('ter'),
         previous?.name ?? sk.terrain.downloadName,

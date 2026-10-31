@@ -1,7 +1,14 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { describe, expect, it } from 'vitest';
-import { clipGrid, clipTin, corridorAround, deckRanges, type Raster } from './corridor.ts';
+import {
+  clipGrid,
+  clipTin,
+  corridorAround,
+  deckRanges,
+  type Raster,
+  rectangleAround,
+} from './corridor.ts';
 import type { ParsedSurface } from './landxml.ts';
 import { terrainTin } from './tin.ts';
 
@@ -157,5 +164,41 @@ describe('clipGrid / deckRanges', () => {
     };
     expect(deckRanges(alignment, [deck], [axis])).toEqual([{ sFrom: 50, sTo: 100 }]);
     expect(deckRanges(alignment, [deck], [{ ...axis, alignment: 'iná' }])).toEqual([]);
+  });
+});
+
+describe('rectangleAround', () => {
+  it('encloses the axis over the deck range plus margin on whole metres, aligned with E/N', () => {
+    const r = rectangleAround(alignment, [{ sFrom: 60, sTo: 100 }], 50);
+    for (const v of Object.values(r.bounds)) expect(Number.isInteger(v)).toBe(true);
+    for (let s = 10; s <= 150; s += 5) {
+      const p = alignment.evaluateHorizontal(s).point;
+      expect(p.x - 50).toBeGreaterThanOrEqual(r.bounds.minX);
+      expect(p.x + 50).toBeLessThanOrEqual(r.bounds.maxX);
+      expect(p.y - 50).toBeGreaterThanOrEqual(r.bounds.minY);
+      expect(p.y + 50).toBeLessThanOrEqual(r.bounds.maxY);
+    }
+    expect(r.contains(r.bounds.minX, r.bounds.maxY)).toBe(true);
+    expect(r.contains(r.bounds.minX - 0.01, r.bounds.maxY)).toBe(false);
+  });
+
+  it('clips a raster to complete rows', () => {
+    const r = rectangleAround(alignment, [{ sFrom: 20, sTo: 30 }], 5);
+    const b = r.bounds;
+    const width = b.maxX - b.minX + 20;
+    const height = b.maxY - b.minY + 20;
+    const raster: Raster = {
+      x0: b.minX - 9.5 + origin.x,
+      y0: b.minY - 9.5 + origin.y,
+      dx: 1,
+      dy: 1,
+      width,
+      height,
+      z: new Float64Array(width * height).fill(250),
+    };
+    const grid = clipGrid(raster, r, origin);
+    const rows = new Set(grid?.runs.map((run) => run.z.length));
+    expect(rows.size).toBe(1);
+    expect(grid?.runs.length).toBe(b.maxY - b.minY);
   });
 });

@@ -1,8 +1,14 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
-import { corridorAround } from '@bridge/terrain';
-import { describe, expect, it } from 'vitest';
-import { buildTerrain, isTerrainFile, readTerrainFile, terrainSize } from './importTerrain.ts';
+import { corridorAround, rectangleAround } from '@bridge/terrain';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  buildTerrain,
+  downloadTerrain,
+  isTerrainFile,
+  readTerrainFile,
+  terrainSize,
+} from './importTerrain.ts';
 
 const data = syntheticAlignmentData(undefined, 1000);
 const origin = suggestOrigin(data);
@@ -52,5 +58,38 @@ describe('import terénu', () => {
     expect(far && (await buildTerrain(far, corridor, options, origin, 't2'))).toEqual({
       issues: [],
     });
+  });
+});
+
+describe('stiahnutie DMR 5.0 zo ZBGIS', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('downloads the whole rectangle around the bridge and stores it as a ZBGIS terrain', async () => {
+    // falošná služba: pokrytie bez polygónov (query zlyhá), identify vráti výšku pre každý bod
+    vi.stubGlobal('fetch', async (url: string, init?: { body?: string }) => {
+      if (url.includes('/query')) return { ok: false, status: 500, json: async () => ({}) };
+      const geometry = new URLSearchParams(init?.body ?? '').get('geometry') ?? '{"points":[]}';
+      const points = (JSON.parse(geometry) as { points: [number, number][] }).points;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: points.map(([x, y]) => ({
+            geometry: { x, y },
+            attributes: { 'Pixel Value': '250.5' },
+          })),
+        }),
+      };
+    });
+    const ranges = [{ sFrom: 20, sTo: 30 }];
+    const r = await downloadTerrain(alignment, ranges, 10, origin, 'dmr', 'DMR 5.0 (ZBGIS)');
+    expect(r.issues).toEqual([]);
+    expect(r.terrain).toMatchObject({
+      source: 'zbgis',
+      corridor: { margin: 10, shape: 'rectangle' },
+      attribution: expect.stringContaining('ÚGKK'),
+    });
+    const b = rectangleAround(alignment, ranges, 10).bounds;
+    expect(r.terrain && terrainSize(r.terrain).points).toBe((b.maxX - b.minX) * (b.maxY - b.minY));
   });
 });
