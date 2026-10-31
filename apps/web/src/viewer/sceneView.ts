@@ -26,6 +26,7 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { MeshUpdate, RenderObject } from './mesh.worker.ts';
+import type { TerrainBuffers } from './terrainMesh.ts';
 
 /** Uhol medzi plochami, nad ktorým sa hrana zvýrazní čiarou [°]. */
 const EDGE_ANGLE = 30;
@@ -84,6 +85,16 @@ export class SceneView {
   private readonly edgeMaterial: LineBasicMaterial;
   private readonly axisMaterial: LineBasicMaterial;
   private readonly capMaterial = new MeshBasicMaterial({ side: DoubleSide });
+  /** terén polopriehľadný, aby bolo vidno základy pod ním (ADR 0011) */
+  private readonly terrainMaterial = new MeshStandardMaterial({
+    color: 0x9aa877,
+    roughness: 1,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+  private terrainMeshes: Mesh[] = [];
   private caps: Mesh[] = [];
   private axisLine: Line | undefined;
   private selectedKey: string | undefined;
@@ -199,7 +210,7 @@ export class SceneView {
     const n = cut && new Vector3(cut.normal.x, cut.normal.y, cut.normal.z);
     this.clipping =
       cut && n ? [new Plane(n, -n.dot(new Vector3(cut.origin.x, cut.origin.y, cut.origin.z)))] : [];
-    for (const m of [...Object.values(this.materials), this.edgeMaterial]) {
+    for (const m of [...Object.values(this.materials), this.edgeMaterial, this.terrainMaterial]) {
       m.clippingPlanes = this.clipping;
       m.needsUpdate = true;
     }
@@ -209,6 +220,27 @@ export class SceneView {
       this.caps.push(cap);
       this.scene.add(cap);
     }
+    this.requestRender();
+  }
+
+  /** Siete terénu (nahradia predchádzajúce); prázdne = terén skrytý. */
+  setTerrain(terrains: readonly TerrainBuffers[]): void {
+    for (const m of this.terrainMeshes) {
+      this.scene.remove(m);
+      m.geometry.dispose();
+    }
+    this.terrainMeshes = terrains.map((t) => {
+      const g = new BufferGeometry();
+      g.setAttribute('position', new BufferAttribute(t.positions, 3));
+      g.setAttribute('normal', new BufferAttribute(t.normals, 3));
+      g.setIndex(new BufferAttribute(t.indices, 1));
+      g.computeBoundingSphere();
+      const mesh = new Mesh(g, this.terrainMaterial);
+      mesh.position.set(t.center.x, t.center.y, t.center.z);
+      mesh.renderOrder = 1; // priehľadný terén až po telesách mosta
+      this.scene.add(mesh);
+      return mesh;
+    });
     this.requestRender();
   }
 
@@ -255,7 +287,9 @@ export class SceneView {
     for (const key of [...this.entries.keys()]) this.remove(key);
     this.setAxis([]);
     this.setCut(undefined);
+    this.setTerrain([]);
     this.capMaterial.dispose();
+    this.terrainMaterial.dispose();
     this.controls.dispose();
     for (const m of [...Object.values(this.materials), this.edgeMaterial, this.axisMaterial]) {
       m.dispose();

@@ -617,6 +617,7 @@ export function App() {
               stationRange={sectionRange}
               onStation={setSectionStation}
               cut={cut}
+              terrains={tins}
             />
           </Suspense>
         }

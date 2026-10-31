@@ -1,10 +1,12 @@
 import type { Alignment } from '@bridge/alignment';
 import type { ProjectFile } from '@bridge/model';
-import { type PointerEvent, useEffect, useRef, useState } from 'react';
+import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
+import type { TerrainTin } from '../store/terrain.ts';
 import { StationControl } from '../views/StationControl.tsx';
 import { sampleHorizontal } from '../views/sampling.ts';
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
+import { terrainBuffers } from './terrainMesh.ts';
 import { useMeshWorker } from './useMeshWorker.ts';
 
 export interface Viewer3DProps {
@@ -18,6 +20,8 @@ export interface Viewer3DProps {
   stationRange: { from: number; to: number } | undefined;
   onStation: (station: number) => void;
   cut: Cut | undefined;
+  /** TIN terénov projektu (sieť sa zostaví pri ich zmene) */
+  terrains: readonly TerrainTin[];
 }
 
 /** Posun myši, do ktorého sa uvoľnenie tlačidla berie ako klik (výber), nie ťahanie [px]. */
@@ -55,6 +59,7 @@ export default function Viewer3D({
   stationRange,
   onStation,
   cut,
+  terrains,
 }: Viewer3DProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<SceneView | undefined>(undefined);
@@ -62,6 +67,8 @@ export default function Viewer3D({
   const [info, setInfo] = useState<{ count: number; elapsed: number }>();
   const [error, setError] = useState<string>();
   const [cutOn, setCutOn] = useState(false);
+  const [terrainOn, setTerrainOn] = useState(true);
+  const terrainMeshes = useMemo(() => terrains.map((t) => terrainBuffers(t.tin)), [terrains]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -110,6 +117,10 @@ export default function Viewer3D({
     viewRef.current?.setCut(cutOn ? cut : undefined);
   }, [cutOn, cut]);
 
+  useEffect(() => {
+    viewRef.current?.setTerrain(terrainOn ? terrainMeshes : []);
+  }, [terrainOn, terrainMeshes]);
+
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     const start = down.current;
     down.current = undefined;
@@ -140,6 +151,16 @@ export default function Viewer3D({
         >
           {sk.viewer3d.cut}
         </button>
+        {terrains.length > 0 && (
+          <button
+            type="button"
+            className="button"
+            aria-pressed={terrainOn}
+            onClick={() => setTerrainOn((v) => !v)}
+          >
+            {sk.viewer3d.terrain}
+          </button>
+        )}
         {cutOn && <StationControl station={station} range={stationRange} onStation={onStation} />}
         {info && (
           <span className="hint">
