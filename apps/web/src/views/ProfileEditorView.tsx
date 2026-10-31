@@ -2,6 +2,8 @@ import type { Scope } from '@bridge/expr';
 import type { Vec2 } from '@bridge/geom';
 import type { ProfileDefinition, ProfileLoop, ProfilePoint } from '@bridge/model';
 import {
+  type ConstraintSpec,
+  constrainPoint,
   constraintExpressions,
   dragPoint,
   drivingIdentifiers,
@@ -146,6 +148,8 @@ export function ProfileEditorView({
   }, [tool, loopDraft, selectedPoint, profile, loopRole]);
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
+    // panel s údajmi a väzbou nad výkresom nepohybuje bodmi ani pohľadom
+    if (e.target instanceof Element && e.target.closest('.pe-readout')) return;
     if (e.button === 0 && tool === 'select' && view) {
       const name = hit(e);
       const point = profile.points.find((p) => p.name === name);
@@ -198,7 +202,8 @@ export function ProfileEditorView({
 
   function onClick(e: React.MouseEvent<HTMLDivElement>) {
     if (wasDrag() || !view) return;
-    if (e.target instanceof Element && e.target.closest('button, select, label')) return;
+    if (e.target instanceof Element && e.target.closest('button, select, label, .pe-readout'))
+      return;
     const name = hit(e);
     if (tool === 'point') {
       const s = snapAt(e);
@@ -416,6 +421,27 @@ export function ProfileEditorView({
               <div className="hint">
                 {constraint ? t.constraints[constraint.kind] : t.parametric}
               </div>
+              {selected.name !== profile.referencePoint && (
+                <ConstraintEditor
+                  key={`${selected.name}:${selected.x}:${selected.y}`}
+                  current={constraint}
+                  earlier={profile.points
+                    .slice(
+                      0,
+                      profile.points.findIndex((p) => p.name === selected.name),
+                    )
+                    .map((p) => p.name)}
+                  onApply={(spec) =>
+                    onChange(
+                      setPointExpressions(
+                        profile,
+                        selected.name,
+                        constrainPoint(spec, selectedAt, points, evaluated.origin),
+                      ),
+                    )
+                  }
+                />
+              )}
             </>
           )}
           {selectedAt && secondAt && second && (
@@ -438,6 +464,117 @@ export function ProfileEditorView({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+type Kind = ConstraintSpec['kind'];
+const KINDS: Kind[] = [
+  'fixed',
+  'offset',
+  'below',
+  'level',
+  'slope',
+  'onLine',
+  'intersection',
+  'mirror',
+];
+/** Počet referenčných bodov podľa druhu väzby. */
+const REFS: Record<Kind, number> = {
+  fixed: 0,
+  offset: 1,
+  below: 1,
+  level: 1,
+  slope: 1,
+  mirror: 1,
+  onLine: 2,
+  intersection: 4,
+};
+
+/** Druh väzby a referenčné body (len skoršie body — bod nesmie odkazovať na neskorší). */
+function ConstraintEditor({
+  current,
+  earlier,
+  onApply,
+}: {
+  current: ReturnType<typeof recognizeConstraint>;
+  earlier: readonly string[];
+  onApply: (spec: ConstraintSpec) => void;
+}) {
+  const t = sk.profileEditor;
+  const initialRefs = (): string[] => {
+    if (!current) return [];
+    if ('ref' in current) return [current.ref];
+    if (current.kind === 'onLine') return [current.a, current.b];
+    if (current.kind === 'intersection') return [current.a, current.b, current.c, current.d];
+    return [];
+  };
+  const [kind, setKind] = useState<Kind>(current?.kind ?? 'fixed');
+  const [refs, setRefs] = useState<string[]>(initialRefs);
+  const need = REFS[kind];
+  const chosen = Array.from({ length: need }, (_, i) => refs[i] ?? earlier[earlier.length - 1 - i]);
+  const ready = chosen.every((r) => r !== undefined && earlier.includes(r));
+  const spec = (): ConstraintSpec | undefined => {
+    if (!ready) return undefined;
+    const [a, b, c, d] = chosen as string[];
+    switch (kind) {
+      case 'fixed':
+        return { kind };
+      case 'onLine':
+        return { kind, a: a as string, b: b as string };
+      case 'intersection':
+        return { kind, a: a as string, b: b as string, c: c as string, d: d as string };
+      default:
+        return { kind, ref: a as string };
+    }
+  };
+  return (
+    <div className="pe-constraint">
+      <label className="field">
+        <span>{t.constraint}</span>
+        <select value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
+          {KINDS.map((k) => (
+            <option key={k} value={k}>
+              {t.constraints[k]}
+            </option>
+          ))}
+        </select>
+      </label>
+      {chosen.map((r, i) => (
+        <label
+          // biome-ignore lint/suspicious/noArrayIndexKey: referenčné body sú určené poradím (A, B, C, D)
+          key={i}
+          className="field"
+        >
+          <span>{need === 1 ? t.refPoint : t.refPoints[i]}</span>
+          <select
+            value={r ?? ''}
+            onChange={(e) => {
+              const next = [...chosen] as string[];
+              next[i] = e.target.value;
+              setRefs(next);
+            }}
+          >
+            {earlier.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+      ))}
+      {need > earlier.length && <p className="hint">{t.needsEarlier}</p>}
+      <button
+        type="button"
+        className="button"
+        disabled={!ready}
+        onClick={() => {
+          const s = spec();
+          if (s) onApply(s);
+        }}
+      >
+        {t.applyConstraint}
+      </button>
     </div>
   );
 }

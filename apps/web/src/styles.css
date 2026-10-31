@@ -1097,6 +1097,14 @@ text.dw-stationing {
   stroke-width: 1.5;
 }
 
+.pe-constraint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .pe-readout {
   position: absolute;
   left: 12px;

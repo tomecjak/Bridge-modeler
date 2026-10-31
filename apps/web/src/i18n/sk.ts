@@ -273,6 +273,12 @@ export const sk = {
     locked: (point: string, names: string) => `Bod ${point} riadia: ${names}`,
     referenceNotRemovable: 'Referenčný bod sa nedá odstrániť.',
     distance: (a: string, b: string) => `${a} → ${b}`,
+    constraint: 'Väzba bodu',
+    refPoint: 'Bod',
+    refPoints: ['Priamka 1: bod A', 'Priamka 1: bod B', 'Priamka 2: bod C', 'Priamka 2: bod D'],
+    needsEarlier:
+      'Väzba potrebuje viac skorších bodov (bod môže odkazovať len na body nad ním v tabuľke).',
+    applyConstraint: 'Použiť väzbu',
     constraints: {
       fixed: 'Pevné súradnice',
       offset: 'Relatívne k bodu',
