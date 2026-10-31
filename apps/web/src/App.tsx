@@ -278,8 +278,10 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const revision = projectStore.getState().revision;
     void loadAutosave().then((saved) => {
-      if (cancelled || !saved) return;
+      // kým sa uložený projekt načítal, mohol používateľ otvoriť iný alebo začať upravovať — ten má prednosť
+      if (cancelled || !saved || projectStore.getState().revision !== revision) return;
       projectStore.getState().replace(saved.project);
       setMessage(sk.persistence.restored(saved.savedAt.toLocaleString('sk-SK')));
     });
