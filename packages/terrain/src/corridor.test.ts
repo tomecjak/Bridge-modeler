@@ -2,12 +2,14 @@ import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { describe, expect, it } from 'vitest';
 import {
+  bridgeRanges,
   clipGrid,
   clipTin,
   corridorAround,
   deckRanges,
   type Raster,
   rectangleAround,
+  studyRanges,
 } from './corridor.ts';
 import type { ParsedSurface } from './landxml.ts';
 import { terrainTin } from './tin.ts';
@@ -164,6 +166,15 @@ describe('clipGrid / deckRanges', () => {
     };
     expect(deckRanges(alignment, [deck], [axis])).toEqual([{ sFrom: 50, sTo: 100 }]);
     expect(deckRanges(alignment, [deck], [{ ...axis, alignment: 'iná' }])).toEqual([]);
+
+    // bez NK rozhoduje oblasť mosta (aj zadaná odzadu); oblasť na inej osi sa ignoruje
+    const area = { alignment: alignment.name, from: 1300, to: 1200 };
+    expect(studyRanges(alignment, area)).toEqual([{ sFrom: 200, sTo: 300 }]);
+    expect(studyRanges(alignment, { ...area, alignment: 'iná' })).toEqual([]);
+    expect(studyRanges(alignment, null)).toEqual([]);
+    expect(bridgeRanges(alignment, [deck], [axis], area)).toEqual([{ sFrom: 50, sTo: 100 }]);
+    expect(bridgeRanges(alignment, [], [axis], area)).toEqual([{ sFrom: 200, sTo: 300 }]);
+    expect(bridgeRanges(alignment, [], [], null)).toEqual([]);
   });
 });
 

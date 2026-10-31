@@ -1,6 +1,6 @@
 import type { Alignment } from '@bridge/alignment';
 import type { Vec2, Vec3 } from '@bridge/geom';
-import type { BridgeAxis, Superstructure, TerrainData } from '@bridge/model';
+import type { BridgeAxis, StudyArea, Superstructure, TerrainData } from '@bridge/model';
 import type { ParsedSurface } from './landxml.ts';
 import type { Bounds2 } from './tin.ts';
 
@@ -36,6 +36,28 @@ export function deckRanges(
     const sTo = alignment.stationing.fromDisplay(sup.to);
     return sFrom === undefined || sTo === undefined ? [] : [{ sFrom, sTo }];
   });
+}
+
+/** Oblasť mosta (Fáza 10a) na osi cesty v spojitom staničení; prázdne, ak nie je alebo leží na inej osi. */
+export function studyRanges(
+  alignment: Alignment,
+  studyArea: StudyArea | null,
+): { sFrom: number; sTo: number }[] {
+  if (studyArea?.alignment !== alignment.name) return [];
+  const a = alignment.stationing.fromDisplay(studyArea.from);
+  const b = alignment.stationing.fromDisplay(studyArea.to);
+  return a === undefined || b === undefined ? [] : [{ sFrom: Math.min(a, b), sTo: Math.max(a, b) }];
+}
+
+/** Rozsahy, okolo ktorých sa orezáva terén: NK na osi cesty, inak oblasť mosta; prázdne = celá os. */
+export function bridgeRanges(
+  alignment: Alignment,
+  superstructures: readonly Superstructure[],
+  bridgeAxes: readonly BridgeAxis[],
+  studyArea: StudyArea | null,
+): { sFrom: number; sTo: number }[] {
+  const decks = deckRanges(alignment, superstructures, bridgeAxes);
+  return decks.length > 0 ? decks : studyRanges(alignment, studyArea);
 }
 
 /**

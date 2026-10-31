@@ -1,3 +1,4 @@
+import { emptyBrief } from './brief.ts';
 import type { ModelIssue } from './issues.ts';
 import { SCHEMA_VERSION } from './schema.ts';
 import { defaultAbutmentGeometry } from './types.ts';
@@ -34,6 +35,8 @@ export const MIGRATIONS: Readonly<
   '4': { to: '5', migrate: (raw) => ({ ...raw, terrains: [] }) },
   /** 5 → 6: čiary v pôdoryse a okraj NK podľa krivky (Fáza 8a) */
   '5': { to: '6', migrate: (raw) => ({ ...raw, planLines: [] }) },
+  /** 6 → 7: zadanie a oblasť mosta (Fáza 10a) */
+  '6': { to: '7', migrate: (raw) => ({ ...raw, brief: emptyBrief(), studyArea: null }) },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BriefSchema, emptyBrief, StudyAreaSchema } from './brief.ts';
 import {
   BridgeAxisSchema,
   ParameterSchema,
@@ -10,7 +11,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '6';
+export const SCHEMA_VERSION = '7';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -71,12 +72,15 @@ export const AlignmentDataSchema = z.object({
 export const ProjectFileSchema = z.strictObject({
   schemaVersion: z.literal(SCHEMA_VERSION),
   name: z.string(),
+  brief: BriefSchema,
   crs: z.object({
     epsg: z.literal(5514),
     /** lokálny počiatok v EPSG:5514 / Bpv; null, kým nie je importovaná os (ADR 0003) */
     origin: Vec3Schema.nullable(),
   }),
   alignments: z.array(AlignmentDataSchema),
+  /** oblasť mosta na osi cesty; null, kým ju projektant nevyznačí */
+  studyArea: StudyAreaSchema.nullable(),
   parameters: z.array(ParameterSchema),
   bridgeAxes: z.array(BridgeAxisSchema),
   profiles: z.array(ProfileDefinitionSchema),
@@ -92,8 +96,10 @@ export function createEmptyProject(name: string): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
     name,
+    brief: emptyBrief(),
     crs: { epsg: 5514, origin: null },
     alignments: [],
+    studyArea: null,
     parameters: [],
     bridgeAxes: [],
     profiles: [],

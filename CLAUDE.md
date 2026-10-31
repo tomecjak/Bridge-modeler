@@ -104,3 +104,8 @@ pnpm lint
 | šikmosť, uhol kríženia | `skew` |
 | základ | `foundation` |
 | výkres | `drawingSheet` |
+| zadanie (stavba, objekt) | `brief` |
+| objednávateľ | `client` |
+| kategória cesty | `roadCategory` |
+| voľná šírka (na moste) | `freeWidth` |
+| oblasť mosta | `studyArea` |

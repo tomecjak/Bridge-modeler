@@ -2,6 +2,7 @@ import type { AlignmentData } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
+import { emptyBrief } from './brief.ts';
 import { migrateProject } from './migrations.ts';
 import { openProject, serializeProject } from './project.ts';
 import { type AlignmentDataSchema, createEmptyProject, type ProjectFile } from './schema.ts';
@@ -10,6 +11,10 @@ function sampleProject(): ProjectFile {
   const project = createEmptyProject('Most SO 201');
   project.crs.origin = { x: -599900, y: -1199900, z: 0 };
   project.alignments.push(syntheticAlignmentData(undefined, 1000));
+  project.brief.object = { number: '201-00', name: 'Most nad potokom' };
+  project.brief.roadCategory = 'C 9,5/70';
+  project.brief.bridgeType = 'road';
+  project.studyArea = { alignment: project.alignments[0]?.name ?? '', from: 1100, to: 1250 };
   project.parameters.push(
     { id: 'p1', name: 'h0', unit: 'length', law: { kind: 'constant', value: '1.0' } },
     {
@@ -93,7 +98,9 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('6');
+      expect(r.project.schemaVersion).toBe('7');
+      expect(r.project.studyArea).toBeNull();
+      expect(r.project.brief.roadCategory).toBe('');
       expect(r.project.terrains).toEqual([]);
       expect(r.project.planLines).toEqual([]);
       expect(r.project.supports).toEqual([]);
@@ -108,13 +115,29 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '6', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '7', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '6', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '7', name: 'Starý most', parameters: [] },
     });
+  });
+
+  it('adds an empty brief and no study area to version 6 files', () => {
+    const {
+      brief: _brief,
+      studyArea: _studyArea,
+      ...v6
+    } = {
+      ...createEmptyProject('Most v6'),
+      schemaVersion: '6',
+    };
+    const r = openProject(JSON.stringify(v6));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.brief).toEqual(emptyBrief());
+    expect(r.project.studyArea).toBeNull();
   });
 
   it('adds a backwall and wings to version 3 abutments and keeps their dimensions', () => {

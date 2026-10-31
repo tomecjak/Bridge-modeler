@@ -4,10 +4,101 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "6"
+      "const": "7"
     },
     "name": {
       "type": "string"
+    },
+    "brief": {
+      "type": "object",
+      "properties": {
+        "construction": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "number",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "object": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "number",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "client": {
+          "type": "string"
+        },
+        "responsibleDesigner": {
+          "type": "string"
+        },
+        "designer": {
+          "type": "string"
+        },
+        "bridgeType": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "road",
+                "railway",
+                "footbridge",
+                "ecoduct"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "obstacle": {
+          "type": "string"
+        },
+        "roadCategory": {
+          "type": "string"
+        },
+        "freeWidth": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "construction",
+        "object",
+        "client",
+        "responsibleDesigner",
+        "designer",
+        "bridgeType",
+        "obstacle",
+        "roadCategory",
+        "freeWidth"
+      ],
+      "additionalProperties": false
     },
     "crs": {
       "type": "object",
@@ -395,6 +486,33 @@
         ],
         "additionalProperties": false
       }
+    },
+    "studyArea": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "alignment": {
+              "type": "string"
+            },
+            "from": {
+              "type": "number"
+            },
+            "to": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "alignment",
+            "from",
+            "to"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "parameters": {
       "type": "array",
@@ -1492,8 +1610,10 @@
   "required": [
     "schemaVersion",
     "name",
+    "brief",
     "crs",
     "alignments",
+    "studyArea",
     "parameters",
     "bridgeAxes",
     "profiles",
@@ -1503,6 +1623,6 @@
     "planLines"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-6.json",
-  "title": "Projekt modelára mostov (schemaVersion 6)"
+  "$id": "https://bridge-modeler.local/schema/project-7.json",
+  "title": "Projekt modelára mostov (schemaVersion 7)"
 }

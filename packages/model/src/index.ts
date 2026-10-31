@@ -1,3 +1,4 @@
+export * from './brief.ts';
 export * from './issues.ts';
 export * from './laws.ts';
 export * from './library.ts';
