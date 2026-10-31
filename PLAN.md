@@ -206,6 +206,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
   - šikmosť = uhol kríženia (90° = kolmá, proti smeru hodín od osi mosta); podpera patrí jednej NK; schéma v3 + migrácia 2 → 3 (ADR 0008).
 - [x] typy v MVP: stenový pilier, pilier z jedného alebo viacerých stĺpov (rozmery, počet, rozostup); opora ako zjednodušený blok (úložný prah, driek, základ)
   - stĺpy kruhové aj obdĺžnikové; pôdorys podpery a základu (`supportPlan`) a pohľad v rovine prierezu (`supportElevation`).
+  - 2026-10-31: opora s úložným prahom, voliteľným driekom a základom, záverným múrikom a krídlami (zavesené / založené, uhol od osi mosta), schéma v4 (ADR 0010); celková dĺžka mosta po konce krídel v zozname polí.
 - [x] uloženie: ložisko, vrubový kĺb alebo votknutie; výška uloženia ako parameter
 - [x] výška podpery od spodného povrchu NK po hornú hranu základu, prepočet pri zmene nivelety alebo NK
   - horná hrana základu = kóta v m n. m.; spodok NK nad ložiskom z rezu prierezu; testy: niveleta +0,5 m → výška +0,5 m, h 1,7 → 1,9 m → výška −0,2 m.
@@ -286,7 +287,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 2. Kontrolné body k tej istej osi z Civil 3D (CSV): staničenie, Y, X, Z, smerník; aspoň 20 bodov vrátane stykov prvkov.
 3. Výkres priečneho rezu dvojice NK (28 900 mm) a ukážky pozdĺžneho rezu a pôdorysu z reálneho projektu.
 4. Firemný štandard hladín, typov čiar a farieb pre DXF.
-5. Malý referenčný most (2–3 polia) s dĺžkami polí a šikmosťami na end-to-end test.
+5. Malý referenčný most (2–3 polia) s dĺžkami polí a šikmosťami na end-to-end test. — *dodané 2026-10-31:* most 212-00 (`Vzorový most.pdf`), test `packages/mesh/src/reference212.test.ts` na syntetickej osi.
 6. Povrch terénu z Civil 3D (LandXML `Surface`) v okolí toho istého mosta a pozdĺžny profil terénu po osi (výkaz) na golden test.
 
 ## 6. Sledované riziká
@@ -309,9 +310,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Os mosta pri dvojici NK: vodorovné posuny −7,75 m / +7,00 m sú odvodené z výkresu za predpokladu, že os R2 (os cesty) leží v strede medzi NK. Ak je os cesty v LandXML inde (napr. na okraji vozovky), posuny treba upraviť.
 - Podpera v oblúku: os podpery a staničenia ložísk sa počítajú od dotyčnice osi mosta v mieste podpery (`s₀ − x·cot α`). Pri malých polomeroch a veľkej šikmosti môže byť treba presnejšie riešenie — overiť na reálnom moste.
 - Predvolené rozmery novej podpery (stena 1,2 × 4 m, ložiská ±1,8 m, výška uloženia 0,35 m, základ 8 m pod NK pri pilieri a 5 m pri opore) sú len východisko — chceš firemné predvolené hodnoty?
-- Referenčný most s 2–3 poliami (dĺžky polí, šikmosti) na end-to-end test stále chýba.
-- Opora v 3D je zjednodušený blok po úložný prah (pôdorys dĺžka × max(prah, driek)), bez záverného múrika a krídel. Stačí to pre koncepciu, alebo má MVP mať aj záverný múrik a krídla (a s akými predvolenými rozmermi)?
-- Šikmý koniec NK: *predpoklad:* koncová plocha je rovina rovnobežná s osou opory, vedená cez staničenie „od/do“ v osi NK, a prierez sa za ňu predlžuje pozdĺž dotyčnice (lokálne priamy úsek). Ložiská opory za staničením „od/do“ sa preto akceptujú, ak ležia v šikmom konci.
+- Opora (ADR 0010), *predpoklady:* bočné líca opory sú rovnobežné s osou mosta a prechádzajú koncami opory na osi ložísk (`length` sa meria pozdĺž osi podpery); krídla začínajú na zadnej líci opory (ďalej od poľa z prahu a múrika); predná líca drieku = predná líca prahu; základ opory leží pod stredom prahu. Pri krídle s uhlom ≠ 0 je bočná líca opory stále rovnobežná s osou mosta.
+- Referenčný most 212-00: test používa šikmosť 68,71 g pre všetky podpery (výkres má 68,40 – 68,94 g), preto kolmé rozpätia sedia na ± 2 cm; prierez je šablóna jednotrámu (šírka 16,50 m, h = 1,20 m), výšky sa overujú len v osi podpery (horná hrana prahu opôr ± 5 mm). Os I/68 je syntetická priamka −0,64 %; ak bude LandXML osi, test sa doplní o polohu.
 - Rez v 3D vyplní len prierezy NK; prerezané podpery sú zobrazené otvorené (bez výplne). Výplň podpier sa doplní s výkresmi (Fáza 6), ak bude treba.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
@@ -379,3 +379,6 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 | Hosting | statický web bez backendu |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
 | GitHub | repo vytvoril Jakub (`tomecjak/Bridge-modeler`); podklady sa nahrávajú do `fixtures/inbox/` |
+| Koniec NK | rovnobežný s osou krajnej opory, staničenie „od/do“ v osi NK; prierez sa za koncovú rovinu predlžuje pozdĺž dotyčnice (2026-10-30, potvrdené 2026-10-31) |
+| Opora | úložný prah, voliteľný driek a základ (hrúbka 0 = bez základu), záverný múrik po horný povrch NK, krídla s uhlom od osi mosta, zavesené alebo založené (2026-10-31, ADR 0010) |
+| Jednotka uhla kríženia | ostávajú stupne; gony z výkresov prepočíta projektant (2026-10-31) |
