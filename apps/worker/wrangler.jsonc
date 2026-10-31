@@ -25,8 +25,8 @@
   ],
   "vars": {
     // tím Cloudflare Access (napr. "firma.cloudflareaccess.com") a AUD aplikácie Access; prázdne = lokálny vývoj
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": ""
+    "ACCESS_TEAM_DOMAIN": "kubator-pages.cloudflareaccess.com",
+    "ACCESS_AUD": "d1d940116b09f034e85eeeda3a95f5a977d8da70ed886bd1b0b77a55e25c87fa"
   },
   "observability": { "enabled": true }
 }
