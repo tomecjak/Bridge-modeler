@@ -9,6 +9,7 @@ import {
   toSvg,
   translate,
 } from '@bridge/drawing';
+import type { Vec2 } from '@bridge/geom';
 import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
   bridgeAxisPlan,
@@ -208,10 +209,48 @@ export function App() {
     .filter((r) => Math.abs(r.support.station - sectionAt) <= 0.5 && r.axis)
     .flatMap((r) => projectSupport(r, item?.alignment.origin.z ?? 0) ?? []);
 
-  const planView = useMemo(
-    () => road && planDrawing({ alignment: road, decks: roadDecks, supports: roadSupports }),
-    [road, roadDecks, roadSupports],
+  const otherAlignments = useMemo(
+    () => alignments.filter((a) => a.alignment !== road).map((a) => a.alignment),
+    [alignments, road],
   );
+  const planView = useMemo(
+    () =>
+      road &&
+      planDrawing({
+        alignment: road,
+        decks: roadDecks,
+        supports: roadSupports,
+        otherAlignments,
+        planLines: project.planLines,
+      }),
+    [road, roadDecks, roadSupports, otherAlignments, project.planLines],
+  );
+
+  /** Nakreslená čiara v pôdoryse (súradnice na mm) sa pridá a vyberie. */
+  function addPlanLine(points: Vec2[]) {
+    const existing = new Set(project.planLines.map((l) => l.name));
+    let n = 1;
+    while (existing.has(sk.planLines.defaultName(n))) n++;
+    const round = (v: number) => Math.round(v * 1000) / 1000;
+    const line = {
+      id: newId('line'),
+      name: sk.planLines.defaultName(n),
+      points: points.map((p) => ({ x: round(p.x), y: round(p.y) })),
+    };
+    projectStore.getState().dispatch({ type: 'addElements', planLines: [line] });
+    setSelectedElement({ collection: 'planLines', id: line.id });
+  }
+
+  function movePlanLineVertex(id: string, index: number, point: Vec2) {
+    const line = project.planLines.find((l) => l.id === id);
+    if (!line) return;
+    projectStore.getState().dispatch({
+      type: 'updateElement',
+      collection: 'planLines',
+      id,
+      changes: { points: line.points.map((p, i) => (i === index ? point : p)) },
+    });
+  }
   const drawnSections = sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []));
   const sectionView = sectionDrawing({
     decks: drawnSections,
@@ -663,6 +702,11 @@ export function App() {
             title: sk.tree.terrains,
             items: project.terrains.map((t) => ({ id: t.id, name: t.name, issues: 0 })),
           },
+          {
+            collection: 'planLines',
+            title: sk.tree.planLines,
+            items: project.planLines.map((l) => ({ id: l.id, name: l.name, issues: 0 })),
+          },
         ]}
         selectedElement={selectedElement}
         onSelectElement={(collection, id) => {
@@ -671,6 +715,11 @@ export function App() {
           if (support) setSectionStation(support.station);
           // 3D ukazuje NK aj podpery; inak podpery v pôdoryse a profile, ostatné prvky v priereze
           if (collection === 'terrains') return;
+          // čiary sa upravujú v pôdoryse
+          if (collection === 'planLines') {
+            setMode('2d');
+            return;
+          }
           if (mode === '3d' && (collection === 'supports' || collection === 'superstructures'))
             return;
           if (collection !== 'supports') setMode('section');
@@ -703,6 +752,10 @@ export function App() {
         }
         plan={planView}
         onAddSupport={addSupportAt}
+        otherAlignments={otherAlignments}
+        planLines={project.planLines}
+        onAddPlanLine={addPlanLine}
+        onMovePlanLineVertex={movePlanLineVertex}
         profile={{
           drawing: profileView,
           decks: roadDecks,
@@ -717,6 +770,8 @@ export function App() {
             alignment: road,
             decks: roadDecks,
             supports: roadSupports,
+            otherAlignments,
+            planLines: project.planLines,
             stationing: { step: 20, labelStep: 100 },
           });
           const origin = project.crs.origin;

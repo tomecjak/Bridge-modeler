@@ -3,6 +3,7 @@ import type { Vec3 } from '@bridge/geom';
 import {
   type BridgeAxis,
   type Parameter,
+  type PlanLine,
   type ProfileDefinition,
   type ProjectFile,
   renameParameter,
@@ -18,6 +19,7 @@ export interface ElementCollections {
   superstructures: Superstructure;
   supports: Support;
   terrains: TerrainSurface;
+  planLines: PlanLine;
 }
 export type ElementCollection = keyof ElementCollections;
 
@@ -47,6 +49,7 @@ export type Command =
       superstructures?: Superstructure[];
       supports?: Support[];
       terrains?: TerrainSurface[];
+      planLines?: PlanLine[];
     }
   | ElementUpdate
   | { type: 'removeElement'; collection: ElementCollection; id: string }
@@ -93,6 +96,7 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       draft.superstructures.push(...(command.superstructures ?? []));
       draft.supports.push(...(command.supports ?? []));
       draft.terrains.push(...(command.terrains ?? []));
+      draft.planLines.push(...(command.planLines ?? []));
       return;
     case 'updateElement': {
       const list = draft[command.collection] as { id: string }[];

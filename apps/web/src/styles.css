@@ -975,6 +975,38 @@ text.dw-stationing {
   stroke-width: 2;
 }
 
+/* ďalšie osi z LandXML a čiary v pôdoryse (okraje NK, Fáza 8a) */
+.axis-other {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.dw-plan-line {
+  fill: none;
+  stroke: var(--warning);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 3;
+}
+
+.dw-plan-line.dw-selected {
+  stroke-width: 2.5;
+}
+
+.plan-line-preview {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+.plan-line-vertex {
+  fill: var(--panel);
+  stroke: var(--warning);
+  stroke-width: 2;
+  cursor: move;
+}
+
 .drawing-toolbar button[aria-pressed="true"] {
   color: var(--panel);
   background: var(--accent);

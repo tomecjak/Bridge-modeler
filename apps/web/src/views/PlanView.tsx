@@ -1,7 +1,8 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
 import { type Drawing, type LayerId, sampleHorizontal, stationTicks } from '@bridge/drawing';
-import type { Vec2 } from '@bridge/geom';
-import { type PointerEvent, useMemo, useState } from 'react';
+import { type Vec2, vec2 } from '@bridge/geom';
+import type { PlanLine } from '@bridge/model';
+import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { type ExportCoordinates, type ExportFormat, ExportMenu } from './ExportMenu.tsx';
@@ -28,7 +29,19 @@ interface Props {
   onExport: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
   onAddSupport: (s: number, offset: number) => void;
+  /** ďalšie osi projektu (napr. okraje vozovky z LandXML) */
+  otherAlignments: readonly Alignment[];
+  /** čiary v pôdoryse; vybraná čiara má ťahateľné vrcholy */
+  planLines: readonly PlanLine[];
+  /** nakreslená čiara (lokálne súradnice) */
+  onAddPlanLine: (points: Vec2[]) => void;
+  onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
 }
+
+type Tool = 'none' | 'support' | 'line';
+
+/** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
+const MERGE_PX = 3;
 
 const MINOR_TICK_PX = 14;
 const LABEL_TICK_PX = 110;
@@ -44,13 +57,48 @@ export function PlanView({
   selected,
   onExport,
   onAddSupport,
+  otherAlignments,
+  planLines,
+  onAddPlanLine,
+  onMovePlanLineVertex,
 }: Props) {
-  const [addMode, setAddMode] = useState(false);
+  const [tool, setTool] = useState<Tool>('none');
+  /** vrcholy rozkreslenej čiary */
+  const [sketch, setSketch] = useState<Vec2[]>([]);
+  const [hover, setHover] = useState<Vec2>();
+  /** ťahaný vrchol vybranej čiary */
+  const [vertexDrag, setVertexDrag] = useState<{ id: string; index: number; point: Vec2 }>();
+  const addMode = tool === 'support';
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
   const bounds = useMemo(() => boundsOf(samples), [samples]);
   const fit = size.width > 0 ? fitView(bounds, size, 56) : undefined;
   const { view, handlers, dragMove, wasDrag, reset } = usePanZoom(ref, size, fit);
+  const others = useMemo(
+    () => otherAlignments.map((a) => ({ name: a.name, points: sampleHorizontal(a, 1) })),
+    [otherAlignments],
+  );
+  const selectedLine = planLines.find((l) => l.id === selected);
+
+  function finishSketch() {
+    if (sketch.length >= 2) onAddPlanLine(sketch);
+    setSketch([]);
+    setTool('none');
+  }
+  // Enter ukončí kreslenie čiary, Esc ho zruší
+  // biome-ignore lint/correctness/useExhaustiveDependencies: finishSketch sa mení s každým vrcholom; poslucháč stačí podľa nástroja a náčrtu
+  useEffect(() => {
+    if (tool !== 'line') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') finishSketch();
+      if (e.key === 'Escape') {
+        setSketch([]);
+        setTool('none');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tool, sketch]);
 
   const elements = useMemo(
     () =>
@@ -71,10 +119,22 @@ export function PlanView({
     }));
   }, [alignment, minorStep]);
 
+  const worldAt = (e: { clientX: number; clientY: number }): Vec2 | undefined => {
+    if (!view || !ref.current) return undefined;
+    const rect = ref.current.getBoundingClientRect();
+    return screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
+    if (vertexDrag) {
+      const point = worldAt(e);
+      if (point) setVertexDrag({ ...vertexDrag, point });
+      return;
+    }
     if (dragMove(e) || !view) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const point = screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+    const point = worldAt(e);
+    if (!point) return;
+    if (tool === 'line') setHover(point);
     const projection = alignment.project(point);
     onCursor({ point, s: projection?.s, offset: projection?.offset });
   }
@@ -98,34 +158,66 @@ export function PlanView({
       role="application"
       aria-label={sk.viewport.plan}
       {...handlers}
+      onPointerUp={(e) => {
+        handlers.onPointerUp(e);
+        if (!vertexDrag) return;
+        const round = (v: number) => Math.round(v * 1000) / 1000;
+        onMovePlanLineVertex(
+          vertexDrag.id,
+          vertexDrag.index,
+          vec2(round(vertexDrag.point.x), round(vertexDrag.point.y)),
+        );
+        setVertexDrag(undefined);
+      }}
       onPointerMove={onPointerMove}
-      onPointerLeave={() => onCursor(undefined)}
-      onDoubleClick={reset}
+      onPointerLeave={() => {
+        onCursor(undefined);
+        setHover(undefined);
+      }}
+      onDoubleClick={() => (tool === 'line' ? finishSketch() : reset())}
       onClick={(e) => {
-        if (!addMode || wasDrag() || !view) return;
-        if (e.target instanceof Element && e.target.closest('button')) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const point = screenToWorld(view, size, {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        });
+        if (tool === 'none' || wasDrag() || !view) return;
+        if (e.target instanceof Element && e.target.closest('button, summary, details')) return;
+        const point = worldAt(e);
+        if (!point) return;
+        if (tool === 'line') {
+          const last = sketch.at(-1);
+          const near = last && Math.hypot(point.x - last.x, point.y - last.y) * view.sx < MERGE_PX;
+          if (!near) setSketch([...sketch, point]);
+          return;
+        }
         const projection = alignment.project(point);
         if (!projection) return;
         onAddSupport(projection.s, projection.offset);
-        setAddMode(false);
+        setTool('none');
       }}
-      data-add-mode={addMode || undefined}
+      data-add-mode={tool !== 'none' || undefined}
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
         <button type="button" onClick={reset}>
           {sk.viewport.fit}
         </button>
-        <button type="button" aria-pressed={addMode} onClick={() => setAddMode((m) => !m)}>
+        <button
+          type="button"
+          aria-pressed={addMode}
+          onClick={() => setTool((t) => (t === 'support' ? 'none' : 'support'))}
+        >
           {sk.supports.add}
+        </button>
+        <button
+          type="button"
+          aria-pressed={tool === 'line'}
+          onClick={() => {
+            setSketch([]);
+            setTool((t) => (t === 'line' ? 'none' : 'line'));
+          }}
+        >
+          {sk.planLines.draw}
         </button>
         <ExportMenu onExport={onExport} coordinates />
         {addMode && <span className="drawing-note">{sk.supports.addHint}</span>}
+        {tool === 'line' && <span className="drawing-note">{sk.planLines.drawHint}</span>}
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.plan}>
@@ -164,6 +256,9 @@ export function PlanView({
               points={polyline(e.points)}
             />
           ))}
+          {others.map((o) => (
+            <polyline key={o.name} className="axis axis-other" points={polyline(o.points)} />
+          ))}
           {alignment.horizontal.boundaries.map((s) => {
             const p = toScreen(alignment.evaluateHorizontal(s).point);
             return <circle key={s} className="joint" cx={p.x} cy={p.y} r={3} />;
@@ -174,6 +269,49 @@ export function PlanView({
               toScreen={toScreen}
               skip={OWN_LAYERS}
               selected={selected}
+            />
+          )}
+          {selectedLine && (
+            <g className="plan-line-edit">
+              {selectedLine.points.map((p, i) => {
+                const q = toScreen(
+                  vertexDrag?.id === selectedLine.id && vertexDrag.index === i
+                    ? vertexDrag.point
+                    : p,
+                );
+                return (
+                  <circle
+                    // biome-ignore lint/suspicious/noArrayIndexKey: vrchol čiary je určený poradím
+                    key={i}
+                    className="plan-line-vertex"
+                    cx={q.x}
+                    cy={q.y}
+                    r={5}
+                    onPointerDown={(e) => {
+                      if (e.button !== 0 || tool !== 'none') return;
+                      e.stopPropagation();
+                      ref.current?.setPointerCapture(e.pointerId);
+                      setVertexDrag({ id: selectedLine.id, index: i, point: p });
+                    }}
+                  />
+                );
+              })}
+              {vertexDrag?.id === selectedLine.id && (
+                <polyline
+                  className="plan-line-preview"
+                  points={polyline(
+                    selectedLine.points.map((p, i) =>
+                      i === vertexDrag.index ? vertexDrag.point : p,
+                    ),
+                  )}
+                />
+              )}
+            </g>
+          )}
+          {tool === 'line' && sketch.length > 0 && (
+            <polyline
+              className="plan-line-preview"
+              points={polyline(hover ? [...sketch, hover] : sketch)}
             />
           )}
           {cursor && (

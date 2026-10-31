@@ -1,8 +1,10 @@
 import { formatStation } from '@bridge/alignment';
+import { vec2 } from '@bridge/geom';
 import type {
   AbutmentGeometry,
   BridgeAxis,
   ParameterUnit,
+  PlanLine,
   ProfileDefinition,
   ProfileLaw,
   Superstructure,
@@ -10,6 +12,7 @@ import type {
   TerrainSurface,
 } from '@bridge/model';
 import type { SupportResult } from '@bridge/sections';
+import { useEffect, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
@@ -79,6 +82,7 @@ export function ElementPanel({
       {element && collection === 'supports' && (
         <SupportEditor support={element as Support} result={supportResult} />
       )}
+      {element && collection === 'planLines' && <PlanLineEditor line={element as PlanLine} />}
       {element && collection === 'terrains' && (
         <TerrainEditor
           terrain={element as TerrainSurface}
@@ -99,6 +103,133 @@ export function ElementPanel({
         </button>
       )}
     </aside>
+  );
+}
+
+/** Čiara v pôdoryse (Fáza 8a): názov, vrcholy v S-JTSK a NK, ktoré ju používajú ako okraj. */
+function PlanLineEditor({ line }: { line: PlanLine }) {
+  const origin = useProject((s) => s.project.crs.origin) ?? { x: 0, y: 0, z: 0 };
+  const superstructures = useProject((s) => s.project.superstructures);
+  const t = sk.planLines;
+  const setPoints = (points: PlanLine['points']) => update('planLines', line.id, { points });
+  const users = superstructures.filter((sup) =>
+    Object.values(sup.parameterLaws).some(
+      (law) => law.kind === 'edge' && law.curve.type === 'planLine' && law.curve.id === line.id,
+    ),
+  );
+  const last = line.points.at(-1);
+  const prev = line.points.at(-2);
+  return (
+    <div className="sf-editor">
+      <Field label={sk.elements.name}>
+        <TextField
+          value={line.name}
+          ariaLabel={sk.elements.name}
+          onCommit={(name) => update('planLines', line.id, { name })}
+        />
+      </Field>
+      <p className="hint">
+        {users.length > 0 ? t.usedBy(users.map((u) => u.name).join(', ')) : t.unused}
+      </p>
+      <h3 className="panel-subtitle">{t.vertices}</h3>
+      <table className="mini-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>E [m]</th>
+            <th>N [m]</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {line.points.map((p, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: vrchol čiary je určený poradím
+            <tr key={i}>
+              <td>{i + 1}</td>
+              <td>
+                <CoordinateField
+                  ariaLabel={`${i + 1} E`}
+                  value={p.x + origin.x}
+                  onCommit={(e) =>
+                    setPoints(line.points.map((q, j) => (j === i ? vec2(e - origin.x, q.y) : q)))
+                  }
+                />
+              </td>
+              <td>
+                <CoordinateField
+                  ariaLabel={`${i + 1} N`}
+                  value={p.y + origin.y}
+                  onCommit={(n) =>
+                    setPoints(line.points.map((q, j) => (j === i ? vec2(q.x, n - origin.y) : q)))
+                  }
+                />
+              </td>
+              <td>
+                {line.points.length > 2 && (
+                  <RemoveButton
+                    label={t.removeVertex}
+                    onClick={() => setPoints(line.points.filter((_, j) => j !== i))}
+                  />
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button
+        type="button"
+        className="button"
+        disabled={!last}
+        onClick={() => {
+          if (!last) return;
+          // nový vrchol v predĺžení posledného úseku (alebo 10 m na východ)
+          const d = prev ? vec2(last.x - prev.x, last.y - prev.y) : vec2(10, 0);
+          setPoints([...line.points, vec2(last.x + d.x, last.y + d.y)]);
+        }}
+      >
+        {t.addVertex}
+      </button>
+      <p className="hint">{t.vertexHint}</p>
+    </div>
+  );
+}
+
+/** Súradnica v m na 3 desatinné miesta (desatinná čiarka aj bodka, medzery ignoruje). */
+function CoordinateField({
+  value,
+  onCommit,
+  ariaLabel,
+}: {
+  value: number;
+  onCommit: (v: number) => void;
+  ariaLabel: string;
+}) {
+  const text = formatNumber(value, 3);
+  const [draft, setDraft] = useState(text);
+  useEffect(() => setDraft(text), [text]);
+  const parse = (v: string) => {
+    // slovenský formát: medzery v tisícoch, desatinná čiarka, znak mínus U+2212
+    const n = Number(v.replace(/\s/g, '').replace(',', '.').replace('\u2212', '-'));
+    return Number.isFinite(n) && v.trim() !== '' ? Math.round(n * 1000) / 1000 : undefined;
+  };
+  return (
+    <input
+      type="text"
+      className="mono"
+      value={draft}
+      aria-label={ariaLabel}
+      aria-invalid={parse(draft) === undefined}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        const v = parse(draft);
+        if (v === undefined) setDraft(text);
+        else if (Math.abs(v - value) > 5e-4) onCommit(v);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') setDraft(text);
+      }}
+    />
   );
 }
 

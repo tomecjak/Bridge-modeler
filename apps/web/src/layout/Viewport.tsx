@@ -1,5 +1,7 @@
 import type { Alignment } from '@bridge/alignment';
 import type { Drawing } from '@bridge/drawing';
+import type { Vec2 } from '@bridge/geom';
+import type { PlanLine } from '@bridge/model';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import type { ExportCoordinates, ExportFormat } from '../views/ExportMenu.tsx';
@@ -20,6 +22,11 @@ interface Props {
   plan: Drawing | undefined;
   onExportPlan: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   onAddSupport: (s: number, offset: number) => void;
+  /** ďalšie osi projektu a čiary v pôdoryse */
+  otherAlignments: readonly Alignment[];
+  planLines: readonly PlanLine[];
+  onAddPlanLine: (points: Vec2[]) => void;
+  onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
   sectionView: ReactNode;
   view3d: ReactNode;
   /** pozdĺžny rez v osi vybranej NK */
@@ -52,6 +59,10 @@ export function Viewport({
   plan,
   onExportPlan,
   onAddSupport,
+  otherAlignments,
+  planLines,
+  onAddPlanLine,
+  onMovePlanLineVertex,
   view3d,
   profile,
   selectedId,
@@ -96,6 +107,10 @@ export function Viewport({
               selected={selectedId}
               onExport={onExportPlan}
               onAddSupport={onAddSupport}
+              otherAlignments={otherAlignments}
+              planLines={planLines}
+              onAddPlanLine={onAddPlanLine}
+              onMovePlanLineVertex={onMovePlanLineVertex}
             />
             <ProfileView
               key={`${alignment.name}-profile`}

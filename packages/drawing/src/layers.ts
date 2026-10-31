@@ -20,6 +20,7 @@ export const LAYERS = {
   terrain: { name: 'TEREN', color: 30, linetype: 'CONTINUOUS' },
   grade: { name: 'NIVELETA', color: 1, linetype: 'CONTINUOUS' },
   label: { name: 'POPIS', color: 7, linetype: 'CONTINUOUS' },
+  planLine: { name: 'CIARY', color: 2, linetype: 'DASHED' },
 } as const satisfies Record<string, Layer>;
 
 export type LayerId = keyof typeof LAYERS;
@@ -30,6 +31,7 @@ export const LAYER_ORDER = Object.keys(LAYERS) as LayerId[];
 /** Farby ACI použitých hladín pre SVG (7 = čierna na bielom papieri). */
 export const ACI_RGB: Record<number, string> = {
   1: '#ff0000',
+  2: '#b09000',
   3: '#00a000',
   4: '#00a0c0',
   5: '#0000ff',

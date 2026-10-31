@@ -15,6 +15,7 @@ const LAYER_CLASS: Record<LayerId, string> = {
   terrain: 'terrain-line',
   grade: 'profile-line',
   label: 'dw-label',
+  planLine: 'dw-plan-line',
 };
 
 interface Props {

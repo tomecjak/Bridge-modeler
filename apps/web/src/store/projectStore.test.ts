@@ -100,6 +100,27 @@ describe('project store', () => {
     expect(store.getState().project.bridgeAxes).toEqual([]);
   });
 
+  it('adds a plan line and moves its vertex as undoable steps', () => {
+    const store = createProjectStore();
+    const s = store.getState();
+    const points = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ];
+    s.dispatch({ type: 'addElements', planLines: [{ id: 'c', name: 'Čiara 1', points }] });
+    s.dispatch({
+      type: 'updateElement',
+      collection: 'planLines',
+      id: 'c',
+      changes: { points: [points[0] as (typeof points)[number], { x: 10, y: 2 }] },
+    });
+    expect(store.getState().project.planLines[0]?.points[1]).toEqual({ x: 10, y: 2 });
+    store.getState().undo();
+    expect(store.getState().project.planLines[0]?.points).toEqual(points);
+    store.getState().undo();
+    expect(store.getState().project.planLines).toEqual([]);
+  });
+
   it('ignores commands that change nothing', () => {
     const store = createProjectStore();
     store.getState().dispatch({ type: 'removeParameter', id: 'missing' });

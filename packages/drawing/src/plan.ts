@@ -1,5 +1,6 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
 import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
+import type { PlanLine } from '@bridge/model';
 import {
   type AxisLinePoint,
   BEARING_PLAN_SIZE,
@@ -15,14 +16,18 @@ export interface PlanInput {
   alignment: Alignment;
   decks: readonly { id: string; outline: DeckOutline; axis: readonly AxisLinePoint[] }[];
   supports: readonly SupportResult[];
+  /** ďalšie osi z LandXML (napr. okraje vozovky) */
+  otherAlignments?: readonly Alignment[];
+  /** čiary v pôdoryse (okraje NK podľa krivky) */
+  planLines?: readonly PlanLine[];
   /** značky staničenia osi cesty [m]; bez nich sa staničenie nekreslí (pohľad má vlastné podľa priblíženia) */
   stationing?: { step: number; labelStep: number };
   scale?: number;
 }
 
 /**
- * Pôdorys (Fáza 6) v lokálnych súradniciach: os cesty so staničením, os mosta, obrys NK, podpery (driek / časti
- * opory, základ, ložiská) a os podpery s názvom. Bez kót.
+ * Pôdorys (Fáza 6) v lokálnych súradniciach: os cesty so staničením, ďalšie osi a čiary v pôdoryse, os mosta, obrys NK,
+ * podpery (driek / časti opory, základ, ložiská) a os podpery s názvom. Bez kót.
  */
 export function planDrawing(input: PlanInput): Drawing {
   const scale = input.scale ?? 200;
@@ -37,6 +42,17 @@ export function planDrawing(input: PlanInput): Drawing {
       sampleHorizontal(alignment).map((p) => vec2(p.x, p.y)),
     ),
   );
+  for (const other of input.otherAlignments ?? []) {
+    entities.push(
+      polyline(
+        'roadAxis',
+        sampleHorizontal(other).map((p) => vec2(p.x, p.y)),
+      ),
+    );
+  }
+  for (const line of input.planLines ?? []) {
+    if (line.points.length >= 2) entities.push(polyline('planLine', line.points, false, line.id));
+  }
   if (input.stationing) {
     const { step, labelStep } = input.stationing;
     for (const t of stationTicks(alignment.stationing, step)) {

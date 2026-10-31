@@ -1,4 +1,4 @@
-import type { Vec2 } from '@bridge/geom';
+import { type Vec2, vec2 } from '@bridge/geom';
 import { evaluateReference212 } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { type DeckDrawingData, deckDrawingData } from './deck.ts';
@@ -68,6 +68,27 @@ describe('planDrawing', () => {
       expect(t.rotation).toBeLessThanOrEqual(Math.PI / 2 + 1e-12);
       expect(t.height).toBeCloseTo(0.5, 12);
     }
+  });
+
+  it('adds other alignments as road axes and plan lines with their id', () => {
+    const view = planDrawing({
+      alignment: ref.alignment,
+      decks: [],
+      supports: [],
+      otherAlignments: [ref.alignment],
+      planLines: [
+        { id: 'c1', name: 'Okraj', points: [vec2(0, 0), vec2(10, 0), vec2(20, 5)] },
+        { id: 'c2', name: 'Bod', points: [vec2(0, 0)] },
+      ],
+    });
+    expect(on(view, 'roadAxis')).toHaveLength(2);
+    expect(on(view, 'planLine')).toEqual([
+      expect.objectContaining({
+        owner: 'c1',
+        closed: false,
+        points: [vec2(0, 0), vec2(10, 0), vec2(20, 5)],
+      }),
+    ]);
   });
 
   it('omits the stationing for the interactive view', () => {
