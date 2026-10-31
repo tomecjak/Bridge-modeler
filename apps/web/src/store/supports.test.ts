@@ -9,6 +9,12 @@ describe('support defaults', () => {
     );
   });
 
+  it('sizes a new abutment to the deck width', () => {
+    const o = defaultSupport('a', 'O1', 'abutment', 'nk', 1100, 251.234, 16.54);
+    expect(o.geometry).toMatchObject({ type: 'abutment', length: '16.5' });
+    expect(o.footing.length).toBe('16.5');
+  });
+
   it('provides geometry defaults per type', () => {
     expect(defaultGeometry('columns')).toMatchObject({
       type: 'columns',

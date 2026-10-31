@@ -2,6 +2,7 @@ import { formatStation } from '@bridge/alignment';
 import type { ExprError } from '@bridge/expr';
 import type { ExpressionField, ModelIssue } from '@bridge/model';
 import { formatNumber } from '../format/number.ts';
+import { sk } from './sk.ts';
 
 const FIELD: Record<ExpressionField, string> = {
   value: 'hodnota',
@@ -143,7 +144,7 @@ export function formatModelIssue(issue: ModelIssue): string {
     case 'NonPositiveSupportHeight':
       return `${prefix}výška podpery vychádza ${formatNumber(issue.height * 1000, 0)} mm — horná hrana základu je príliš vysoko.`;
     case 'InvalidDimension':
-      return `${prefix}neplatný rozmer ${issue.name} = ${formatNumber(issue.value, 3)}.`;
+      return `${prefix}neplatný rozmer ${sk.supports.dimensions[issue.name] ?? issue.name} = ${formatNumber(issue.value, 3)}.`;
     case 'SupportOrder':
       return `${prefix}podpera „${issue.support}“ by mala byť ${issue.expected === 'abutment' ? 'opora (je na konci NK)' : 'pilier (je medzi oporami)'}.`;
     case 'DuplicateSupportStation':

@@ -1,5 +1,6 @@
 import { formatStation } from '@bridge/alignment';
 import type {
+  AbutmentGeometry,
   BridgeAxis,
   ParameterUnit,
   ProfileDefinition,
@@ -7,7 +8,7 @@ import type {
   Superstructure,
   Support,
 } from '@bridge/model';
-import type { SpanResult, SupportResult } from '@bridge/sections';
+import type { SupportResult } from '@bridge/sections';
 import { formatNumber } from '../format/number.ts';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
@@ -19,6 +20,7 @@ import {
 } from '../store/profileEdit.ts';
 import { projectStore, useProject } from '../store/projectStore.ts';
 import type { SectionResult } from '../store/sections.ts';
+import type { DeckSpans } from '../store/supports.ts';
 import { defaultGeometry } from '../store/supports.ts';
 import { ExpressionInput } from '../views/ExpressionInput.tsx';
 import { StationField, StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
@@ -30,7 +32,7 @@ interface Props {
   id: string;
   result: SectionResult | undefined;
   supportResult: SupportResult | undefined;
-  spans: SpanResult | undefined;
+  spans: DeckSpans | undefined;
   onRemoved: () => void;
 }
 
@@ -375,7 +377,7 @@ function SuperstructureEditor({
 }: {
   sup: Superstructure;
   result: SectionResult | undefined;
-  spans: SpanResult | undefined;
+  spans: DeckSpans | undefined;
 }) {
   const axes = useProject((s) => s.project.bridgeAxes);
   const profiles = useProject((s) => s.project.profiles);
@@ -496,7 +498,7 @@ function SuperstructureEditor({
   );
 }
 
-function SpanList({ spans }: { spans: SpanResult | undefined }) {
+function SpanList({ spans }: { spans: DeckSpans | undefined }) {
   if (!spans) return <p className="hint">{sk.supports.noSupports}</p>;
   return (
     <>
@@ -513,6 +515,20 @@ function SpanList({ spans }: { spans: SpanResult | undefined }) {
                 <td className="num">{formatNumber(s.length, 3)} m</td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      )}
+      {spans.deckLength !== undefined && spans.overallLength !== undefined && (
+        <table className="mini-table">
+          <tbody>
+            <tr>
+              <td>{sk.supports.deckLength}</td>
+              <td className="num">{formatNumber(spans.deckLength, 3)} m</td>
+            </tr>
+            <tr>
+              <td>{sk.supports.overallLength}</td>
+              <td className="num">{formatNumber(spans.overallLength, 3)} m</td>
+            </tr>
           </tbody>
         </table>
       )}
@@ -537,17 +553,79 @@ function IssueItems({ issues }: { issues: SupportResult['issues'] }) {
   );
 }
 
-const DIMENSION_LABELS: Record<string, string> = {
-  thickness: 'hrúbka (kolmo na os podpery)',
-  length: 'dĺžka (pozdĺž osi podpery)',
-  seatLength: 'šírka úložného prahu',
-  stemThickness: 'hrúbka drieku',
-  diameter: 'priemer stĺpa',
-  width: 'šírka stĺpa (pozdĺž osi podpery)',
-  depth: 'hĺbka stĺpa',
-  count: 'počet stĺpov',
-  spacing: 'osová vzdialenosť stĺpov',
-};
+/** Rozmery opory po častiach (ADR 0010): prah, driek, záverný múrik, krídla. */
+function AbutmentFields({
+  geometry: g,
+  onChange,
+}: {
+  geometry: AbutmentGeometry;
+  onChange: (geometry: AbutmentGeometry) => void;
+}) {
+  const dims = sk.supports.dimensions;
+  const t = sk.supports.abutment;
+  const field = (key: string, value: string, apply: (v: string) => AbutmentGeometry) => (
+    <Field key={key} label={dims[key] ?? key}>
+      <ExpressionInput
+        value={value}
+        ariaLabel={dims[key] ?? key}
+        onCommit={(v) => onChange(apply(v))}
+      />
+    </Field>
+  );
+  const wing = (k: 'angle' | 'length' | 'thickness' | 'endHeight') => (v: string) => ({
+    ...g,
+    wings: { ...g.wings, [k]: v },
+  });
+  return (
+    <>
+      <h3 className="panel-subtitle">{t.seat}</h3>
+      <div className="segment-grid">
+        {field('length', g.length, (length) => ({ ...g, length }))}
+        {field('seatLength', g.seatLength, (seatLength) => ({ ...g, seatLength }))}
+        {field('seatHeight', g.seatHeight, (seatHeight) => ({ ...g, seatHeight }))}
+        {field('frontOffset', g.frontOffset, (frontOffset) => ({ ...g, frontOffset }))}
+      </div>
+      <h3 className="panel-subtitle">{t.stem}</h3>
+      <div className="segment-grid">
+        {field('stemThickness', g.stemThickness, (stemThickness) => ({ ...g, stemThickness }))}
+      </div>
+      <p className="hint">{t.stemHint}</p>
+      <h3 className="panel-subtitle">{t.backwall}</h3>
+      <div className="segment-grid">
+        {field('backwallThickness', g.backwallThickness, (backwallThickness) => ({
+          ...g,
+          backwallThickness,
+        }))}
+        {field('gap', g.gap, (gap) => ({ ...g, gap }))}
+      </div>
+      <h3 className="panel-subtitle">{t.wings}</h3>
+      <div className="segment-grid">
+        <Field label={t.wingSupport}>
+          <select
+            value={g.wings.support}
+            aria-label={t.wingSupport}
+            onChange={(e) =>
+              onChange({
+                ...g,
+                wings: {
+                  ...g.wings,
+                  support: e.target.value as AbutmentGeometry['wings']['support'],
+                },
+              })
+            }
+          >
+            <option value="hung">{t.wingSupports.hung}</option>
+            <option value="founded">{t.wingSupports.founded}</option>
+          </select>
+        </Field>
+        {field('wingAngle', g.wings.angle, wing('angle'))}
+        {field('wingLength', g.wings.length, wing('length'))}
+        {field('wingThickness', g.wings.thickness, wing('thickness'))}
+        {g.wings.support === 'hung' && field('wingEndHeight', g.wings.endHeight, wing('endHeight'))}
+      </div>
+    </>
+  );
+}
 
 function SupportEditor({
   support,
@@ -563,10 +641,11 @@ function SupportEditor({
     g.type === 'wall'
       ? ['thickness', 'length']
       : g.type === 'abutment'
-        ? ['seatLength', 'stemThickness', 'length']
+        ? []
         : g.shape === 'circle'
           ? ['diameter', 'count', 'spacing']
           : ['width', 'depth', 'count', 'spacing'];
+  const dims = sk.supports.dimensions;
   return (
     <div className="sf-editor">
       <Field label={sk.elements.name}>
@@ -660,17 +739,21 @@ function SupportEditor({
           </Field>
         )}
         {dimensionKeys.map((k) => (
-          <Field key={k} label={DIMENSION_LABELS[k] ?? k}>
+          <Field key={k} label={dims[k] ?? k}>
             <ExpressionInput
               value={(g as unknown as Record<string, string>)[k] ?? ''}
-              ariaLabel={DIMENSION_LABELS[k] ?? k}
+              ariaLabel={dims[k] ?? k}
               onCommit={(v) => set({ geometry: { ...g, [k]: v } as Support['geometry'] })}
             />
           </Field>
         ))}
       </div>
+      {g.type === 'abutment' && (
+        <AbutmentFields geometry={g} onChange={(geometry) => set({ geometry })} />
+      )}
 
       <h3 className="panel-subtitle">{sk.supports.footing}</h3>
+      <p className="hint">{sk.supports.footingHint}</p>
       <div className="segment-grid">
         {(['length', 'width', 'thickness'] as const).map((k) => (
           <Field key={k} label={sk.supports.footingFields[k]}>

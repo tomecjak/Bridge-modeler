@@ -1,6 +1,7 @@
 import type { AlignmentIssue } from '@bridge/alignment';
 import { createEmptyProject, evaluateLaw, openProject } from '@bridge/model';
 import {
+  evaluateSuperstructure,
   globalScope,
   singleBeamHaunched,
   singleDeckExample,
@@ -177,7 +178,30 @@ export function App() {
     } catch {
       soffit = 0;
     }
-    const support = defaultSupport(newId('sup'), `${prefix}${n}`, kind, deck.id, station, soffit);
+    // opora na šírku NK (krídla pod okrajmi NK)
+    const section = evaluateSuperstructure(
+      {
+        alignments: alignmentMap,
+        parameters: parameterState.set,
+        bridgeAxes: project.bridgeAxes,
+        profiles: project.profiles,
+      },
+      deck,
+      s,
+    );
+    const xs = section.loops
+      .filter((l) => l.role === 'outer')
+      .flatMap((l) => l.polygon.map((p) => p.x));
+    const width = xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : undefined;
+    const support = defaultSupport(
+      newId('sup'),
+      `${prefix}${n}`,
+      kind,
+      deck.id,
+      station,
+      soffit,
+      width,
+    );
     projectStore.getState().dispatch({ type: 'addElements', supports: [support] });
     setSelectedElement({ collection: 'supports', id: support.id });
     setSectionStation(station);
