@@ -286,12 +286,39 @@ Pôdorys, Pozdĺžny profil a Prierez a ich geometria sa exportuje do DXF / SVG,
 
 **Hotové, keď:** súbor prejde validáciou a otvorí sa správne umiestnený v Revite, Civil 3D a v jednom nezávislom prehliadači (napr. BIMvision alebo Bonsai).
 
-### Fáza 8 — Neskôr (backlog)
-- OpenCascade (WASM) ako druhý `GeometryKernel`: booleovské operácie, presné telesá, pohľady so skrytými hranami
-- IfcSectionedSolidHorizontal a IfcLinearPlacement
-- rozšírenia definované v pôdoryse (okraj NK ako krivka), viac NK, zakrivené podpery
+### Fáza 8 — Okraj NK z krivky, editor prierezu, OpenCascade
+Rozhodnutie 2026-10-31: Fáza 7 (IFC) sa odkladá, kým nebude projekt vyladený. Z backlogu sa robí okraj NK podľa krivky,
+plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 8c.
+
+#### 8a — Okraj NK podľa krivky
+- [ ] schéma v6: čiary v pôdoryse (`planLines`) a priebeh parametra profilu `edge` (vzdialenosť od osi mosta ku krivke kolmo na os + prídavok); migrácia 5 → 6
+- [ ] výpočet vzdialenosti ku krivke (os z LandXML alebo čiara), zlomy vo vzorkovaní NK
+- [ ] čiary v pôdoryse: kreslenie, úprava vrcholov, editor, hladina `CIARY`
+- [ ] „Okraj podľa krivky“ v editore NK s grafom výsledných hodnôt
+
+**Hotové, keď:** NK s okrajmi podľa osí `125_L` / `125_R` z Civil 3D sa v pôdoryse aj v 3D drží krivky (± 2 mm).
+
+#### 8b — Editor prierezu a knižnica
+- [ ] šablóny typológií VŠB: doska, vyľahčená doska, jednotrám, doskotrám, dvojtrám, komora, komora s nábehmi
+- [ ] knižnica prierezov: v projekte, import / export súboru; rozhranie pripravené na databázu (Cloudflare)
+- [ ] väzby bodov ako výrazy (relatívne, zvislo / vodorovne, sklon, priamka, priesečník, zrkadlo), bez numerického riešiča
+- [ ] grafický editor v pohľade Prierez: body, obrysy, ťahanie, prichytávanie, prepojenie s tabuľkou
+
+**Hotové, keď:** prierez sa dá vložiť z knižnice, upraviť ťahaním a väzbami so späť / znova a exportovať do knižnice.
+
+#### 8c — OpenCascade (WASM)
+- [ ] prieskum knižníc (veľkosť, rýchlosť, licencia LGPL-2.1) → ADR na schválenie
+- [ ] `GeometryKernel` s booleovskými operáciami a exportom STEP; balík `packages/occt`
+- [ ] presná scéna: konce NK orezané rovinou opory, opora zjednotená s krídlami, vrch piliera po podhľad NK
+- [ ] 3D prepínač „Presný model“ a export STEP (deterministický)
+
+**Hotové, keď:** presný model sa zobrazí v 3D, objemy sedia so sieťou ± 0,5 % a STEP sa otvorí vo FreeCADe / Civil 3D.
+
+### Backlog
+- IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)
+- zakrivené a zalomené podpery, import okraja NK z DXF
 - výmery (objemy betónu, plochy) a export pre KUBATOR
-- plnohodnotný editor priečneho rezu (grafické kreslenie, väzby, knižnica prierezov)
+- nasadenie na Cloudflare s databázou (knižnica prierezov, projekty)
 
 ## 5. Referenčné dáta (dodá Jakub)
 
@@ -393,7 +420,7 @@ Pôdorys, Pozdĺžny profil a Prierez a ich geometria sa exportuje do DXF / SVG,
 | Spodok trámu | rovnobežný s vozovkou alebo vodorovný — voliteľné; na výkrese rovnobežný (2026-10-30) |
 | Rímsy | samostatné prvky (`edgeBeam`), nie súčasť prierezu NK (2026-10-30) |
 | Výška NK | meria sa zvislo (2026-10-30) |
-| Hosting | statický web bez backendu |
+| Hosting | statický web bez backendu; ďalší krok po Fáze 8 je nasadenie na Cloudflare s databázou (2026-10-31) |
 | Súradnice | EPSG:5514, záporné E/N (potvrdené) |
 | GitHub | repo vytvoril Jakub (`tomecjak/Bridge-modeler`); podklady sa nahrávajú do `fixtures/inbox/` |
 | Koniec NK | rovnobežný s osou krajnej opory, staničenie „od/do“ v osi NK; prierez sa za koncovú rovinu predlžuje pozdĺž dotyčnice (2026-10-30, potvrdené 2026-10-31) |
