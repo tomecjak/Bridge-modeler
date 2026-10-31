@@ -52,14 +52,23 @@ export function SectionView({
   const [ref, size] = useElementSize<HTMLDivElement>();
 
   // pohľad sa prispôsobí len pri zmene zostavy NK, nie pri každom staničení
-  const layoutKey = [...sections.map((s) => s.id), ...supports.map((s) => s.id)].join('|');
+  const layoutKey = [
+    ...sections.map((s) => s.id),
+    ...supports.map((s) => s.id),
+    ...terrain.map((t) => t.id),
+  ].join('|');
   // biome-ignore lint/correctness/useExhaustiveDependencies: pohľad sa prepočíta zámerne len pri zmene zostavy NK
   const bounds = useMemo(() => {
     const pts = [
       ...sections.flatMap((s) => s.loops.flatMap((l) => l.points)),
       ...supports.flatMap((s) => [...(s.footing ?? []), ...s.body.flat()]),
     ];
-    const b = boundsOf(pts);
+    // terén pod mostom (v šírke NK + 10 m) sa zmestí do pohľadu, celý koridor nie
+    const deck = boundsOf(pts);
+    const ground = terrain.flatMap((t) =>
+      t.runs.flatMap((r) => r.filter((p) => p.x >= deck.minX - 10 && p.x <= deck.maxX + 10)),
+    );
+    const b = boundsOf([...pts, ...ground]);
     return { minX: b.minX, maxX: b.maxX, minY: b.minY - 1.2, maxY: b.maxY + 1.5 };
   }, [layoutKey, size.width > 0]);
   const fit =

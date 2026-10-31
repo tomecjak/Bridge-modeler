@@ -28,7 +28,11 @@ export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = 
   const samples = useMemo(() => sampleProfile(alignment, 1), [alignment]);
   const profile = alignment.profile;
   const bounds = useMemo(() => {
-    const zs = samples.map((p) => p.z);
+    // výškový rozsah zahŕňa niveletu aj terén
+    const zs = [
+      ...samples.map((p) => p.z),
+      ...terrain.flatMap((t) => t.runs.flatMap((r) => r.map((p) => p.z))),
+    ];
     const minZ = Math.min(...zs);
     const maxZ = Math.max(...zs);
     const margin = Math.max(1, (maxZ - minZ) * 0.15);
@@ -38,7 +42,7 @@ export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = 
       minY: minZ - margin,
       maxY: maxZ + margin,
     };
-  }, [samples]);
+  }, [samples, terrain]);
   const fit =
     size.width > 0 && samples.length > 0 ? fitView(bounds, size, 48, EXAGGERATION) : undefined;
   const { view, handlers, dragMove, reset } = usePanZoom(ref, size, fit);
