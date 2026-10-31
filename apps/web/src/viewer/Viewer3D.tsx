@@ -22,6 +22,11 @@ export interface Viewer3DProps {
   cut: Cut | undefined;
   /** TIN terénov projektu (sieť sa zostaví pri ich zmene) */
   terrains: readonly TerrainTin[];
+  /** priebeh sťahovania DMR 5.0 [%] */
+  terrainProgress: number | undefined;
+  /** projekt nemá terén → stiahnuť DMR 5.0 zo ZBGIS */
+  onRequestTerrain: () => void;
+  onCancelTerrain: () => void;
 }
 
 /** Posun myši, do ktorého sa uvoľnenie tlačidla berie ako klik (výber), nie ťahanie [px]. */
@@ -60,6 +65,9 @@ export default function Viewer3D({
   onStation,
   cut,
   terrains,
+  terrainProgress,
+  onRequestTerrain,
+  onCancelTerrain,
 }: Viewer3DProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<SceneView | undefined>(undefined);
@@ -151,15 +159,29 @@ export default function Viewer3D({
         >
           {sk.viewer3d.cut}
         </button>
-        {terrains.length > 0 && (
-          <button
-            type="button"
-            className="button"
-            aria-pressed={terrainOn}
-            onClick={() => setTerrainOn((v) => !v)}
-          >
-            {sk.viewer3d.terrain}
-          </button>
+        <button
+          type="button"
+          className="button"
+          aria-pressed={terrainOn && terrains.length > 0}
+          title={terrains.length === 0 ? sk.viewer3d.terrainDownloadTitle : undefined}
+          disabled={terrainProgress !== undefined}
+          onClick={() => {
+            // bez terénu zapnutie stiahne DMR 5.0 zo ZBGIS
+            if (terrains.length === 0) {
+              setTerrainOn(true);
+              onRequestTerrain();
+            } else setTerrainOn((v) => !v);
+          }}
+        >
+          {sk.viewer3d.terrain}
+        </button>
+        {terrainProgress !== undefined && (
+          <>
+            <span className="hint">{sk.terrain.downloading(terrainProgress)}</span>
+            <button type="button" className="button" onClick={onCancelTerrain}>
+              {sk.terrain.cancelDownload}
+            </button>
+          </>
         )}
         {cutOn && <StationControl station={station} range={stationRange} onStation={onStation} />}
         {info && (

@@ -8,8 +8,13 @@ import {
   supportElevation,
   twinDeckExample,
 } from '@bridge/sections';
-import { type CorridorOptions, corridorAround, deckRanges } from '@bridge/terrain';
-import { type DragEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import {
+  type CorridorOptions,
+  corridorAround,
+  DEFAULT_CORRIDOR,
+  deckRanges,
+} from '@bridge/terrain';
+import { type DragEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
@@ -17,6 +22,7 @@ import { formatTerrainIssue } from './i18n/terrainIssues.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
 import {
   buildTerrain,
+  downloadTerrain,
   isTerrainFile,
   readTerrainFile,
   type TerrainCandidate,
@@ -72,6 +78,9 @@ export function App() {
   const [sectionStation, setSectionStation] = useState<number>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [terrainBusy, setTerrainBusy] = useState(false);
+  /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
+  const [dmrProgress, setDmrProgress] = useState<number>();
+  const dmrCancel = useRef(false);
 
   const item = alignments[selected];
   const parameterState = useParameterState(item?.alignment.stationing);
@@ -371,6 +380,57 @@ export function App() {
     }
   }
 
+  /**
+   * Stiahne DMR 5.0 zo ZBGIS pre koridor okolo zobrazenej osi (ADR 0011, doplnok); s `replaceId` nahradí
+   * existujúci terén (s jeho koridorom), inak pridá nový s predvoleným koridorom. Jeden krok späť/znova.
+   */
+  async function downloadDmrTerrain(replaceId?: string) {
+    const road = item?.alignment;
+    const origin = project.crs.origin;
+    if (dmrProgress !== undefined) return;
+    if (!road || !origin) {
+      setMessage(sk.terrain.needsAlignment);
+      return;
+    }
+    const previous = project.terrains.find((t) => t.id === replaceId);
+    const options = previous?.corridor ?? DEFAULT_CORRIDOR;
+    dmrCancel.current = false;
+    setDmrProgress(0);
+    setMessage(sk.terrain.downloading(0));
+    try {
+      const r = await downloadTerrain(
+        road,
+        deckRanges(road, project.superstructures, project.bridgeAxes),
+        options,
+        origin,
+        previous?.id ?? newId('ter'),
+        previous?.name ?? sk.terrain.downloadName,
+        {
+          onProgress: (done, total) => {
+            const percent = Math.floor((100 * done) / Math.max(total, 1));
+            setDmrProgress(percent);
+            setMessage(sk.terrain.downloading(percent));
+          },
+          isCancelled: () => dmrCancel.current,
+        },
+      );
+      if (r.terrain) {
+        projectStore
+          .getState()
+          .dispatch(
+            previous
+              ? { type: 'replaceTerrain', id: previous.id, terrain: r.terrain }
+              : { type: 'addElements', terrains: [r.terrain] },
+          );
+        setMessage(sk.terrain.downloaded);
+      } else {
+        setMessage(r.issues.map(formatTerrainIssue).join(' '));
+      }
+    } finally {
+      setDmrProgress(undefined);
+    }
+  }
+
   async function openProjectFile(file: File) {
     try {
       const opened = openProject(await file.text());
@@ -618,6 +678,11 @@ export function App() {
               onStation={setSectionStation}
               cut={cut}
               terrains={tins}
+              terrainProgress={dmrProgress}
+              onRequestTerrain={() => void downloadDmrTerrain()}
+              onCancelTerrain={() => {
+                dmrCancel.current = true;
+              }}
             />
           </Suspense>
         }
@@ -654,6 +719,8 @@ export function App() {
           result={sections.results.find((r) => r.superstructure.id === selectedElement.id)}
           supportResult={supportState.supports.find((r) => r.support.id === selectedElement.id)}
           spans={supportState.spans.get(selectedElement.id)}
+          terrainBusy={dmrProgress !== undefined}
+          onRedownloadTerrain={(id) => void downloadDmrTerrain(id)}
           onRemoved={() => setSelectedElement(undefined)}
         />
       ) : mode === 'section' ? (

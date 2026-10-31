@@ -54,6 +54,8 @@ export const sk = {
     fitTitle: 'Pohľad na vybraný objekt; bez výberu na celý model',
     cut: 'Rez',
     terrain: 'Terén',
+    terrainDownloadTitle:
+      'Projekt nemá terén — stiahne sa DMR 5.0 zo služby ZBGIS (ÚGKK) v koridore okolo mosta',
     cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako v záložke Prierez)',
     loading: 'Načítavam 3D náhľad…',
     noDeck: 'Vložte nosnú konštrukciu (záložka Prierez), zobrazí sa jej 3D model.',

@@ -36,6 +36,9 @@ interface Props {
   supportResult: SupportResult | undefined;
   spans: DeckSpans | undefined;
   onRemoved: () => void;
+  /** sťahuje sa terén zo ZBGIS */
+  terrainBusy: boolean;
+  onRedownloadTerrain: (id: string) => void;
 }
 
 const UNITS: ParameterUnit[] = ['length', 'angle', 'slope', 'none'];
@@ -49,7 +52,16 @@ function update<K extends ElementCollection>(
 }
 
 /** Editor vybraného prvku mosta (os mosta, prierez, NK) v pravom paneli. */
-export function ElementPanel({ collection, id, result, supportResult, spans, onRemoved }: Props) {
+export function ElementPanel({
+  collection,
+  id,
+  result,
+  supportResult,
+  spans,
+  onRemoved,
+  terrainBusy,
+  onRedownloadTerrain,
+}: Props) {
   const project = useProject((s) => s.project);
   const element = (project[collection] as { id: string; name: string }[]).find((e) => e.id === id);
   return (
@@ -68,7 +80,11 @@ export function ElementPanel({ collection, id, result, supportResult, spans, onR
         <SupportEditor support={element as Support} result={supportResult} />
       )}
       {element && collection === 'terrains' && (
-        <TerrainEditor terrain={element as TerrainSurface} />
+        <TerrainEditor
+          terrain={element as TerrainSurface}
+          busy={terrainBusy}
+          onRedownload={() => onRedownloadTerrain(id)}
+        />
       )}
       {element && (
         <button
@@ -87,7 +103,15 @@ export function ElementPanel({ collection, id, result, supportResult, spans, onR
 }
 
 /** Terén (ADR 0011): názov, zdroj, veľkosť a koridor, na ktorý bol orezaný. */
-function TerrainEditor({ terrain }: { terrain: TerrainSurface }) {
+function TerrainEditor({
+  terrain,
+  busy,
+  onRedownload,
+}: {
+  terrain: TerrainSurface;
+  busy: boolean;
+  onRedownload: () => void;
+}) {
   const t = sk.terrain;
   const size = terrainSize(terrain);
   return (
@@ -109,8 +133,23 @@ function TerrainEditor({ terrain }: { terrain: TerrainSurface }) {
         </dd>
         <dt>{t.corridor}</dt>
         <dd>{t.corridorUsed(terrain.corridor.halfWidth, terrain.corridor.margin)}</dd>
+        {terrain.attribution && (
+          <>
+            <dt>{t.attribution}</dt>
+            <dd>{terrain.attribution}</dd>
+          </>
+        )}
       </dl>
-      <p className="hint">{t.reimportHint}</p>
+      {terrain.source === 'zbgis' ? (
+        <>
+          <button type="button" className="button" disabled={busy} onClick={onRedownload}>
+            {t.redownload}
+          </button>
+          <p className="hint">{t.redownloadHint}</p>
+        </>
+      ) : (
+        <p className="hint">{t.reimportHint}</p>
+      )}
     </div>
   );
 }

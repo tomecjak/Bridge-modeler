@@ -1,3 +1,4 @@
+import type { Alignment } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
 import type { TerrainSurface } from '@bridge/model';
 import {
@@ -5,9 +6,12 @@ import {
   type CorridorOptions,
   clipGrid,
   clipTin,
+  corridorAround,
+  downloadDmr,
   type ParsedSurface,
   parseSurfaces,
   type TerrainIssue,
+  ZBGIS_DMR_ATTRIBUTION,
 } from '@bridge/terrain';
 
 /** Povrch zo súboru, ktorý sa dá importovať (pred orezaním na koridor). */
@@ -73,6 +77,50 @@ export async function buildTerrain(
   if (!read.raster) return { issues: read.issues };
   const data = clipGrid(read.raster, corridor, origin);
   return data ? { terrain: { ...base, source: 'geotiff', data }, issues: [] } : { issues: [] };
+}
+
+/**
+ * Stiahne DMR 5.0 zo služby ZBGIS pre koridor okolo osi (ADR 0011, doplnok) a vytvorí terén projektu.
+ * `ranges` = rozsahy NK na osi v spojitom staničení.
+ */
+export async function downloadTerrain(
+  road: Alignment,
+  ranges: readonly { sFrom: number; sTo: number }[],
+  options: CorridorOptions,
+  origin: Vec3,
+  id: string,
+  name: string,
+  callbacks: {
+    onProgress?: (done: number, total: number) => void;
+    isCancelled?: () => boolean;
+  } = {},
+): Promise<{ terrain?: TerrainSurface; issues: TerrainIssue[] }> {
+  const corridor = corridorAround(road, ranges, options);
+  const b = corridor.bounds;
+  const read = await downloadDmr(
+    {
+      minX: b.minX + origin.x,
+      minY: b.minY + origin.y,
+      maxX: b.maxX + origin.x,
+      maxY: b.maxY + origin.y,
+    },
+    (x, y) => corridor.contains(x - origin.x, y - origin.y),
+    { fetch: (url, init) => fetch(url, init), ...callbacks },
+  );
+  if (!read.raster) return { issues: read.issues };
+  const data = clipGrid(read.raster, corridor, origin);
+  if (!data) return { issues: [{ severity: 'error', code: 'NoData' }] };
+  return {
+    terrain: {
+      id,
+      name,
+      source: 'zbgis',
+      attribution: ZBGIS_DMR_ATTRIBUTION,
+      corridor: { ...options },
+      data,
+    },
+    issues: [],
+  };
 }
 
 /** Počet bodov a trojuholníkov / buniek uloženého terénu (pre zobrazenie). */

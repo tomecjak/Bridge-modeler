@@ -91,7 +91,8 @@ export class SceneView {
     roughness: 1,
     transparent: true,
     opacity: 0.55,
-    depthWrite: false,
+    // zápis hĺbky: terén nezakryje sám seba (bez tmavých škvŕn), most sa kreslí skôr a ostáva vidieť
+    depthWrite: true,
     side: DoubleSide,
   });
   private terrainMeshes: Mesh[] = [];
