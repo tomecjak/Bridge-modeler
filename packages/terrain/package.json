@@ -3,9 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Terén: TIN a mriežka z LandXML a GeoTIFF, výška v bode, rezy terénom.",
+  "description": "Ter\u00e9n: TIN a mrie\u017eka z LandXML a GeoTIFF, v\u00fd\u0161ka v bode, rezy ter\u00e9nom.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./geotiff": "./src/geotiff.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."

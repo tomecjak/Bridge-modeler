@@ -1,3 +1,7 @@
+import { formatNumber } from '../format/number.ts';
+
+const formatCount = (n: number) => formatNumber(n, 0);
+
 /** Všetky texty používateľského rozhrania (slovensky). */
 export const sk = {
   app: {
@@ -119,6 +123,7 @@ export const sk = {
       profiles: 'Prierez',
       superstructures: 'Nosná konštrukcia',
       supports: 'Podpera',
+      terrains: 'Terén',
     },
     name: 'Názov',
     remove: 'Odstrániť prvok',
@@ -217,6 +222,37 @@ export const sk = {
     profiles: 'Prierezy',
     superstructures: 'Nosné konštrukcie',
     supports: 'Podpery',
+    terrains: 'Terén',
+  },
+  terrain: {
+    import: 'Importovať terén',
+    dialogTitle: 'Import terénu',
+    file: 'Súbor',
+    surfaces: 'Povrchy v súbore',
+    raster: 'Raster DMR (GeoTIFF)',
+    points: (n: number) => `${formatCount(n)} bodov`,
+    triangles: (n: number) => `${formatCount(n)} trojuholníkov`,
+    cells: (n: number) => `${formatCount(n)} buniek`,
+    corridor: 'Koridor okolo osi',
+    corridorHint:
+      'Terén sa oreže na pás okolo osi cesty v rozsahu NK s presahom (bez NK celá os) a uloží do projektu.',
+    halfWidth: 'Pol šírky koridoru [m]',
+    margin: 'Presah za koniec NK [m]',
+    alignment: 'Os cesty',
+    confirm: 'Importovať',
+    cancel: 'Zrušiť',
+    importing: 'Importujem terén…',
+    needsAlignment: 'Terén sa orezáva okolo osi — najprv importujte os z LandXML.',
+    unsupportedFile: 'Podporované sú súbory LandXML (.xml) a GeoTIFF (.tif).',
+    nothingSelected: 'Vyberte aspoň jeden povrch.',
+    empty: (name: string) => `Povrch „${name}“ nemá v koridore žiadne body.`,
+    imported: (n: number) => `Importované povrchy terénu: ${n}.`,
+    source: 'Zdroj',
+    sources: { landxml: 'LandXML (Civil 3D)', geotiff: 'GeoTIFF (DMR 5.0)' },
+    size: 'Veľkosť',
+    corridorUsed: (halfWidth: number, margin: number) =>
+      `± ${formatCount(halfWidth)} m okolo osi, presah ${formatCount(margin)} m`,
+    reimportHint: 'Na zmenu koridoru terén importujte znova.',
   },
   properties: {
     title: 'Vlastnosti',

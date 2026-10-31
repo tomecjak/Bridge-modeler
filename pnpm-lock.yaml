@@ -199,6 +199,9 @@ importers:
       '@bridge/sections':
         specifier: workspace:*
         version: link:../../packages/sections
+      '@bridge/terrain':
+        specifier: workspace:*
+        version: link:../../packages/terrain
       comlink:
         specifier: 4.4.2
         version: 4.4.2

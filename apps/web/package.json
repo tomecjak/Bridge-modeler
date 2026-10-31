@@ -16,6 +16,7 @@
     "@bridge/mesh": "workspace:*",
     "@bridge/model": "workspace:*",
     "@bridge/sections": "workspace:*",
+    "@bridge/terrain": "workspace:*",
     "comlink": "4.4.2",
     "immer": "11.2.9",
     "react": "^19.3.1",

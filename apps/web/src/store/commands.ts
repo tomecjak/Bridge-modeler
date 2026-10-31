@@ -8,6 +8,7 @@ import {
   renameParameter,
   type Superstructure,
   type Support,
+  type TerrainSurface,
 } from '@bridge/model';
 
 /** Kolekcie prvkov mosta s rovnakými príkazmi (pridať / upraviť / odstrániť). */
@@ -16,6 +17,7 @@ export interface ElementCollections {
   profiles: ProfileDefinition;
   superstructures: Superstructure;
   supports: Support;
+  terrains: TerrainSurface;
 }
 export type ElementCollection = keyof ElementCollections;
 
@@ -44,6 +46,7 @@ export type Command =
       profiles?: ProfileDefinition[];
       superstructures?: Superstructure[];
       supports?: Support[];
+      terrains?: TerrainSurface[];
     }
   | ElementUpdate
   | { type: 'removeElement'; collection: ElementCollection; id: string };
@@ -87,6 +90,7 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       draft.profiles.push(...(command.profiles ?? []));
       draft.superstructures.push(...(command.superstructures ?? []));
       draft.supports.push(...(command.supports ?? []));
+      draft.terrains.push(...(command.terrains ?? []));
       return;
     case 'updateElement': {
       const list = draft[command.collection] as { id: string }[];

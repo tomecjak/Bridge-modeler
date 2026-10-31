@@ -1,5 +1,5 @@
 import type { AlignmentIssue } from '@bridge/alignment';
-import { createEmptyProject, evaluateLaw, openProject } from '@bridge/model';
+import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
   evaluateSuperstructure,
   globalScope,
@@ -8,16 +8,26 @@ import {
   supportElevation,
   twinDeckExample,
 } from '@bridge/sections';
+import { type CorridorOptions, corridorAround, deckRanges } from '@bridge/terrain';
 import { type DragEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
+import { formatTerrainIssue } from './i18n/terrainIssues.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
+import {
+  buildTerrain,
+  isTerrainFile,
+  readTerrainFile,
+  type TerrainCandidate,
+  type TerrainFile,
+} from './import/importTerrain.ts';
 import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { SectionPanel } from './layout/SectionPanel.tsx';
+import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject } from './persistence/fileIO.ts';
@@ -59,6 +69,8 @@ export function App() {
     id: string;
   }>();
   const [sectionStation, setSectionStation] = useState<number>();
+  const [terrainFile, setTerrainFile] = useState<TerrainFile>();
+  const [terrainBusy, setTerrainBusy] = useState(false);
 
   const item = alignments[selected];
   const parameterState = useParameterState(item?.alignment.stationing);
@@ -309,6 +321,43 @@ export function App() {
     }
   }
 
+  async function openTerrainFile(file: File) {
+    if (!isTerrainFile(file.name)) {
+      setMessage(sk.terrain.unsupportedFile);
+      return;
+    }
+    try {
+      setTerrainFile(await readTerrainFile(file));
+    } catch {
+      setMessage(sk.import.readFailed);
+    }
+  }
+
+  /** Oreže vybrané povrchy na koridor okolo zobrazenej osi a pridá ich do projektu (jeden krok späť). */
+  async function importTerrains(selected: TerrainCandidate[], options: CorridorOptions) {
+    const road = item?.alignment;
+    const origin = project.crs.origin;
+    if (!road || !origin) return;
+    setTerrainBusy(true);
+    try {
+      const ranges = deckRanges(road, project.superstructures, project.bridgeAxes);
+      const corridor = corridorAround(road, ranges, options);
+      const terrains: TerrainSurface[] = [];
+      const notes: string[] = [];
+      for (const c of selected) {
+        const r = await buildTerrain(c, corridor, options, origin, newId('ter'));
+        if (r.terrain) terrains.push(r.terrain);
+        else if (r.issues.length > 0) notes.push(...r.issues.map(formatTerrainIssue));
+        else notes.push(sk.terrain.empty(c.name));
+      }
+      if (terrains.length > 0) projectStore.getState().dispatch({ type: 'addElements', terrains });
+      setMessage([sk.terrain.imported(terrains.length), ...notes].join(' '));
+      setTerrainFile(undefined);
+    } finally {
+      setTerrainBusy(false);
+    }
+  }
+
   async function openProjectFile(file: File) {
     try {
       const opened = openProject(await file.text());
@@ -421,6 +470,19 @@ export function App() {
               }}
             />
           </label>
+          <label className="button">
+            {sk.terrain.import}
+            <input
+              type="file"
+              accept=".xml,.landxml,.tif,.tiff"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void openTerrainFile(file);
+                e.target.value = '';
+              }}
+            />
+          </label>
         </div>
       </header>
       <ProjectTree
@@ -470,6 +532,11 @@ export function App() {
               issues: r.issues.filter((i) => i.severity !== 'warning').length,
             })),
           },
+          {
+            collection: 'terrains',
+            title: sk.tree.terrains,
+            items: project.terrains.map((t) => ({ id: t.id, name: t.name, issues: 0 })),
+          },
         ]}
         selectedElement={selectedElement}
         onSelectElement={(collection, id) => {
@@ -477,6 +544,7 @@ export function App() {
           const support = project.supports.find((x) => x.id === id);
           if (support) setSectionStation(support.station);
           // 3D ukazuje NK aj podpery; inak podpery v pôdoryse a profile, ostatné prvky v priereze
+          if (collection === 'terrains') return;
           if (mode === '3d' && (collection === 'supports' || collection === 'superstructures'))
             return;
           if (collection !== 'supports') setMode('section');
@@ -591,6 +659,15 @@ export function App() {
       )}
       <footer className="app-status">{statusText()}</footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
+      {terrainFile && (
+        <TerrainImportDialog
+          file={terrainFile}
+          alignmentName={project.crs.origin ? item?.alignment.name : undefined}
+          busy={terrainBusy}
+          onConfirm={(selected, options) => void importTerrains(selected, options)}
+          onCancel={() => setTerrainFile(undefined)}
+        />
+      )}
     </div>
   );
 }

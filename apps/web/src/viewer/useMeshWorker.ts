@@ -64,7 +64,8 @@ async function pump(s: WorkerState) {
     while (s.pending && !s.disposed) {
       const next = s.pending;
       s.pending = undefined;
-      const update = await s.api.build(next);
+      // terén worker nepotrebuje a jeho kopírovanie pri každej zmene by bolo drahé (ADR 0011)
+      const update = await s.api.build(next.terrains.length > 0 ? { ...next, terrains: [] } : next);
       if (!s.disposed) s.callbacks.current.onUpdate(update);
     }
   } catch (e) {

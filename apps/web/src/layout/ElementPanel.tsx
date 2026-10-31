@@ -7,11 +7,13 @@ import type {
   StationFunction,
   Superstructure,
   Support,
+  TerrainSurface,
 } from '@bridge/model';
 import type { SupportResult } from '@bridge/sections';
 import { formatNumber } from '../format/number.ts';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
+import { terrainSize } from '../import/importTerrain.ts';
 import type { ElementCollection, ElementCollections } from '../store/commands.ts';
 import {
   parsePointList,
@@ -65,6 +67,9 @@ export function ElementPanel({ collection, id, result, supportResult, spans, onR
       {element && collection === 'supports' && (
         <SupportEditor support={element as Support} result={supportResult} />
       )}
+      {element && collection === 'terrains' && (
+        <TerrainEditor terrain={element as TerrainSurface} />
+      )}
       {element && (
         <button
           type="button"
@@ -78,6 +83,35 @@ export function ElementPanel({ collection, id, result, supportResult, spans, onR
         </button>
       )}
     </aside>
+  );
+}
+
+/** Terén (ADR 0011): názov, zdroj, veľkosť a koridor, na ktorý bol orezaný. */
+function TerrainEditor({ terrain }: { terrain: TerrainSurface }) {
+  const t = sk.terrain;
+  const size = terrainSize(terrain);
+  return (
+    <div className="sf-editor">
+      <Field label={sk.elements.name}>
+        <TextField
+          value={terrain.name}
+          ariaLabel={sk.elements.name}
+          onCommit={(name) => update('terrains', terrain.id, { name })}
+        />
+      </Field>
+      <dl className="props">
+        <dt>{t.source}</dt>
+        <dd>{t.sources[terrain.source]}</dd>
+        <dt>{t.size}</dt>
+        <dd>
+          {t.points(size.points)} ·{' '}
+          {terrain.data.kind === 'tin' ? t.triangles(size.cells) : t.cells(size.cells)}
+        </dd>
+        <dt>{t.corridor}</dt>
+        <dd>{t.corridorUsed(terrain.corridor.halfWidth, terrain.corridor.margin)}</dd>
+      </dl>
+      <p className="hint">{t.reimportHint}</p>
+    </div>
   );
 }
 
