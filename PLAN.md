@@ -347,12 +347,14 @@ kolegovia vidia a upravujú tú istú knižnicu prierezov. — *2026-10-31:* pri
 ### Fáza 10 — Návrhový workflow mosta
 Rozhodnutie 2026-10-31: UI má viesť prvotným návrhom mosta od trasy z LandXML (aj juniora) a slúžiť ako podklad
 na ďalšie spracovanie, vizualizáciu pre investora a interné konzultácie kvality návrhu. Cieľový postup:
-1 Podklady (LandXML, terén, meračka DXF) → 2 Oblasť mosta → 3 Prekážky → 4 Prierez NK → 5 Polia a podpery →
-6 Kontroly → 7 Varianty → 8 Výstupy. Každá podfáza sa pred začatím rozpracuje v plan mode; otázky k nej sú
-v Otvorených otázkach (Fáza 10). Každá zmena schémy = nová verzia + migrácia + test (dnes v6).
+1 Zadanie (stavba, objekt, kategória cesty) → 2 Podklady (LandXML, terén, meračka DXF) → 3 Oblasť mosta →
+4 Prekážky → 5 Prierez NK a rímsy → 6 Polia a podpery → 7 Kontroly → 8 Varianty → 9 Výstupy. Každá podfáza sa
+pred začatím rozpracuje v plan mode; otázky a odpovede sú v Otvorených otázkach (Fáza 10). Každá zmena schémy =
+nová verzia + migrácia + test (dnes v6). Poradie podfáz: 10a → 10g, 10i (rímsy), 10h.
 
-#### 10a — Postup a oblasť mosta
-- [ ] panel „Postup“ v ľavom stĺpci: kroky 1–8 so stavom (hotové / upozornenie / chýba) z projektu a issues, tlačidlá do správneho pohľadu, krátka nápoveda; nie vynútený sprievodca, strom prvkov ostáva pod ním
+#### 10a — Zadanie, postup a oblasť mosta
+- [ ] panel „Postup“ v ľavom stĺpci: kroky 1–9 so stavom (hotové / upozornenie / chýba) z projektu a issues, tlačidlá do správneho pohľadu, krátka nápoveda; nie vynútený sprievodca, strom prvkov ostáva pod ním
+- [ ] krok „Zadanie“: stavba (názov, číslo), objekt (číslo a názov), kategória prevádzanej cesty → voľná šírka na moste (s ručnou úpravou pri rozšírení); návrh ďalších údajov v plan mode 10a; schéma v7
 - [ ] oblasť mosta v projekte (`studyArea`: os, od, do; schéma v7), zadanie ťahom v pozdĺžnom profile alebo staničeniami; riadi rozsah novej NK (namiesto 25 % nivelety) a koridor terénu bez NK (namiesto celej osi)
 - [ ] „Stiahnuť terén“ aj z pozdĺžneho profilu; „Prejsť na staničenie“ a priblíženie na oblasť v pôdoryse aj profile
 - [ ] vloženie NK výberom typológie s náhľadmi (z knižnice prierezov) namiesto dvoch pevných tlačidiel
@@ -361,34 +363,36 @@ v Otvorených otázkach (Fáza 10). Každá zmena schémy = nová verzia + migr�
 
 #### 10b — Os mosta: dĺžky, profil v ľubovoľnej osi, merania, kóty
 - [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
-- [ ] rozpätia, dĺžka NK a celková dĺžka po osi mosta; kolmé rozpätia (× sin α pri rovnakom uhle podpier); dĺžka premostenia (líca úložných prahov)
-- [ ] pozdĺžny profil v zvolenej osi: os cesty / os mosta / iná os z LandXML / čiara v pôdoryse (neskôr os prekážky); pri osi mosta x = rozvinutá dĺžka, popis v km osi cesty; rez NK z parametrov (bod čiary → `project()` → prierez na `s` → zvislica v odsadení), doplnok ADR 0007
+- [ ] rozpätia, dĺžka NK, dĺžka premostenia (líca úložných prahov) a celková dĺžka po osi mosta; len vzdialenosti po osi (kolmé a šikmé rieši až výkres, rozhodnutie 2026-10-31)
+- [ ] pozdĺžny profil v zvolenej osi: os cesty / os mosta / okraj NK / iná os z LandXML / čiara v pôdoryse (neskôr os prekážky); pri osi mosta x = rozvinutá dĺžka, popis v km osi cesty; rez NK z parametrov (bod čiary → `project()` → prierez na `s` → zvislica v odsadení), doplnok ADR 0007
+- [ ] terén rezaný na ľavom a pravom okraji NK premietnutý do profilu v osi mosta inými farbami (vidno priečny sklon terénu)
 - [ ] odčítanie pod kurzorom v profile: niveleta, horný povrch a spodok NK, terén, výška spodku NK nad terénom
 - [ ] nástroj „Merať“ v profile: Δ dĺžka, Δ výška, sklon, prichytávanie na vrcholy, skutočné hodnoty pri prevýšení
-- [ ] zapínateľné kóty len na obrazovke (rozpätia s ⊥, dĺžka NK, premostenia, celková, neskôr voľná výška) v profile a pôdoryse; do DXF nejdú (ADR 0012 platí)
+- [ ] zapínateľné kóty len na obrazovke (rozpätia, dĺžka NK, premostenia, celková, neskôr voľná výška) v profile a pôdoryse; do DXF nejdú (ADR 0012 platí)
 
-**Hotové, keď:** na 212-00 kóty ukazujú 16,00 + 23,00 + 16,00, NK 56,00, premostenie 53,20 (⊥46,85) a celkovú dĺžku 65,84 a na posunutej osi v oblúku sedia rozpätia s dĺžkou po osi mosta (test).
+**Hotové, keď:** na 212-00 kóty ukazujú 16,00 + 23,00 + 16,00, NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 a na posunutej osi v oblúku sedia rozpätia s dĺžkou po osi mosta (test).
 
 #### 10c — Polia v pozdĺžnom profile
 - [ ] pridanie podpery klikom aj v pozdĺžnom profile
-- [ ] ťahanie podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta (nie km), Shift = bez prichytávania, živé kóty, jeden krok späť
-- [ ] úprava rozpätia kliknutím na kótu a zadaním hodnoty
+- [ ] ťahanie podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta po 0,5 m (nie km), Shift = bez prichytávania, živé kóty, jeden krok späť; staničenie v editore podpery ostáva ľubovoľné
+- [ ] úprava rozpätia kliknutím na kótu a zadaním hodnoty: zmení sa len upravené pole a všetky podpery za ním (na strane od vybranej podpery) sa posunú, celková dĺžka mosta sa zmení (rozhodnutie 2026-10-31)
 - [ ] „Rozloženie polí“: „16 + 23 + 16“ / „3×20“, ukotvenie od začiatku / od konca / symetricky okolo km (predvolene kríženie s prekážkou), spoločný uhol kríženia, typ piliera a opory z knižnice; nahradí podpery NK jedným krokom späť
 - [ ] spoločná šikmosť: v editore NK „použiť uhol na všetky podpery“
 
 **Hotové, keď:** most 212-00 vznikne z „16 + 23 + 16“ a šikmosti jedným dialógom a ťahanie piliera mení rozpätia v kroku prichytávania.
 
 #### 10d — Opora a koniec NK
-- [ ] workshop s projektantom: náčrt rezu opory v osi mosta s pomenovanými rozmermi (presah NK za os ložísk, predná líca prahu od osi ložísk, medzera NK – múrik, výška uloženia, šírka a výška prahu, hrúbka múrika, bočný presah za okraj NK, krídla, typ opory) → doplnok ADR 0010 alebo nové ADR
-- [ ] nová parametrizácia opory v schéme + migrácia
-- [ ] koniec NK odvodený od opory (os ložísk ± presah), posun opory posunie koniec NK
+- [ ] workshop s projektantom: náčrt rezu opory v osi mosta s pomenovanými rozmermi (predsadenie prahu pred os uloženia, odsadenie konca NK od osi uloženia, medzera NK – múrik, odsadenie NK od prahu = priestor pre ložiská, šírka a výška prahu, hrúbka múrika, krídla, typ opory) → doplnok ADR 0010 alebo nové ADR
+- [ ] nová parametrizácia opory v schéme + migrácia; typy opôr vrátane rámovej a integrovanej konštrukcie (bez ložísk)
+- [ ] koniec NK odvodený od opory (os uloženia ± odsadenie konca NK), NK sa natiahne a posúva s oporou; väzba sa dá odomknúť (ručné od/do)
 - [ ] nápoveda s náčrtom (SVG schéma s kótami) pri parametroch opory; rovnaký mechanizmus neskôr pre pilier a prierez
 
 **Hotové, keď:** 212-00 dá z parametrov opory NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 (test) a posun opory posunie koniec NK.
 
 #### 10e — Podpery: založenie podľa terénu, firemná knižnica
-- [ ] režimy založenia: podľa terénu (predvolený; horná hrana základu = terén v osi podpery − krytie) / výška podpery / kóta základovej škáry; terén do `evaluateSupport` ako čistá funkcia, bez terénu dnešné pravidlo s upozornením; migrácia `foundationTop` → kóta
+- [ ] režimy založenia: podľa terénu (predvolený pre piliere; horná hrana základu = terén v osi podpery − krytie 0,5 m) / výška podpery / kóta základovej škáry; pri oporách volí režim projektant (plošné alebo hlbinné založenie); terén do `evaluateSupport` ako čistá funkcia, bez terénu dnešné pravidlo s upozornením; migrácia `foundationTop` → kóta
 - [ ] upozornenie, keď je základ nad terénom
+- [ ] predvolené ložiská odvodené od prierezu NK (≈ 1,4 m od okraja spodnej plochy, zaokrúhlené — upresniť v plan mode 10e)
 - [ ] firemná knižnica podpier: pomenované typy (geometria, základ, ložiská, uloženie) s náhľadom; šablóny, projekt, súbor, D1 (formát `bridge-modeler/support-library` v1, doplnok ADR 0008 a 0015)
 - [ ] šablóny: stenový pilier, jeden stĺp, dva stĺpy, opora na pilótach (212-00), masívna opora — rozmery potvrdí projektant
 
@@ -397,24 +401,35 @@ v Otvorených otázkach (Fáza 10). Každá zmena schémy = nová verzia + migr�
 #### 10f — Prekážky a meračka
 - [ ] prekážka (spoločný podklad): typ (cesta, železnica, vodný tok, poľná cesta, chodník, iná), referencia (os z LandXML / čiara v pôdoryse / čiara z meračky), výška (niveleta / Z čiary / konštanta, napr. Q100), voľný prierez s predvoľbou podľa typu; nové ADR
 - [ ] kríženie osi mosta s prekážkou → km a uhol kríženia (konvencia `crossingAngle`); ukotvenie a šikmosť pre 10c
-- [ ] voľný prierez v profile v osi mosta (šírka / sin α), v priečnom reze, v 3D a v profile v osi prekážky
+- [ ] kríženie zadané aj ručne na trase (km): v pozdĺžnom profile šrafovaná čiara s označením staničenia a popisom prekážky; vloženie prechodového (voľného) prierezu cesty (nastaviteľná šírka a výška) alebo priechodného prierezu železnice — predpisy naštudovať na začiatku 10f, hodnoty potvrdí projektant
+- [ ] voľný prierez v profile v osi mosta (šírka / sin α), v priečnom reze, v 3D a v profile v osi prekážky; vodný tok = kóta hladiny Q100 + rezerva a brehové čiary (bez prietokovej plochy)
 - [ ] kontroly `ClearanceViolated` (s hodnotou), `SupportInClearance`; kóta minimálnej voľnej výšky
-- [ ] import meračky DXF: vlastná čítačka (`LINE`, `LWPOLYLINE`, `POLYLINE` 3D, `POINT`), výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; nové ADR a balík `packages/survey` (doplniť do CLAUDE.md)
+- [ ] import meračky DXF: vlastná čítačka (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov), výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; nové ADR a balík `packages/survey` (doplniť do CLAUDE.md)
 
 **Hotové, keď:** vetva z LandXML ako prekážka „cesta“ dá km a uhol kríženia, voľný prierez sa ukáže vo všetkých pohľadoch, znížená niveleta vyvolá `ClearanceViolated` a čiara z DXF meračky sa dá použiť ako prekážka.
 
 #### 10g — Kontroly
 - [ ] panel „Kontroly“: issues zoskupené (geometria, rozpätia, štíhlosť, voľná výška a podpery v prekážke, klopenie, založenie) s odkazom na prvok
 - [ ] štíhlosť h/L: tabuľka orientačných hodnôt podľa typológie (len upozornenie; TODO statik v Otvorených otázkach)
-- [ ] parser `Superelevation` z LandXML (typované problémy) a kontrola parametra `q` v rozsahu NK: NK v nábehu klopenia, plné klopenie ≠ `q` (tolerancia 0,1 %) → upozornenie
+- [ ] parser `Superelevation` z LandXML (typované problémy) a kontrola parametra `q` v rozsahu NK: NK v nábehu klopenia, plné klopenie ≠ `q` (tolerancia 0,1 %) → upozornenie; ak LandXML klopenie neobsahuje, kontrola sa nezobrazuje
+- [ ] pomer krajného a vnútorného poľa mimo 0,7 – 0,8 → upozornenie (nie chyba)
 
 **Hotové, keď:** všetky kontroly sú na jednom mieste a interpretáciu klopenia overí golden test na podklade s výkazom klopenia.
 
+#### 10i — Rímsy (pred 10h)
+- [ ] rímsa (`edgeBeam`) ako samostatný prvok na okraji NK (rozhodnutie 2026-10-30): parametrický prierez z knižnice (šírka, výška, sklon 4 % k vozovke), vedená po okraji NK v rozsahu NK; schéma + ADR
+- [ ] zobrazenie v priečnom reze, pôdoryse, pozdĺžnom reze a 3D; export DXF (hladina `RIMSY`) a STEP
+- [ ] voľná šírka na moste medzi rímsami a kontrola voči zadaniu (kategória cesty, krok 1)
+
+**Hotové, keď:** dvojica NK z rezu E–E má rímsy podľa výkresu (`Dvojica NK.png`) a voľná šírka medzi rímsami sedí s kótami (test).
+
 #### 10h — Varianty a ukazovatele
-- [ ] varianty v jednom projekte: `variants` + `activeVariant`; prvky mosta (os mosta, prierezy, NK, podpery) nesú `variant`, podklady (osi, terén, meračka, prekážky, čiary, globálne parametre, oblasť mosta) sú spoločné; migrácia → „Variant A“; nové ADR
+- [ ] varianty v jednom projekte: `variants` + `activeVariant`; prvky mosta (os mosta, prierezy, NK, rímsy, podpery) nesú `variant`, podklady (osi, terén, meračka, prekážky, čiary, oblasť mosta) sú spoločné; globálne parametre spoločné s možnosťou prepísať hodnotu vo variante; migrácia → „Variant A“; nové ADR
 - [ ] duplikovať / premenovať / odstrániť variant (nové id s prepisom odkazov, jeden krok späť)
 - [ ] ukazovatele (čistá funkcia, každý s vysvetlivkou v UI): dispozícia (polia, piliere, opory, rozpätia, dĺžky, šírka, min. uhol kríženia), plocha mosta a pôdorysná plocha NK, objem NK (∫A·dL), objem spodnej stavby, ekvivalentná hrúbka NK, výšky pilierov, podpery v prekážke, počet ložísk a mostných závesov, voľná výška a rezerva, max. pole / ekonomické, štíhlosť, pomer krajné / vnútorné pole
-- [ ] porovnanie variantov: tabuľka so zvýraznenou najlepšou hodnotou, pozdĺžne profily variantov pod sebou v rovnakej mierke; voliteľne CSV a orientačná cena
+- [ ] plocha mosta = pôdorysná plocha vrátane ríms (pri konštantnej šírke = dĺžka premostenia × šírka vrátane ríms)
+- [ ] orientačná cena: €/m² plochy mosta podľa typológie, zatiaľ zástupné hodnoty zreteľne označené (skutočné dodá projektant)
+- [ ] porovnanie variantov: tabuľka so zvýraznenou najlepšou hodnotou, pozdĺžne profily variantov pod sebou v rovnakej mierke; voliteľne CSV
 
 **Hotové, keď:** dva varianty 212-00 (3 polia jednotrám / 1 pole komora) sa porovnajú v tabuľke a objem NK sedí s ručným výpočtom (A·L pri konštantnom priereze) a so sieťou ± 0,5 %.
 
@@ -432,7 +447,7 @@ v Otvorených otázkach (Fáza 10). Každá zmena schémy = nová verzia + migr�
 4. Firemný štandard hladín, typov čiar a farieb pre DXF.
 5. Malý referenčný most (2–3 polia) s dĺžkami polí a šikmosťami na end-to-end test. — *dodané 2026-10-31:* most 212-00 (`Vzorový most.pdf`), test `packages/mesh/src/reference212.test.ts` na syntetickej osi.
 6. Povrch terénu z Civil 3D (LandXML `Surface`) v okolí toho istého mosta a pozdĺžny profil terénu po osi (výkaz) na golden test.
-7. Vzorka meračky existujúceho stavu v DXF (Fáza 10f) — s informáciou, ako sú zapísané výšky a v akých súradniciach.
+7. Vzorka meračky existujúceho stavu v DXF (Fáza 10f) — *dodané 2026-10-31:* `Meracka skutocneho stavu.dxf` (rozbor v Zistené z podkladov).
 8. Výkres alebo výkaz klopenia k osi, ktorej LandXML obsahuje `Superelevation` (125-00 alebo 101-00; `Trasa LandXML.xml` v inboxe chýba) — Fáza 10g.
 9. Hodnoty voľných prierezov podľa typu prekážky alebo odkaz na normu (Fáza 10f).
 10. Potvrdené hodnoty štíhlosti NK od statika (Fáza 10g) a rozmery firemných typov podpier (Fáza 10e).
@@ -478,34 +493,65 @@ Stačí zodpovedať pred začatím danej podfázy; *predpoklad* platí, kým nep
 
 Pred 10b / 10c:
 1. Zmena jedného rozpätia (ťahaním alebo zadaním): *predpoklad:* posunú sa všetky nasledujúce podpery (zmení sa celková dĺžka), so Shift sa zachová celková dĺžka a zmení susedné pole. Alebo naopak?
+*odpoveď* ak vyberiem podperu a zmením rozpätie, tak sa zmení len to, ktoré som prepísal a na tú stranu sa všetky ostatné podpery presunú, čiže sa zmení celková dĺžka mosta.
 2. Krok prichytávania rozpätí: *predpoklad* 0,5 m (ponuka 0,1 / 0,25 / 0,5 / 1,0).
+*odpoveď* súhlasím, ale v staničení si bude môcť člvoek zmeniť ľubovoľne.
 3. Plocha mosta: vzor z praxe (STN 73 6200 čl. 60 a 61, napr. 39,75 × 14,0 = 556,5 m²) = dĺžka premostenia × šírka mosta. Ktorá šírka (celková šírka NK vrátane ríms, alebo medzi zábradliami)? Pri premenlivej šírke priemer, alebo plocha z pôdorysu?
+*odpoveď* šírka vrátene ríms, čo vlastne aj doplňa to že je potrebné pridať ešte nástroj ktorý bude modelovať na NK rímsy. Pri pemenlivej šírke by to bola pôdorysná plocha.
 4. Dĺžka premostenia = vzdialenosť líc úložných prahov v osi mosta (212-00: 56,00 − 2 × (0,50 + 0,90) = 53,20), kolmá = × sin α (⊥46,85)?
+*odpoveď* merať len vzdialosť po osi. kolmú a šikmá vzdialensoť sa rieši až potom vo výkrese.
 5. Merania v profile uložiť do projektu (na konzultácie), alebo stačia dočasné? *Predpoklad:* dočasné.
+*odpoveď* dočasné.
 6. Pozdĺžny profil v ďalších osiach: ktoré sú najdôležitejšie (os prekážky, okraj NK, ľubovoľná čiara)?
+*odpoveď* okraj NK napríklad je odbrý príkald kvli prmenlivosti terénu, dobrá by bola možnosť aj teren rezaný na okrajoch mosta premiesť do pozdlžného profilu v osi mosta, inými farbami napr. aby bolo vidno ak osa mení terén.
 
 Pred 10d / 10e:
 7. Opora: čo znamená „odsadenie od NK“, bočný presah opory za okraj NK, alebo niečo pozdĺžne? Modelovať prechodovú dosku (len vizuálne)? Iné typy opôr okrem plytkej na pilótach, masívnej a integrovanej?
+*odpoveď* odsadeni od NK myslím vzdielensoť medzi úložním prahom a spodnou hranou nosnej konštrukcie, čiže pristor pre ložiská. Mohlo by byť potom celkovo nejaká konštrukcia rámu, alebo integrovoného mostu.
 8. Koniec NK odvodiť automaticky od opory (*predpoklad*), alebo nechať zadaný ručne s upozornením na nesúlad?
+*odpoveď* koniec NK odvoiť od opory, z možnosťou odomknúť. Ale fungovalo by to tak že má mvloženú oporu a nastavím jej predsadenie pred uloženie a potom odsadenie od uloženia + medzera medzi NK a oporou, pdoľa toho sa aj nosná konštrukcia natiahne, čiže ka budem potom posúvať oporu, nosná konštrukcia sa bude posúvať s ňou.
 9. Krytie základu pod terénom: *predpoklad* 1,0 m, aj pre opory. Pri vodnom toku pod dno + rezerva?
+*odpoveď* stáčí 0,5 m, väčšina podpier je veľká, pri oporách by som to nechal na uživateľovli, záleži, čo je zlaožená plošne alebo hlbine.
 10. Ložiská predvolene odvodiť od prierezu (napr. pod stenami trámu), alebo stačí typ podpery z knižnice?
+*odpoveď* odvodiť od prierezu, nejakú 1,4 od kraja, celé číslo.
 
 Pred 10f:
 11. Ukazovatele (10h): sedí zoznam? Treba aj orientačnú cenu (€/m² podľa typológie)? Kto dodá jednotkové ceny?
+*odpoveď* vytvor zatiaľ s nejakými placeholdrami, skutočné ceny hodnoty doriešim neskôr.
 12. Voľné prierezy: hodnoty predvolieb (diaľnica a rýchlostná cesta, cesty I. – III. triedy, miestna, poľná cesta, chodník, železnica elektrifikovaná a neelektrifikovaná, vodný tok Q100 + rezerva) alebo odkaz na normu. Hodnoty sa nehádajú; dovtedy sa zadávajú ručne.
+*odpoveď* súhlasím, taktiež by som pridal možnosť si určite na trase kríženie a následne v rámci pozlžného profilu vložiť napríkald prehcodový prierez cesty (nastaviteľná šírka a výška) alebo prechodový prierez pre železnicu. Skús si naštudovať predpisy. Taktiež by sa vložila. čiakrovaná čiara z označením staničenia a možnosoťu popsíať o akú prekážku sa jedná.
 13. Vodný tok: stačí kóta hladiny Q100 + rezerva a brehové čiary z meračky, alebo treba aj prietokovú plochu pod mostom?
+*odpoveď* stačí
 14. Meračka DXF: ako geodet zapisuje výšky (3D polyline, bod s textom kóty, blok s atribútom)? Sú súradnice záporné S-JTSK? Robiť z bodov meračky aj terén (TIN), alebo stačí DMR / povrch z Civil 3D?
+*odpoveď* sú v mínusových hodnotách do podkladov ti hodín nejaký príklad meračky, môžeš si našťudovať.
 
 Pred 10g / 10h:
 15. Ďalšie limity v kontrolách: max. výška piliera, min. uhol kríženia, pomer krajné / vnútorné pole (orientačne 0,75 – 0,8)?
+*odpoveď* pomer krajrné vnútorné pole 0,7-0,8, súhalsím, upozorniť nie trvať.
 16. Varianty: globálne parametre spoločné pre všetky varianty (*predpoklad*), alebo vlastné?
+*odpoveď* mať možnosť aj aj
 17. Klopenie: `Superelevation` v `125-00_C3D.xml` je neúplné (rozsahy nesedia so staničeniami vnútri) — interpretácia sa overí na výkaze klopenia (Referenčné dáta, bod 8).
+*odpoveď* ak sú zadené v LandXML tak konfrontovať, pokiaľ nie, tka neukazovať
 
 Celkovo:
 18. Sedí poradie krokov postupu 1–8? Chýba krok „Zadanie“ (stavba, objekt, kategória cesty), ktorý by predvyplnil predvoľby (šírky, voľné prierezy)?
+*odpoveď* Môže byť ešte prvý krok, kdey uživateľ zadá názov stavby, číslo a názov objektu, vyebrie kategóriu cesty, ktorá bdefinuje potom voľnú šírku na moste (+ ručnú úprava v príprade rošírenia a podobne). Ak ťa napadnú ešte nejaké údaje, skús navrhnúť.
 19. Sedí poradie podfáz 10a → 10h? Prekážky (10f bez DXF) sa dajú posunúť hneď za 10b.
+*odpoveď* sedí
+
+Nové otázky (2026-10-31, z odpovedí vyššie):
+20. Ložiská z prierezu „≈ 1,4 m od kraja, celé číslo“: meria sa 1,4 m od okraja spodnej plochy prierezu (spodku trámu, komory)? Čo sa zaokrúhľuje na celé číslo: počet ložísk, alebo poloha (napr. na celé dm)? — pred 10e
+21. Opora: „predsadenie pred uloženie“ = predná líca prahu pred osou uloženia (212-00: 0,90) a „odsadenie od uloženia“ = koniec NK za osou uloženia (212-00: 0,50)? — potvrdí sa na workshope 10d
+22. Kategórie ciest pre krok Zadanie: zoznam kategórií (STN 73 6101) a k nim voľná šírka na moste — dodáš tabuľku, alebo ju mám naštudovať a dať na potvrdenie? — pred 10a
+23. Meračka: robiť z bodov meračky aj terén (TIN), ktorý má v zameranom území prednosť pred DMR? Body v ukážke majú výšky len v textoch a línie sú 2D. — pred 10f
 
 ### Zistené z podkladov
+
+`fixtures/inbox/Meracka skutocneho stavu.dxf` (dodané 2026-10-31; zameranie existujúceho klenbového priepustu, ≈ 74 × 37 m, výšky 800,97 – 813,36 m Bpv):
+- DXF AC1018 (AutoCAD 2004), `$INSUNITS` = 6 (m), súradnice záporné S-JTSK: x = E (≈ −302 7xx), y = N (≈ −1 199 0xx) — rovnaká orientácia ako pôdorys v S-JTSK v našom exporte.
+- **Všetko má Z = 0.** Výška bodu je len v texte: `POINT` na `Vrstva 23` (152), číslo bodu `TEXT` na `Vrstva 4` presne v bode, výška `TEXT` na `Vrstva 5` ≈ 0,39 m vľavo od bodu (ručne posunuté až 0,82 m), časť výšok presunutá na hladinu `Skryté výšky od výkresu` (33). Kód bodu `TEXT` na `Vrstva 23` (`asf` 35, `hs` 27, `ps` 20, `klenba` 18, `rimsa` 8, `stlp` 7, `kamen` 7, `priepust` 6, `murik` 5, …).
+- Línie podľa objektov (`asfalt`, `kamen`, `klenba`, `kocky`, `murik`, `priepust`, `rimsa`) sú 2D `LWPOLYLINE` / `LINE`; svahové šrafy ako bloky `INSERT` na `srafy_svahove`.
+- Dôsledok pre import (10f): priradenie výšky k bodu podľa najbližšieho textu na zvolených hladinách výšok (s limitom vzdialenosti a kontrolou jednoznačnosti), typované problémy pre bod bez výšky a výšku bez bodu; výška línií z bodov meračky alebo z terénu.
 
 `fixtures/inbox/Trasa LandXML.xml` (Civil 3D 2024, os 101-00, export 2026-06-10):
 - Hlavička uvádza `epsgCode="2065"` (klasický S-JTSK), ale súradnice sú záporné E/N (EPSG:5514). Import preto nesmie veriť `epsgCode`; rozhoduje znamienko súradníc.
@@ -590,3 +636,19 @@ Celkovo:
 | Varianty | v jednom projekte so spoločnými podkladmi a porovnaním ukazovateľov (2026-10-31) |
 | Kóty | len v pohľadoch aplikácie (rozpätia, dĺžky, voľná výška); export DXF ostáva bez kót, ADR 0012 platí (2026-10-31) |
 | Knižnica podpier | jednoduché firemné typy podpier na vizuálny návrh, nie detailné (2026-10-31) |
+| Zadanie | prvý krok postupu: stavba, objekt, kategória cesty → voľná šírka na moste s ručnou úpravou (2026-10-31) |
+| Úprava rozpätia | zmení sa len upravené pole, podpery za ním sa posunú, celková dĺžka sa zmení; prichytávanie po 0,5 m, staničenie v editore ľubovoľné (2026-10-31) |
+| Dĺžky mosta | len po osi mosta; kolmé a šikmé vzdialenosti rieši výkres (2026-10-31) |
+| Plocha mosta | pôdorysná plocha vrátane ríms; rímsy treba modelovať (Fáza 10i) (2026-10-31) |
+| Merania v profile | dočasné, neukladajú sa (2026-10-31) |
+| Terén na okrajoch NK | premietnuť do pozdĺžneho profilu v osi mosta inými farbami (2026-10-31) |
+| Koniec NK | odvodený od opory, posúva sa s ňou; väzba sa dá odomknúť (2026-10-31) |
+| Odsadenie NK od opory | priestor pre ložiská medzi úložným prahom a spodkom NK (2026-10-31) |
+| Krytie základov | piliere 0,5 m pod terénom; pri oporách volí projektant (2026-10-31) |
+| Ložiská | predvolene odvodené od prierezu NK (2026-10-31) |
+| Orientačná cena | zástupné hodnoty €/m², skutočné dodá projektant (2026-10-31) |
+| Prekážka na trase | kríženie zadané aj ručne km; v profile šrafovaná čiara so staničením a popisom, voľný prierez cesty alebo železnice (2026-10-31) |
+| Vodný tok | kóta Q100 + rezerva a brehové čiary stačia (2026-10-31) |
+| Pomer polí | krajné / vnútorné 0,7 – 0,8, len upozornenie (2026-10-31) |
+| Klopenie | kontrola len ak ho LandXML obsahuje (2026-10-31) |
+| Parametre vo variantoch | spoločné s možnosťou prepísať vo variante (2026-10-31) |
