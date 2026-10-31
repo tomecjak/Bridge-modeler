@@ -303,10 +303,14 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 **Hotové, keď:** NK s okrajmi podľa osí z Civil 3D sa v pôdoryse aj v 3D drží krivky (± 2 mm). — *2026-10-31:* overené na syntetickej osi okraja; `125_L` / `125_R` sú krátke oblúky napojenia (≈ 23 m), nie okraje popri moste — na reálny test treba os okraja vozovky popri moste.
 
 #### 8b — Editor prierezu a knižnica
-- [ ] šablóny typológií VŠB: doska, vyľahčená doska, jednotrám, doskotrám, dvojtrám, komora, komora s nábehmi
-- [ ] knižnica prierezov: v projekte, import / export súboru; rozhranie pripravené na databázu (Cloudflare)
-- [ ] väzby bodov ako výrazy (relatívne, zvislo / vodorovne, sklon, priamka, priesečník, zrkadlo), bez numerického riešiča
-- [ ] grafický editor v pohľade Prierez: body, obrysy, ťahanie, prichytávanie, prepojenie s tabuľkou
+- [x] šablóny typológií VŠB: doska, vyľahčená doska, jednotrám, doskotrám, dvojtrám, komora, komora s nábehmi
+  - `templates/catalog.ts` (ADR 0013); testy: bez chýb, šírka / výška podľa parametrov, plochy proti ručnému výpočtu. Rozmery sú predpoklad (Otvorené otázky).
+- [x] knižnica prierezov: v projekte, import / export súboru; rozhranie pripravené na databázu (Cloudflare)
+  - formát `bridge-modeler/profile-library` v1, `ProfileLibrary` (šablóny, projekt, súbor); dialóg „Knižnica prierezov“ v pohľade Prierez s náhľadmi, vložením, exportom vybraných a importom (projektový súbor odmietne zrozumiteľnou hláškou).
+- [x] väzby bodov ako výrazy (relatívne, zvislo / vodorovne, sklon, priamka, priesečník, zrkadlo), bez numerického riešiča
+  - `constraints.ts`: kanonické výrazy, rozpoznanie, ťahanie voľnej hodnoty (mm), väzba z aktuálnej polohy; v editore výber druhu a skorších bodov.
+- [x] grafický editor v pohľade Prierez: body, obrysy, ťahanie, prichytávanie, prepojenie s tabuľkou
+  - pri vybranom priereze: nástroje vybrať / ťahať, pridať bod, obrys (dutina / vonkajší), odstrániť; mriežka 10 mm a zarovnanie s bodmi; Shift + klik meria; zamknutý bod ukáže riadiace parametre; výber bodu zvýrazní riadok tabuľky. Overené v prehliadači vrátane späť / znova.
 
 **Hotové, keď:** prierez sa dá vložiť z knižnice, upraviť ťahaním a väzbami so späť / znova a exportovať do knižnice.
 
@@ -360,6 +364,7 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 - Hladiny DXF (ADR 0012) sú predpoklad, kým nebude firemný štandard: `OS_CESTY`, `OS_MOSTA`, `OS_PODPERY`, `STANICENIE`, `NK`, `NK_DUTINY`, `PODPERY`, `ZAKLADY`, `LOZISKA`, `TEREN`, `NIVELETA`, `POPIS` (farby ACI, typy čiar CONTINUOUS / DASHED / CENTER). Výška textu 2,5 mm v mierke 1 : 200 (pôdorys, pozdĺžny rez) a 1 : 100 (priečny rez). Pošli štandard alebo iné názvy, ak treba.
 - Pozdĺžny rez sa exportuje 1 : 1 a reže sa len v osi mosta (bez pohľadu na časti za rezom, napr. krídla). Ak treba prevýšenie alebo pohľad, doplní sa.
 - Okraj NK podľa krivky (Fáza 8a), *predpoklady:* vzdialenosť sa meria vodorovne kolmo na os mosta (v rovine prierezu) a okraj sa hľadá najviac 50 m od osi (bližší priesečník na danej strane); prídavok sa zadáva výrazom v m ako ostatné výrazy. Podklad: v `125-00_C3D.xml` sú `125_L` / `125_R` krátke oblúky napojenia pri km 0,004 – 0,020 — pre skutočný test treba os okraja vozovky popri moste.
+- Šablóny prierezov (Fáza 8b, ADR 0013), *predpoklady:* tvary podľa schém VŠB bez kót, spodok rovnobežný s vrchom, priečny sklon 2,5 %. Predvolené rozmery [m]: doska h 1,0 / spodok 7,0 / koniec 0,30; vyľahčená doska h 1,2 / spodok 9,0 / 6 dutín ⌀ 0,8 po 1,3; doskotrám h 1,2 / doska 0,30 / 2 rebrá 2,4 po 5,6; jednotrám h 2,0 / spodok trámu 4,0 / steny 5 : 1 / konzola 0,25 → 0,45; dvojtrám h 2,5 / trámy 1,1 → 0,8 po 6,0 / doska 0,30; komora h 3,5 / 7,0 hore / 5,0 dole / steny 0,45 / dosky 0,28 a 0,25; komora s nábehmi h 4,0 / nábehy 1,2 × 0,3 hore a 0,6 × 0,2 dole. Šírky NK 12 – 14 m. Opravte podľa firemných zvyklostí.
 - Premenovanie globálneho parametra dnes prepíše odkazy len v ostatných globálnych parametroch, nie v priebehoch NK, posunoch osi mosta, predvolených hodnotách profilu ani v podperách (zistené 2026-10-31). Doplniť?
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 

@@ -18,6 +18,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0010](0010-opora.md) | Opora s úložným prahom, záverným múrikom a krídlami | Prijaté |
 | [0011](0011-teren.md) | Terén: uloženie, zdroje a súradnice | Prijaté |
 | [0012](0012-2d-vystupy-dxf.md) | 2D pohľady a export SVG / DXF | Prijaté |
+| [0013](0013-kniznica-prierezov-a-vazby.md) | Knižnica prierezov, šablóny a väzby bodov | Prijaté |
 
 ## Šablóna
 
