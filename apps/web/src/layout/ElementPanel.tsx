@@ -28,6 +28,7 @@ import type { SectionResult } from '../store/sections.ts';
 import type { DeckSpans } from '../store/supports.ts';
 import { defaultGeometry } from '../store/supports.ts';
 import { ExpressionInput } from '../views/ExpressionInput.tsx';
+import { Field } from '../views/Field.tsx';
 import { ProfileLawEditor } from '../views/ProfileLawEditor.tsx';
 import { StationField, StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
 import { TextField } from '../views/TextField.tsx';
@@ -305,15 +306,6 @@ function TerrainEditor({
       ) : (
         <p className="hint">{t.reimportHint}</p>
       )}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="field">
-      <span>{label}</span>
-      {children}
     </div>
   );
 }

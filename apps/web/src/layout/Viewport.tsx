@@ -22,6 +22,8 @@ interface Props {
   plan: Drawing | undefined;
   onExportPlan: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   onAddSupport: (s: number, offset: number) => void;
+  /** zmena hodnoty zapne v pôdoryse nástroj „Pridať podperu“ (z postupu) */
+  supportToolRequest: number;
   /** ďalšie osi projektu a čiary v pôdoryse */
   otherAlignments: readonly Alignment[];
   planLines: readonly PlanLine[];
@@ -59,6 +61,7 @@ export function Viewport({
   plan,
   onExportPlan,
   onAddSupport,
+  supportToolRequest,
   otherAlignments,
   planLines,
   onAddPlanLine,
@@ -107,6 +110,7 @@ export function Viewport({
               selected={selectedId}
               onExport={onExportPlan}
               onAddSupport={onAddSupport}
+              supportToolRequest={supportToolRequest}
               otherAlignments={otherAlignments}
               planLines={planLines}
               onAddPlanLine={onAddPlanLine}

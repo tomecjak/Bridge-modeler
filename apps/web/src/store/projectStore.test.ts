@@ -121,6 +121,28 @@ describe('project store', () => {
     expect(store.getState().project.planLines).toEqual([]);
   });
 
+  it('edits the brief and the study area as undoable steps', () => {
+    const store = createProjectStore();
+    const { dispatch, undo, redo } = store.getState();
+    dispatch({ type: 'updateBrief', changes: { roadCategory: 'C 9,5/70' } });
+    dispatch({ type: 'updateBrief', changes: { object: { number: '201-00', name: 'Most' } } });
+    dispatch({ type: 'setStudyArea', studyArea: { alignment: 'Os', from: 100, to: 250 } });
+    expect(store.getState().project.brief).toMatchObject({
+      roadCategory: 'C 9,5/70',
+      object: { number: '201-00', name: 'Most' },
+    });
+    expect(store.getState().project.studyArea).toEqual({ alignment: 'Os', from: 100, to: 250 });
+
+    undo();
+    expect(store.getState().project.studyArea).toBeNull();
+    undo();
+    expect(store.getState().project.brief.object).toEqual({ number: '', name: '' });
+    expect(store.getState().project.brief.roadCategory).toBe('C 9,5/70');
+    redo();
+    redo();
+    expect(store.getState().project.studyArea?.to).toBe(250);
+  });
+
   it('ignores commands that change nothing', () => {
     const store = createProjectStore();
     store.getState().dispatch({ type: 'removeParameter', id: 'missing' });

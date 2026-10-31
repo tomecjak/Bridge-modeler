@@ -15,6 +15,14 @@ export function formatNumber(value: number, decimals: number): string {
   return f.format(v).replace(/ | /g, ' ');
 }
 
+/** Číslo zo vstupu: medzery ako oddeľovač tisícov, desatinná čiarka alebo bodka; inak undefined. */
+export function parseNumber(text: string): number | undefined {
+  // \s zahŕňa aj nedeliteľné medzery z formatNumber
+  const t = text.replace(/\s/g, '').replace(',', '.');
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(t)) return undefined;
+  return Number(t);
+}
+
 /** Sklon m/m → percentá. */
 export const formatGrade = (grade: number, decimals = 3): string =>
   `${formatNumber(grade * 100, decimals)} %`;

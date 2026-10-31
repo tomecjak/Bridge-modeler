@@ -29,6 +29,8 @@ interface Props {
   onExport: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
   onAddSupport: (s: number, offset: number) => void;
+  /** zmena hodnoty zapne nástroj „Pridať podperu“ (z postupu); 0 = bez žiadosti */
+  supportToolRequest?: number;
   /** ďalšie osi projektu (napr. okraje vozovky z LandXML) */
   otherAlignments: readonly Alignment[];
   /** čiary v pôdoryse; vybraná čiara má ťahateľné vrcholy */
@@ -57,6 +59,7 @@ export function PlanView({
   selected,
   onExport,
   onAddSupport,
+  supportToolRequest = 0,
   otherAlignments,
   planLines,
   onAddPlanLine,
@@ -79,6 +82,10 @@ export function PlanView({
     [otherAlignments],
   );
   const selectedLine = planLines.find((l) => l.id === selected);
+
+  useEffect(() => {
+    if (supportToolRequest > 0) setTool('support');
+  }, [supportToolRequest]);
 
   function finishSketch() {
     if (sketch.length >= 2) onAddPlanLine(sketch);

@@ -36,6 +36,7 @@ import {
   type TerrainCandidate,
   type TerrainFile,
 } from './import/importTerrain.ts';
+import { BriefPanel } from './layout/BriefPanel.tsx';
 import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
@@ -44,6 +45,7 @@ import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { SectionPanel } from './layout/SectionPanel.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
+import { type StepAction, WorkflowPanel } from './layout/WorkflowPanel.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
 import { drawingFileName } from './persistence/fileName.ts';
@@ -60,6 +62,7 @@ import {
   terrainProfilesAlong,
   useTerrainTins,
 } from './store/terrain.ts';
+import { type StepId, workflowSteps } from './store/workflow.ts';
 import type { Cut } from './viewer/sceneView.ts';
 import type { ExportFormat } from './views/ExportMenu.tsx';
 import { ParameterTable } from './views/ParameterTable.tsx';
@@ -105,6 +108,13 @@ export function App() {
   /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
   const [dmrProgress, setDmrProgress] = useState<number>();
   const dmrCancel = useRef(false);
+  /** rozbalený krok postupu a panel vpravo otvorený z postupu (Fáza 10a) */
+  const [expandedStep, setExpandedStep] = useState<StepId>();
+  const [sidePanel, setSidePanel] = useState<'brief'>();
+  /** žiadosť o nástroj „Pridať podperu“ v pôdoryse (počítadlo, aby sa dala zopakovať) */
+  const [supportToolRequest, setSupportToolRequest] = useState(0);
+  const landXmlInput = useRef<HTMLInputElement>(null);
+  const terrainInput = useRef<HTMLInputElement>(null);
 
   const item = alignments[selected];
   const parameterState = useParameterState(item?.alignment.stationing);
@@ -429,6 +439,89 @@ export function App() {
 
   const importIssuesOf = (name: string) => lastImport.issues.filter((i) => i.alignment === name);
 
+  const steps = workflowSteps({
+    brief: project.brief,
+    alignments: alignments.map((a) => ({
+      hasProfile: a.alignment.profile !== undefined,
+      errors: [...a.issues, ...importIssuesOf(a.data.name)].filter((i) => i.severity === 'error')
+        .length,
+    })),
+    terrains: project.terrains.length,
+    hasStudyArea: project.studyArea !== null,
+    decks: sections.results.map((r) => ({
+      errors: r.issues.filter((i) => i.severity !== 'warning').length,
+    })),
+    spans: project.superstructures.flatMap((sup) => {
+      const spans = supportState.spans.get(sup.id);
+      if (!spans) return [];
+      const supportErrors = supportState.supports
+        .filter((r) => r.support.superstructure === sup.id)
+        .flatMap((r) => r.issues.filter((i) => i.severity !== 'warning'));
+      return [
+        {
+          supports: spans.supports.length,
+          errors:
+            supportErrors.length + spans.issues.filter((i) => i.severity !== 'warning').length,
+          warnings: spans.issues.filter((i) => i.severity === 'warning').length,
+        },
+      ];
+    }),
+  });
+  const hasRoad = alignments.some((a) => a.alignment.profile !== undefined);
+  const stepActions: Partial<Record<StepId, StepAction[]>> = {
+    brief: [
+      {
+        label: sk.workflow.actions.editBrief,
+        onClick: () => {
+          setSelectedElement(undefined);
+          setSidePanel('brief');
+        },
+      },
+    ],
+    sources: [
+      { label: sk.import.button, onClick: () => landXmlInput.current?.click() },
+      {
+        label: sk.terrain.import,
+        onClick: () => terrainInput.current?.click(),
+        disabled: !project.crs.origin,
+      },
+      {
+        label: sk.terrain.download,
+        onClick: () => void downloadDmrTerrain(),
+        disabled: !hasRoad || project.terrains.length > 0 || dmrProgress !== undefined,
+      },
+    ],
+    studyArea: [{ label: sk.workflow.actions.open2d, onClick: () => setMode('2d') }],
+    deck: [
+      {
+        label: sk.workflow.actions.insertDeck,
+        onClick: () => insertExample('single'),
+        disabled: !hasRoad,
+      },
+      { label: sk.library.open, onClick: () => setLibraryOpen(true) },
+    ],
+    supports: [
+      {
+        label: sk.workflow.actions.addSupport,
+        onClick: () => {
+          setMode('2d');
+          setSupportToolRequest((n) => n + 1);
+        },
+        disabled: project.superstructures.length === 0,
+      },
+    ],
+    outputs: [
+      { label: sk.workflow.actions.open3d, onClick: () => setMode('3d') },
+      { label: sk.workflow.actions.open2d, onClick: () => setMode('2d') },
+      { label: sk.workflow.actions.openSection, onClick: () => setMode('section') },
+    ],
+  };
+
+  // výber prvku v strome, v 3D alebo po vložení zavrie panel otvorený z postupu
+  useEffect(() => {
+    if (selectedElement) setSidePanel(undefined);
+  }, [selectedElement]);
+
   useEffect(() => {
     let cancelled = false;
     const revision = projectStore.getState().revision;
@@ -677,6 +770,7 @@ export function App() {
           <label className="button">
             {sk.import.button}
             <input
+              ref={landXmlInput}
               type="file"
               accept=".xml,.landxml"
               hidden
@@ -690,6 +784,7 @@ export function App() {
           <label className="button">
             {sk.terrain.import}
             <input
+              ref={terrainInput}
               type="file"
               accept=".xml,.landxml,.tif,.tiff"
               hidden
@@ -702,88 +797,105 @@ export function App() {
           </label>
         </div>
       </header>
-      <ProjectTree
-        projectName={project.name}
-        alignments={alignments}
-        issueCount={(name) =>
-          importIssuesOf(name).length +
-          (alignments.find((a) => a.data.name === name)?.issues.length ?? 0)
-        }
-        parameters={project.parameters.map((p) => ({
-          id: p.id,
-          name: p.name,
-          issues: issuesOf(parameterState.issues, p.name).length,
-        }))}
-        selectedParameterId={mode === 'parameters' ? selectedParameterId : undefined}
-        onSelectParameter={(id) => {
-          setSelectedParameterId(id);
-          setMode('parameters');
-        }}
-        fileIssues={lastImport.fileIssues}
-        elements={[
-          {
-            collection: 'bridgeAxes',
-            title: sk.tree.bridgeAxes,
-            items: project.bridgeAxes.map((a) => ({ id: a.id, name: a.name, issues: 0 })),
-          },
-          {
-            collection: 'profiles',
-            title: sk.tree.profiles,
-            items: project.profiles.map((p) => ({ id: p.id, name: p.name, issues: 0 })),
-          },
-          {
-            collection: 'superstructures',
-            title: sk.tree.superstructures,
-            items: sections.results.map((r) => ({
-              id: r.superstructure.id,
-              name: r.superstructure.name,
-              issues: r.issues.filter((i) => i.severity !== 'warning').length,
-            })),
-          },
-          {
-            collection: 'supports',
-            title: sk.tree.supports,
-            items: supportState.supports.map((r) => ({
-              id: r.support.id,
-              name: r.support.name,
-              issues: r.issues.filter((i) => i.severity !== 'warning').length,
-            })),
-          },
-          {
-            collection: 'terrains',
-            title: sk.tree.terrains,
-            items: project.terrains.map((t) => ({ id: t.id, name: t.name, issues: 0 })),
-          },
-          {
-            collection: 'planLines',
-            title: sk.tree.planLines,
-            items: project.planLines.map((l) => ({ id: l.id, name: l.name, issues: 0 })),
-          },
-        ]}
-        selectedElement={selectedElement}
-        onSelectElement={(collection, id) => {
-          setSelectedElement({ collection, id });
-          const support = project.supports.find((x) => x.id === id);
-          if (support) setSectionStation(support.station);
-          // 3D ukazuje NK aj podpery; inak podpery v pôdoryse a profile, ostatné prvky v priereze
-          if (collection === 'terrains') return;
-          // čiary sa upravujú v pôdoryse
-          if (collection === 'planLines') {
-            setMode('2d');
-            return;
+      <aside className="panel panel-left" aria-label={sk.projectTree.title}>
+        <WorkflowPanel
+          steps={steps}
+          actions={stepActions}
+          expanded={expandedStep}
+          onExpand={(id) => {
+            setExpandedStep(id);
+            if (id === 'brief') {
+              setSelectedElement(undefined);
+              setSidePanel('brief');
+            } else {
+              setSidePanel(undefined);
+            }
+          }}
+        />
+        <ProjectTree
+          projectName={project.name}
+          alignments={alignments}
+          issueCount={(name) =>
+            importIssuesOf(name).length +
+            (alignments.find((a) => a.data.name === name)?.issues.length ?? 0)
           }
-          if (mode === '3d' && (collection === 'supports' || collection === 'superstructures'))
-            return;
-          if (collection !== 'supports') setMode('section');
-          else if (mode !== '2d' && mode !== 'section') setMode('2d');
-        }}
-        notices={openErrors}
-        selected={selected}
-        onSelect={(i) => {
-          setSelected(i);
-          setSelectedElement(undefined);
-        }}
-      />
+          parameters={project.parameters.map((p) => ({
+            id: p.id,
+            name: p.name,
+            issues: issuesOf(parameterState.issues, p.name).length,
+          }))}
+          selectedParameterId={mode === 'parameters' ? selectedParameterId : undefined}
+          onSelectParameter={(id) => {
+            setSelectedParameterId(id);
+            setMode('parameters');
+            setSidePanel(undefined);
+          }}
+          fileIssues={lastImport.fileIssues}
+          elements={[
+            {
+              collection: 'bridgeAxes',
+              title: sk.tree.bridgeAxes,
+              items: project.bridgeAxes.map((a) => ({ id: a.id, name: a.name, issues: 0 })),
+            },
+            {
+              collection: 'profiles',
+              title: sk.tree.profiles,
+              items: project.profiles.map((p) => ({ id: p.id, name: p.name, issues: 0 })),
+            },
+            {
+              collection: 'superstructures',
+              title: sk.tree.superstructures,
+              items: sections.results.map((r) => ({
+                id: r.superstructure.id,
+                name: r.superstructure.name,
+                issues: r.issues.filter((i) => i.severity !== 'warning').length,
+              })),
+            },
+            {
+              collection: 'supports',
+              title: sk.tree.supports,
+              items: supportState.supports.map((r) => ({
+                id: r.support.id,
+                name: r.support.name,
+                issues: r.issues.filter((i) => i.severity !== 'warning').length,
+              })),
+            },
+            {
+              collection: 'terrains',
+              title: sk.tree.terrains,
+              items: project.terrains.map((t) => ({ id: t.id, name: t.name, issues: 0 })),
+            },
+            {
+              collection: 'planLines',
+              title: sk.tree.planLines,
+              items: project.planLines.map((l) => ({ id: l.id, name: l.name, issues: 0 })),
+            },
+          ]}
+          selectedElement={selectedElement}
+          onSelectElement={(collection, id) => {
+            setSelectedElement({ collection, id });
+            const support = project.supports.find((x) => x.id === id);
+            if (support) setSectionStation(support.station);
+            // 3D ukazuje NK aj podpery; inak podpery v pôdoryse a profile, ostatné prvky v priereze
+            if (collection === 'terrains') return;
+            // čiary sa upravujú v pôdoryse
+            if (collection === 'planLines') {
+              setMode('2d');
+              return;
+            }
+            if (mode === '3d' && (collection === 'supports' || collection === 'superstructures'))
+              return;
+            if (collection !== 'supports') setMode('section');
+            else if (mode !== '2d' && mode !== 'section') setMode('2d');
+          }}
+          notices={openErrors}
+          selected={selected}
+          onSelect={(i) => {
+            setSelected(i);
+            setSelectedElement(undefined);
+          }}
+        />
+      </aside>
       <Viewport
         mode={mode}
         onModeChange={setMode}
@@ -804,6 +916,7 @@ export function App() {
         }
         plan={planView}
         onAddSupport={addSupportAt}
+        supportToolRequest={supportToolRequest}
         otherAlignments={otherAlignments}
         planLines={project.planLines}
         onAddPlanLine={addPlanLine}
@@ -931,7 +1044,9 @@ export function App() {
           )
         }
       />
-      {mode !== 'parameters' && selectedElement ? (
+      {sidePanel === 'brief' ? (
+        <BriefPanel />
+      ) : mode !== 'parameters' && selectedElement ? (
         <ElementPanel
           collection={selectedElement.collection}
           id={selectedElement.id}

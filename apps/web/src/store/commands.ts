@@ -2,11 +2,13 @@ import type { AlignmentData } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
 import {
   type BridgeAxis,
+  type Brief,
   type Parameter,
   type PlanLine,
   type ProfileDefinition,
   type ProjectFile,
   renameParameter,
+  type StudyArea,
   type Superstructure,
   type Support,
   type TerrainSurface,
@@ -35,6 +37,10 @@ type ElementUpdate = {
 /** Príkazy menia projekt; každý je jedna položka v histórii späť/znova (ADR 0005). */
 export type Command =
   | { type: 'setProjectName'; name: string }
+  /** zmena údajov zadania (Fáza 10a) */
+  | { type: 'updateBrief'; changes: Partial<Brief> }
+  /** oblasť mosta (Fáza 10a); null ju zruší */
+  | { type: 'setStudyArea'; studyArea: StudyArea | null }
   | { type: 'importAlignments'; alignments: AlignmentData[]; origin: Vec3 }
   | { type: 'addParameter'; parameter: Parameter }
   | { type: 'updateParameter'; id: string; changes: Partial<Omit<Parameter, 'id'>> }
@@ -61,6 +67,12 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
   switch (command.type) {
     case 'setProjectName':
       draft.name = command.name;
+      return;
+    case 'updateBrief':
+      Object.assign(draft.brief, command.changes);
+      return;
+    case 'setStudyArea':
+      draft.studyArea = command.studyArea;
       return;
     case 'importAlignments': {
       // prvý import určí lokálny počiatok; ďalšie osi sú v tom istom S-JTSK, počiatok sa nemení

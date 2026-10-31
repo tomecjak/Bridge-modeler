@@ -55,10 +55,9 @@ export function ProjectTree({
   onSelectElement,
 }: Props) {
   return (
-    <aside className="panel panel-left" aria-labelledby="project-tree-title">
-      <h2 id="project-tree-title" className="panel-title">
-        {sk.projectTree.title}
-      </h2>
+    // strom prvkov je pod panelom Postup (Fáza 10a), dá sa zbaliť
+    <details className="project-tree" open>
+      <summary className="panel-title">{sk.workflow.elements}</summary>
       <p className="file-name">{projectName}</p>
       {alignments.length === 0 && <p className="panel-empty">{sk.projectTree.empty}</p>}
       {alignments.length > 0 && (
@@ -145,6 +144,6 @@ export function ProjectTree({
           <IssueList issues={fileIssues} />
         </>
       )}
-    </aside>
+    </details>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatGrade, formatNumber } from './number.ts';
+import { formatGrade, formatNumber, parseNumber } from './number.ts';
 
 describe('formatNumber', () => {
   it('uses decimal comma and space thousands separator', () => {
@@ -13,5 +13,20 @@ describe('formatNumber', () => {
 
   it('formats grades in percent', () => {
     expect(formatGrade(-0.0138)).toBe('-1,380 %');
+  });
+});
+
+describe('parseNumber', () => {
+  it('reads numbers formatted for display and typed by hand', () => {
+    expect(parseNumber(formatNumber(9500, 0))).toBe(9500);
+    expect(parseNumber('10 250,5')).toBe(10250.5);
+    expect(parseNumber(' -1.25 ')).toBe(-1.25);
+    expect(parseNumber('.5')).toBe(0.5);
+  });
+
+  it('rejects anything else', () => {
+    for (const text of ['', ' ', 'abc', '9,5,5', '9 500 mm', '1e3']) {
+      expect(parseNumber(text)).toBeUndefined();
+    }
   });
 });
