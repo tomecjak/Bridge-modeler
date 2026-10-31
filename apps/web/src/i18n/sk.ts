@@ -252,6 +252,38 @@ export const sk = {
     terrains: 'Terén',
     planLines: 'Čiary',
   },
+  profileEditor: {
+    title: (name: string) => `Editor prierezu ${name}`,
+    tools: {
+      select: 'Vybrať / ťahať',
+      point: 'Pridať bod',
+      loop: 'Obrys',
+      delete: 'Odstrániť bod',
+    },
+    hints: {
+      select: 'Ťahaním posuniete bod; Shift + klik meria vzdialenosť dvoch bodov.',
+      point: 'Klik pridá bod (mriežka 10 mm, zarovnanie s bodmi).',
+      loop: 'Klikajte body v poradí; klik na prvý bod alebo Enter obrys uzavrie, Esc zruší.',
+      delete: 'Klik na bod ho odstráni aj z obrysov.',
+    },
+    sourceDeck: (deck: string, station: string) => `Hodnoty parametrov z ${deck} na ${station}`,
+    sourceDefaults:
+      'Predvolené hodnoty parametrov (prierez nepoužíva žiadna NK na tomto staničení)',
+    parametric: 'Bod riadia parametre (ťahanie nie je možné, upravte výraz).',
+    locked: (point: string, names: string) => `Bod ${point} riadia: ${names}`,
+    referenceNotRemovable: 'Referenčný bod sa nedá odstrániť.',
+    distance: (a: string, b: string) => `${a} → ${b}`,
+    constraints: {
+      fixed: 'Pevné súradnice',
+      offset: 'Relatívne k bodu',
+      below: 'Zvislo pod / nad bodom',
+      level: 'Vodorovne s bodom',
+      slope: 'Na sklone od bodu',
+      onLine: 'Na priamke',
+      intersection: 'Priesečník priamok',
+      mirror: 'Zrkadlovo podľa osi',
+    },
+  },
   library: {
     open: 'Knižnica prierezov',
     title: 'Knižnica prierezov',

@@ -45,6 +45,9 @@ interface Props {
   onRedownloadTerrain: (id: string) => void;
   /** vstupy výpočtu prierezov (náhľad okraja NK podľa krivky) */
   sectionContext: SectionContext | undefined;
+  /** vybraný bod prierezu (zvýraznenie v tabuľke, výber v editore) */
+  selectedPoint: string | undefined;
+  onSelectPoint: (name: string | undefined) => void;
 }
 
 const UNITS: ParameterUnit[] = ['length', 'angle', 'slope', 'none'];
@@ -68,6 +71,8 @@ export function ElementPanel({
   terrainBusy,
   onRedownloadTerrain,
   sectionContext,
+  selectedPoint,
+  onSelectPoint,
 }: Props) {
   const project = useProject((s) => s.project);
   const element = (project[collection] as { id: string; name: string }[]).find((e) => e.id === id);
@@ -79,7 +84,13 @@ export function ElementPanel({
       </h2>
       {!element && <p className="panel-empty">{sk.properties.nothingSelected}</p>}
       {element && collection === 'bridgeAxes' && <BridgeAxisEditor axis={element as BridgeAxis} />}
-      {element && collection === 'profiles' && <ProfileEditor def={element as ProfileDefinition} />}
+      {element && collection === 'profiles' && (
+        <ProfileEditor
+          def={element as ProfileDefinition}
+          selectedPoint={selectedPoint}
+          onSelectPoint={onSelectPoint}
+        />
+      )}
       {element && collection === 'superstructures' && (
         <SuperstructureEditor
           sup={element as Superstructure}
@@ -352,7 +363,15 @@ function BridgeAxisEditor({ axis }: { axis: BridgeAxis }) {
   );
 }
 
-function ProfileEditor({ def }: { def: ProfileDefinition }) {
+function ProfileEditor({
+  def,
+  selectedPoint,
+  onSelectPoint,
+}: {
+  def: ProfileDefinition;
+  selectedPoint: string | undefined;
+  onSelectPoint: (name: string | undefined) => void;
+}) {
   const set = (next: ProfileDefinition) => {
     const { id: _id, ...changes } = next;
     update('profiles', def.id, changes);
@@ -455,7 +474,11 @@ function ProfileEditor({ def }: { def: ProfileDefinition }) {
         </thead>
         <tbody>
           {def.points.map((p, i) => (
-            <tr key={p.name}>
+            <tr
+              key={p.name}
+              aria-selected={p.name === selectedPoint}
+              onFocusCapture={() => onSelectPoint(p.name)}
+            >
               <td>
                 <TextField
                   className="mono point-name"

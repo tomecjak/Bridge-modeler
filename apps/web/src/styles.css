@@ -1027,6 +1027,92 @@ text.dw-stationing {
   background: color-mix(in srgb, var(--bg) 60%, transparent);
 }
 
+/* editor prierezu (Fáza 8b) */
+.profile-editor[data-tool="point"],
+.profile-editor[data-tool="loop"] {
+  cursor: crosshair;
+}
+
+.profile-editor[data-tool="delete"] {
+  cursor: not-allowed;
+}
+
+.section-toolbar select {
+  width: auto;
+}
+
+.pe-grid line {
+  stroke: var(--grid);
+  stroke-width: 0.5;
+}
+
+.pe-guide,
+.pe-measure {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.pe-draft {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.pe-point circle {
+  fill: var(--panel);
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.pe-point text {
+  font-size: 11px;
+  fill: var(--muted);
+  pointer-events: none;
+}
+
+.pe-point-reference circle {
+  fill: var(--text);
+}
+
+.pe-point-selected circle,
+.pe-point-draft circle {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.pe-point-selected text {
+  fill: var(--text);
+  font-weight: 600;
+}
+
+.pe-point-error circle {
+  stroke: var(--error);
+  stroke-width: 2.5;
+}
+
+.pe-cursor {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.pe-readout {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  max-width: min(520px, 70%);
+  padding: 8px 10px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.mini-table tr[aria-selected="true"] td {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
 .modal.modal-wide {
   width: min(860px, 100%);
 }

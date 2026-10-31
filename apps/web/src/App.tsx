@@ -15,6 +15,7 @@ import {
   bridgeAxisPlan,
   evaluateSuperstructure,
   globalScope,
+  profileParameterValues,
   singleBeamHaunched,
   singleDeckExample,
   twinDeckExample,
@@ -62,7 +63,9 @@ import {
 import type { Cut } from './viewer/sceneView.ts';
 import type { ExportFormat } from './views/ExportMenu.tsx';
 import { ParameterTable } from './views/ParameterTable.tsx';
+import { ProfileEditorView } from './views/ProfileEditorView.tsx';
 import { SectionView } from './views/SectionView.tsx';
+import { StationControl } from './views/StationControl.tsx';
 
 // three.js je veľký → 3D náhľad sa načíta až pri otvorení záložky (samostatný chunk)
 const Viewer3D = lazy(() => import('./viewer/Viewer3D.tsx'));
@@ -96,6 +99,8 @@ export function App() {
   const [profileDeckId, setProfileDeckId] = useState<string>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /** vybraný bod v editore prierezu (zvýraznený aj v tabuľke bodov) */
+  const [profilePoint, setProfilePoint] = useState<string>();
   const [terrainBusy, setTerrainBusy] = useState(false);
   /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
   const [dmrProgress, setDmrProgress] = useState<number>();
@@ -279,6 +284,31 @@ export function App() {
     supports: sectionSupports,
     terrain: sectionTerrain.flatMap((t) => t.runs),
   });
+
+  /** Prierez vybraný v strome: editor s hodnotami parametrov z NK, ktorá ho používa, inak predvolené. */
+  const editedProfile = useMemo(() => {
+    if (selectedElement?.collection !== 'profiles') return undefined;
+    const def = project.profiles.find((p) => p.id === selectedElement.id);
+    if (!def) return undefined;
+    const globals = globalScope(parameterState.set, sectionAt);
+    const used = sections.results.find(
+      (r) => r.superstructure.profile === def.id && (r.section?.parameters.size ?? 0) > 0,
+    );
+    if (used?.section) {
+      return {
+        def,
+        globals,
+        values: used.section.parameters,
+        source: sk.profileEditor.sourceDeck(used.superstructure.name, formatStation(sectionAt, 3)),
+      };
+    }
+    return {
+      def,
+      globals,
+      values: profileParameterValues(def, {}, globals, sectionAt).values,
+      source: sk.profileEditor.sourceDefaults,
+    };
+  }, [selectedElement, project.profiles, parameterState.set, sectionAt, sections.results]);
 
   /** Stiahne pohľad ako DXF alebo SVG (ADR 0012). */
   function exportDrawing(drawing: Drawing | undefined, view: string, format: ExportFormat) {
@@ -840,38 +870,65 @@ export function App() {
           </Suspense>
         }
         sectionView={
-          <SectionView
-            sections={drawnSections}
-            station={sectionAt}
-            range={sectionRange}
-            onStation={setSectionStation}
-            elapsed={sections.elapsed}
-            selectedId={selectedSuperstructureId}
-            onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
-            canInsert={defaultDeckRange() !== undefined}
-            supports={sectionSupports}
-            terrain={sectionTerrain}
-            drawing={sectionView}
-            onExport={(format) =>
-              exportDrawing(
-                sectionView,
-                sk.export.names.section(formatStation(sectionAt, 3)),
-                format,
-              )
-            }
-            onInsert={insertExample}
-            onOpenLibrary={() => setLibraryOpen(true)}
-            emptyActions={
-              <div className="toolbar">
-                <button type="button" className="button" onClick={() => insertExample('twin')}>
-                  {sk.section.insertExample}
-                </button>
-                <button type="button" className="button" onClick={() => insertExample('single')}>
-                  {sk.section.insertTemplate}
-                </button>
-              </div>
-            }
-          />
+          editedProfile ? (
+            <ProfileEditorView
+              key={editedProfile.def.id}
+              profile={editedProfile.def}
+              values={editedProfile.values}
+              globals={editedProfile.globals}
+              station={sectionAt}
+              source={editedProfile.source}
+              stationControl={
+                <StationControl
+                  station={sectionAt}
+                  range={sectionRange}
+                  onStation={setSectionStation}
+                />
+              }
+              selectedPoint={profilePoint}
+              onSelectPoint={setProfilePoint}
+              onMessage={setMessage}
+              onChange={(next) => {
+                const { id, ...changes } = next;
+                projectStore
+                  .getState()
+                  .dispatch({ type: 'updateElement', collection: 'profiles', id, changes });
+              }}
+            />
+          ) : (
+            <SectionView
+              sections={drawnSections}
+              station={sectionAt}
+              range={sectionRange}
+              onStation={setSectionStation}
+              elapsed={sections.elapsed}
+              selectedId={selectedSuperstructureId}
+              onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
+              canInsert={defaultDeckRange() !== undefined}
+              supports={sectionSupports}
+              terrain={sectionTerrain}
+              drawing={sectionView}
+              onExport={(format) =>
+                exportDrawing(
+                  sectionView,
+                  sk.export.names.section(formatStation(sectionAt, 3)),
+                  format,
+                )
+              }
+              onInsert={insertExample}
+              onOpenLibrary={() => setLibraryOpen(true)}
+              emptyActions={
+                <div className="toolbar">
+                  <button type="button" className="button" onClick={() => insertExample('twin')}>
+                    {sk.section.insertExample}
+                  </button>
+                  <button type="button" className="button" onClick={() => insertExample('single')}>
+                    {sk.section.insertTemplate}
+                  </button>
+                </div>
+              }
+            />
+          )
         }
       />
       {mode !== 'parameters' && selectedElement ? (
@@ -885,6 +942,8 @@ export function App() {
           onRedownloadTerrain={(id) => void downloadDmrTerrain(id)}
           onRemoved={() => setSelectedElement(undefined)}
           sectionContext={sectionContext}
+          selectedPoint={profilePoint}
+          onSelectPoint={setProfilePoint}
         />
       ) : mode === 'section' ? (
         <SectionPanel results={sections.results} selectedId={undefined} />
