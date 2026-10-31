@@ -1,10 +1,17 @@
 /**
  * End-to-end test: referenčný most 212-00 (fixtúra `@bridge/sections/testing`, výkres `fixtures/inbox/Vzorový most.pdf`).
  */
-import { evaluateSpans, overallLength, seatAt } from '@bridge/sections';
+import {
+  type DeckSamples,
+  deckOutline,
+  evaluateSpans,
+  overallLength,
+  sampleSuperstructure,
+  seatAt,
+} from '@bridge/sections';
 import { evaluateReference212, reference212Project, SIN } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
-import { meshVolume } from './mesh.ts';
+import { meshBounds, meshVolume } from './mesh.ts';
 import { buildScene, createSceneCache } from './scene.ts';
 
 describe('referenčný most 212-00', () => {
@@ -49,5 +56,19 @@ describe('referenčný most 212-00', () => {
       expect(o.issues, o.id).toEqual([]);
       expect(meshVolume(o.mesh), o.id).toBeGreaterThan(0);
     }
+  });
+
+  it('has a plan outline matching the 3D deck mesh within 2 mm', () => {
+    const { ctx, deck, results } = evaluateReference212();
+    const samples = sampleSuperstructure(ctx, deck, results) as DeckSamples;
+    const outline = deckOutline(samples).polygon;
+    const mesh = buildScene(reference212Project(), createSceneCache()).objects[0]?.mesh;
+    const b = mesh && meshBounds(mesh);
+    const xs = outline.map((p) => p.x);
+    const ys = outline.map((p) => p.y);
+    expect(Math.abs(Math.min(...xs) - (b?.min.x ?? 0))).toBeLessThan(0.002);
+    expect(Math.abs(Math.max(...xs) - (b?.max.x ?? 0))).toBeLessThan(0.002);
+    expect(Math.abs(Math.min(...ys) - (b?.min.y ?? 0))).toBeLessThan(0.002);
+    expect(Math.abs(Math.max(...ys) - (b?.max.y ?? 0))).toBeLessThan(0.002);
   });
 });
