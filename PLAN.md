@@ -330,14 +330,19 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 Rozhodnutie 2026-10-31: jeden Cloudflare Worker so statickými súbormi aplikácie a API; v databáze (D1) len firemná
 knižnica prierezov, projekty ostávajú ako súbory; prístup cez Cloudflare Access; nasadenie automaticky z GitHubu;
 adresa `*.workers.dev` (ADR 0015).
-- [ ] `apps/worker`: statické súbory (jednostránková aplikácia) a API, `wrangler.jsonc`
-- [ ] D1: tabuľka knižnice prierezov, API (zoznam, uloženie s kontrolou verzie, odstránenie)
-- [ ] overenie identity z Cloudflare Access (JWT) vo Workeri, `/api/me`
-- [ ] „Firemná knižnica“ v dialógu Knižnica prierezov (vložiť, uložiť z projektu, odstrániť, konflikt verzií)
-- [ ] návod na nastavenie účtu (D1, napojenie GitHubu, Access) a nasadenie
+- [x] `apps/worker`: statické súbory (jednostránková aplikácia) a API, `wrangler.jsonc`
+  - API len pre `/api/*`, ostatné obslúži Cloudflare priamo; WASM ako `application/wasm`; náhľadové URL vypnuté. Overené lokálne cez `wrangler dev`.
+- [x] D1: tabuľka knižnice prierezov, API (zoznam, uloženie s kontrolou verzie, odstránenie)
+  - migrácia `0001_profile_library.sql`; `PUT` s `expectedVersion` (409 s autorom zmeny), `DELETE ?version=`; chyby JSON so slovenskou hláškou, chyba servera → 500. Testy nad `node:sqlite` so skutočnou migráciou.
+- [x] overenie identity z Cloudflare Access (JWT) vo Workeri, `/api/me`
+  - RS256 cez WebCrypto, kľúče tímu s cache, `aud` / vydavateľ / expirácia; bez nastavenia Access len localhost (`local@dev`), nasadený Worker inak vráti 401.
+- [x] „Firemná knižnica“ v dialógu Knižnica prierezov (vložiť, uložiť z projektu, odstrániť, konflikt verzií)
+  - zdroj sa zobrazí, ak `/api/me` odpovie; autor a čas zmeny pri položke; overené v prehliadači cez `wrangler dev` (uloženie, nová relácia, zmena kolegu → konflikt, odstránenie).
+- [x] návod na nastavenie účtu (D1, napojenie GitHubu, Access) a nasadenie
+  - `docs/nasadenie.md`. **Na projektantovi:** vytvoriť D1 a doplniť `database_id`, napojiť repozitár, zapnúť Access a doplniť `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD`, pushnúť `main`.
 
 **Hotové, keď:** push do main nasadí aplikáciu na `*.workers.dev`, otvorí sa až po prihlásení cez Access a dvaja
-kolegovia vidia a upravujú tú istú knižnicu prierezov.
+kolegovia vidia a upravujú tú istú knižnicu prierezov. — *2026-10-31:* pripravené a overené lokálne; nasadenie čaká na kroky v účte Cloudflare a push.
 
 ### Backlog
 - IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)

@@ -32,7 +32,7 @@ describe('worker routing', () => {
     const output = (globalThis as unknown as { console: { error: (...a: unknown[]) => void } })
       .console;
     const quiet = vi.spyOn(output, 'error').mockImplementation(() => undefined);
-    const r = await worker.fetch(new Request('https://x/api/library'), broken);
+    const r = await worker.fetch(new Request('http://localhost/api/library'), broken);
     quiet.mockRestore();
     expect(r.status).toBe(500);
     expect(await r.json()).toMatchObject({ code: 'ServerError' });

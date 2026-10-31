@@ -77,8 +77,12 @@ describe('identify (Cloudflare Access)', () => {
     expect(await reject(request('nie.je.jwt'))).toBe(false);
   });
 
-  it('uses local@dev without an Access audience (local wrangler dev)', async () => {
-    expect(await identify(request(), {}, fakeFetch)).toEqual({ ok: true, email: 'local@dev' });
+  it('uses local@dev without an Access audience only on localhost (wrangler dev)', async () => {
+    const local = new Request('http://127.0.0.1:8787/api/me');
+    expect(await identify(local, {}, fakeFetch)).toEqual({ ok: true, email: 'local@dev' });
+    // nasadený Worker bez nastavenia Access nikoho nepustí
+    const deployed = new Request('https://modeler-mostov.firma.workers.dev/api/me');
+    expect((await identify(deployed, {}, fakeFetch)).ok).toBe(false);
   });
 
   it('makes the worker answer API calls without a valid token with 401', async () => {

@@ -1,7 +1,8 @@
 /**
  * Identita z Cloudflare Access (ADR 0015): Access stojí pred Workerom a do požiadavky pridá podpísaný JWT
  * `Cf-Access-Jwt-Assertion`. Worker ho overí sám (obrana do hĺbky): RS256 cez WebCrypto, kľúče tímu Access
- * (s cache), `aud`, vydavateľ a expirácia. Bez `ACCESS_AUD` (lokálny `wrangler dev`) je používateľ `local@dev`.
+ * (s cache), `aud`, vydavateľ a expirácia. Bez `ACCESS_AUD` je používateľ `local@dev` len na localhost (`wrangler dev`);
+ * nasadený Worker bez nastavenia Access API odmietne.
  */
 
 export interface AccessEnv {
@@ -68,7 +69,13 @@ export async function identify(
   env: AccessEnv,
   fetchFn: typeof fetch = fetch,
 ): Promise<Identity> {
-  if (!env.ACCESS_AUD) return { ok: true, email: 'local@dev' };
+  if (!env.ACCESS_AUD) {
+    // bez nastavenia Access len lokálny vývoj; nasadený Worker bez neho knižnicu nikomu neotvorí
+    const host = new URL(request.url).hostname;
+    return host === 'localhost' || host === '127.0.0.1'
+      ? { ok: true, email: 'local@dev' }
+      : deny('Firemná knižnica nie je nastavená (chýba Cloudflare Access).');
+  }
   const team = env.ACCESS_TEAM_DOMAIN;
   if (!team) return deny('Chýba nastavenie tímu Cloudflare Access.');
   const jwt = request.headers.get('Cf-Access-Jwt-Assertion');

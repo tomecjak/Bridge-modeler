@@ -4,6 +4,9 @@
   "name": "modeler-mostov",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-15",
+  // aplikácia beží na <name>.<účet>.workers.dev; náhľadové URL verzií sú vypnuté, aby neobchádzali Access
+  "workers_dev": true,
+  "preview_urls": false,
   "assets": {
     "directory": "../web/dist",
     "binding": "ASSETS",
