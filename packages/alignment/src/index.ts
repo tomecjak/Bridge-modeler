@@ -9,6 +9,8 @@ export type {
 export type { HorizontalSegment } from './horizontal/segments.ts';
 export * from './issues.ts';
 export { type LandXmlResult, landXmlDirectionToAzimuth, parseLandXml } from './landxml/parse.ts';
+/** obal XML parsera (ADR 0004) — aj pre povrchy terénu v `@bridge/terrain` */
+export { childNamed, childrenNamed, parseXml, type XmlNode } from './landxml/xml.ts';
 export { formatStation, parseStation } from './station/format.ts';
 export {
   createStationing,
