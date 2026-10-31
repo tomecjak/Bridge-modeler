@@ -1393,3 +1393,38 @@ text.dw-stationing {
 .sf-editor > .hint {
   margin: -6px 0 0;
 }
+
+/* oblasť mosta (Fáza 10a) */
+.study-area rect {
+  fill: url(#study-area-hatch);
+}
+
+#study-area-hatch line {
+  stroke: color-mix(in srgb, var(--accent) 22%, transparent);
+  stroke-width: 2;
+}
+
+.study-area line {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+
+.study-area text {
+  font-size: 11px;
+  fill: var(--accent);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.study-area-axis {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 30%, transparent);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.drawing[data-area-mode] {
+  cursor: col-resize;
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   boundsOf,
   fitView,
+  focusRange,
   niceStep,
   pan,
   screenToWorld,
@@ -59,5 +60,13 @@ describe('view transform', () => {
         { x: -2, y: 3 },
       ]),
     ).toEqual({ minX: -2, minY: 3, maxX: 1, maxY: 5 });
+  });
+});
+
+describe('focusRange', () => {
+  it('adds 15 % of the length on both sides, at least the minimum margin, within the axis', () => {
+    expect(focusRange({ from: 1000, to: 1200 }, 0, 5000)).toEqual({ from: 970, to: 1230 });
+    expect(focusRange({ from: 1050, to: 1000 }, 0, 5000)).toEqual({ from: 980, to: 1070 });
+    expect(focusRange({ from: 10, to: 4990 }, 0, 5000)).toEqual({ from: 0, to: 5000 });
   });
 });

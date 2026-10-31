@@ -126,6 +126,9 @@ export async function downloadTerrain(
 /** Predvolený okraj obdĺžnika terénu okolo mosta [m]. */
 export const DEFAULT_TERRAIN_MARGIN = 50;
 
+/** Najdlhšia os [m], pre ktorú sa terén stiahne aj bez NK a oblasti mosta (Fáza 10a). */
+export const WHOLE_AXIS_TERRAIN_LIMIT = 2000;
+
 /** Počet bodov a trojuholníkov / buniek uloženého terénu (pre zobrazenie). */
 export function terrainSize(t: TerrainSurface): { points: number; cells: number } {
   if (t.data.kind === 'tin') {

@@ -8,6 +8,12 @@ export interface View {
   sy: number;
 }
 
+/** Úsek osi v spojitom staničení [m]. */
+export interface SRange {
+  sFrom: number;
+  sTo: number;
+}
+
 export interface Size {
   width: number;
   height: number;
@@ -89,4 +95,20 @@ export function boundsOf(points: readonly Vec2[]): Bounds {
     maxY = Math.max(maxY, p.y);
   }
   return { minX, minY, maxX, maxY };
+}
+
+/**
+ * Rozsah pohľadu okolo úseku `from`–`to` (napr. oblasť mosta) s okrajom 15 % dĺžky, najmenej `minMargin`,
+ * orezaný na `min`–`max` (rozsah osi).
+ */
+export function focusRange(
+  range: { from: number; to: number },
+  min: number,
+  max: number,
+  minMargin = 20,
+): { from: number; to: number } {
+  const a = Math.min(range.from, range.to);
+  const b = Math.max(range.from, range.to);
+  const margin = Math.max(minMargin, 0.15 * (b - a));
+  return { from: Math.max(min, a - margin), to: Math.min(max, b + margin) };
 }

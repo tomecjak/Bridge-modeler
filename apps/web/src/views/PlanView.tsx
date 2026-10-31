@@ -8,7 +8,15 @@ import { DrawingEntities } from './DrawingEntities.tsx';
 import { type ExportCoordinates, type ExportFormat, ExportMenu } from './ExportMenu.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
-import { boundsOf, fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';
+import {
+  boundsOf,
+  fitView,
+  focusRange,
+  niceStep,
+  type SRange,
+  screenToWorld,
+  worldToScreen,
+} from './viewTransform.ts';
 
 export interface PlanCursor {
   /** lokálne súradnice kurzora */
@@ -31,6 +39,10 @@ interface Props {
   onAddSupport: (s: number, offset: number) => void;
   /** zmena hodnoty zapne nástroj „Pridať podperu“ (z postupu); 0 = bez žiadosti */
   supportToolRequest?: number;
+  /** oblasť mosta na tejto osi (zvýraznený úsek osi, Fáza 10a) */
+  studyArea?: SRange | undefined;
+  /** úsek, na ktorý sa pohľad prispôsobí (oblasť mosta, inak NK); bez neho celá os */
+  focus?: SRange | undefined;
   /** ďalšie osi projektu (napr. okraje vozovky z LandXML) */
   otherAlignments: readonly Alignment[];
   /** čiary v pôdoryse; vybraná čiara má ťahateľné vrcholy */
@@ -60,6 +72,8 @@ export function PlanView({
   onExport,
   onAddSupport,
   supportToolRequest = 0,
+  studyArea,
+  focus,
   otherAlignments,
   planLines,
   onAddPlanLine,
@@ -74,7 +88,15 @@ export function PlanView({
   const addMode = tool === 'support';
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
-  const bounds = useMemo(() => boundsOf(samples), [samples]);
+  /** „Celá os“ ukáže celú os aj vtedy, keď je oblasť mosta alebo NK */
+  const [whole, setWhole] = useState(false);
+  const bounds = useMemo(() => {
+    if (!focus || whole) return boundsOf(samples);
+    const r = focusRange({ from: focus.sFrom, to: focus.sTo }, 0, alignment.length);
+    const inRange = samples.filter((p) => p.s >= r.from && p.s <= r.to);
+    const ends = [r.from, r.to].map((s) => alignment.evaluateHorizontal(s).point);
+    return boundsOf([...inRange, ...ends]);
+  }, [samples, focus, whole, alignment]);
   const fit = size.width > 0 ? fitView(bounds, size, 56) : undefined;
   const { view, handlers, dragMove, wasDrag, reset } = usePanZoom(ref, size, fit);
   const others = useMemo(
@@ -156,6 +178,11 @@ export function PlanView({
       .join(' ');
 
   const cursor = cursorS === undefined ? undefined : alignment.evaluateHorizontal(cursorS);
+  const areaAxis = studyArea && [
+    alignment.evaluateHorizontal(studyArea.sFrom).point,
+    ...samples.filter((p) => p.s > studyArea.sFrom && p.s < studyArea.sTo),
+    alignment.evaluateHorizontal(studyArea.sTo).point,
+  ];
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: umiestnenie podpery kliknutím do mapy; z klávesnice sa staničenie zadá v editore podpery
@@ -202,9 +229,27 @@ export function PlanView({
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
-        <button type="button" onClick={reset}>
+        <button
+          type="button"
+          title={sk.viewport.fitTitle}
+          onClick={() => {
+            setWhole(false);
+            reset();
+          }}
+        >
           {sk.viewport.fit}
         </button>
+        {focus && (
+          <button
+            type="button"
+            onClick={() => {
+              setWhole(true);
+              reset();
+            }}
+          >
+            {sk.viewport.wholeAxis}
+          </button>
+        )}
         <button
           type="button"
           aria-pressed={addMode}
@@ -228,6 +273,7 @@ export function PlanView({
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.plan}>
+          {areaAxis && <polyline className="study-area-axis" points={polyline(areaAxis)} />}
           {ticks.map((t) => {
             const p = toScreen(t.point);
             const nx = Math.cos(t.azimuth);

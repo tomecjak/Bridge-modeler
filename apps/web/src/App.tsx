@@ -20,7 +20,13 @@ import {
   singleDeckExample,
   twinDeckExample,
 } from '@bridge/sections';
-import { type CorridorOptions, corridorAround, deckRanges } from '@bridge/terrain';
+import {
+  bridgeRanges,
+  type CorridorOptions,
+  corridorAround,
+  deckRanges,
+  studyRanges,
+} from '@bridge/terrain';
 import { type DragEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
@@ -35,6 +41,7 @@ import {
   readTerrainFile,
   type TerrainCandidate,
   type TerrainFile,
+  WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
 import { BriefPanel } from './layout/BriefPanel.tsx';
 import { ElementPanel } from './layout/ElementPanel.tsx';
@@ -43,6 +50,7 @@ import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { SectionPanel } from './layout/SectionPanel.tsx';
+import { StudyAreaPanel } from './layout/StudyAreaPanel.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { type StepAction, WorkflowPanel } from './layout/WorkflowPanel.tsx';
@@ -110,9 +118,10 @@ export function App() {
   const dmrCancel = useRef(false);
   /** rozbalený krok postupu a panel vpravo otvorený z postupu (Fáza 10a) */
   const [expandedStep, setExpandedStep] = useState<StepId>();
-  const [sidePanel, setSidePanel] = useState<'brief'>();
-  /** žiadosť o nástroj „Pridať podperu“ v pôdoryse (počítadlo, aby sa dala zopakovať) */
+  const [sidePanel, setSidePanel] = useState<'brief' | 'studyArea'>();
+  /** žiadosti o nástroj „Pridať podperu“ v pôdoryse a „Oblasť mosta“ v profile (počítadlá, aby sa dali zopakovať) */
   const [supportToolRequest, setSupportToolRequest] = useState(0);
+  const [areaToolRequest, setAreaToolRequest] = useState(0);
   const landXmlInput = useRef<HTMLInputElement>(null);
   const terrainInput = useRef<HTMLInputElement>(null);
 
@@ -189,17 +198,44 @@ export function App() {
     };
   }, [sections.results]);
 
-  /** Rozsah novej NK: štvrtina rozsahu nivelety, najviac 200 m (zobrazované staničenie). */
+  /**
+   * Rozsah novej NK (zobrazované staničenie): oblasť mosta na zobrazenej osi, inak štvrtina rozsahu nivelety,
+   * najviac 200 m.
+   */
   function defaultDeckRange():
     | { road: NonNullable<typeof item>['alignment']; from: number; to: number }
     | undefined {
     const road = item?.alignment;
     const profile = road?.profile;
     if (!road || !profile) return undefined;
+    const area = project.studyArea;
+    if (area && area.alignment === road.name) return { road, from: area.from, to: area.to };
     const start = road.stationing.toDisplay(profile.startS).station;
     const end = road.stationing.toDisplay(profile.endS).station;
     const from = Math.round(start + (end - start) * 0.25);
     return { road, from, to: Math.round(Math.min(end, from + 200)) };
+  }
+
+  /** Oblasť mosta a úsek na prispôsobenie pohľadov (oblasť, inak rozsah NK) na zobrazenej osi. */
+  const studyAreaS = road ? studyRanges(road, project.studyArea)[0] : undefined;
+  const viewFocus = useMemo(() => {
+    if (studyAreaS) return studyAreaS;
+    const decks = road ? deckRanges(road, project.superstructures, project.bridgeAxes) : [];
+    if (decks.length === 0) return undefined;
+    return {
+      sFrom: Math.min(...decks.map((d) => Math.min(d.sFrom, d.sTo))),
+      sTo: Math.max(...decks.map((d) => Math.max(d.sFrom, d.sTo))),
+    };
+  }, [studyAreaS, road, project.superstructures, project.bridgeAxes]);
+
+  /** Vyznačená oblasť mosta (spojité staničenie) → zobrazované staničenie na celé metre. */
+  function setStudyAreaFrom(range: { sFrom: number; sTo: number }) {
+    if (!road) return;
+    const at = (s: number) => Math.round(road.stationing.toDisplay(s).station);
+    projectStore.getState().dispatch({
+      type: 'setStudyArea',
+      studyArea: { alignment: road.name, from: at(range.sFrom), to: at(range.sTo) },
+    });
   }
 
   /** Podpery na osiach mosta vedených po zobrazenej osi cesty (pre pôdorys a profil). */
@@ -491,7 +527,23 @@ export function App() {
         disabled: !hasRoad || project.terrains.length > 0 || dmrProgress !== undefined,
       },
     ],
-    studyArea: [{ label: sk.workflow.actions.open2d, onClick: () => setMode('2d') }],
+    studyArea: [
+      {
+        label: sk.workflow.actions.markStudyArea,
+        onClick: () => {
+          setMode('2d');
+          setAreaToolRequest((n) => n + 1);
+        },
+        disabled: !hasRoad,
+      },
+      {
+        label: sk.workflow.actions.editStudyArea,
+        onClick: () => {
+          setSelectedElement(undefined);
+          setSidePanel('studyArea');
+        },
+      },
+    ],
     deck: [
       {
         label: sk.workflow.actions.insertDeck,
@@ -599,7 +651,12 @@ export function App() {
     if (!road || !origin) return;
     setTerrainBusy(true);
     try {
-      const ranges = deckRanges(road, project.superstructures, project.bridgeAxes);
+      const ranges = bridgeRanges(
+        road,
+        project.superstructures,
+        project.bridgeAxes,
+        project.studyArea,
+      );
       const corridor = corridorAround(road, ranges, options);
       const terrains: TerrainSurface[] = [];
       const notes: string[] = [];
@@ -631,13 +688,25 @@ export function App() {
     }
     const previous = project.terrains.find((t) => t.id === replaceId);
     const margin = previous?.corridor.margin ?? DEFAULT_TERRAIN_MARGIN;
+    const ranges = bridgeRanges(
+      road,
+      project.superstructures,
+      project.bridgeAxes,
+      project.studyArea,
+    );
+    // celú dlhú os nesťahujeme (tisíce dávok zo ZBGIS) — najprv treba oblasť mosta
+    if (ranges.length === 0 && road.length > WHOLE_AXIS_TERRAIN_LIMIT) {
+      setMessage(sk.terrain.needsStudyArea);
+      setExpandedStep('studyArea');
+      return;
+    }
     dmrCancel.current = false;
     setDmrProgress(0);
     setMessage(sk.terrain.downloading(0));
     try {
       const r = await downloadTerrain(
         road,
-        deckRanges(road, project.superstructures, project.bridgeAxes),
+        ranges,
         margin,
         origin,
         previous?.id ?? newId('ter'),
@@ -804,9 +873,9 @@ export function App() {
           expanded={expandedStep}
           onExpand={(id) => {
             setExpandedStep(id);
-            if (id === 'brief') {
+            if (id === 'brief' || id === 'studyArea') {
               setSelectedElement(undefined);
-              setSidePanel('brief');
+              setSidePanel(id);
             } else {
               setSidePanel(undefined);
             }
@@ -917,6 +986,10 @@ export function App() {
         plan={planView}
         onAddSupport={addSupportAt}
         supportToolRequest={supportToolRequest}
+        studyArea={studyAreaS}
+        focus={viewFocus}
+        onStudyArea={setStudyAreaFrom}
+        areaToolRequest={areaToolRequest}
         otherAlignments={otherAlignments}
         planLines={project.planLines}
         onAddPlanLine={addPlanLine}
@@ -1046,6 +1119,18 @@ export function App() {
       />
       {sidePanel === 'brief' ? (
         <BriefPanel />
+      ) : sidePanel === 'studyArea' ? (
+        <StudyAreaPanel
+          road={road}
+          suggestion={(() => {
+            const r = defaultDeckRange();
+            return r && { from: r.from, to: r.to };
+          })()}
+          onMark={() => {
+            setMode('2d');
+            setAreaToolRequest((n) => n + 1);
+          }}
+        />
       ) : mode !== 'parameters' && selectedElement ? (
         <ElementPanel
           collection={selectedElement.collection}

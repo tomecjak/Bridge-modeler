@@ -7,6 +7,7 @@ import { sk } from '../i18n/sk.ts';
 import type { ExportCoordinates, ExportFormat } from '../views/ExportMenu.tsx';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { ProfileView } from '../views/ProfileView.tsx';
+import type { SRange } from '../views/viewTransform.ts';
 
 export type ViewMode = '3d' | '2d' | 'section' | 'parameters';
 
@@ -24,6 +25,12 @@ interface Props {
   onAddSupport: (s: number, offset: number) => void;
   /** zmena hodnoty zapne v pôdoryse nástroj „Pridať podperu“ (z postupu) */
   supportToolRequest: number;
+  /** oblasť mosta a úsek na prispôsobenie pohľadov v spojitom staničení zobrazenej osi (Fáza 10a) */
+  studyArea: SRange | undefined;
+  focus: SRange | undefined;
+  onStudyArea: (range: SRange) => void;
+  /** zmena hodnoty zapne v profile nástroj „Oblasť mosta“ */
+  areaToolRequest: number;
   /** ďalšie osi projektu a čiary v pôdoryse */
   otherAlignments: readonly Alignment[];
   planLines: readonly PlanLine[];
@@ -62,6 +69,10 @@ export function Viewport({
   onExportPlan,
   onAddSupport,
   supportToolRequest,
+  studyArea,
+  focus,
+  onStudyArea,
+  areaToolRequest,
   otherAlignments,
   planLines,
   onAddPlanLine,
@@ -111,6 +122,8 @@ export function Viewport({
               onExport={onExportPlan}
               onAddSupport={onAddSupport}
               supportToolRequest={supportToolRequest}
+              studyArea={studyArea}
+              focus={focus}
               otherAlignments={otherAlignments}
               planLines={planLines}
               onAddPlanLine={onAddPlanLine}
@@ -123,6 +136,10 @@ export function Viewport({
               onCursor={onProfileCursor}
               {...profile}
               selected={selectedId}
+              studyArea={studyArea}
+              focus={focus}
+              onStudyArea={onStudyArea}
+              areaToolRequest={areaToolRequest}
             />
           </div>
         )}

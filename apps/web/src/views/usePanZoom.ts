@@ -8,7 +8,13 @@ const INTERACTIVE = 'button, input, select, textarea, a, label, summary, details
  * Pohľad s posunom ťahaním a priblížením kolieskom. `fit` je predvolený pohľad (aj po „Prispôsobiť“).
  * Koliesko sa registruje natívne s `passive: false`, aby sa dalo zrušiť posúvanie stránky.
  */
-export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: View | undefined) {
+export function usePanZoom(
+  ref: RefObject<HTMLElement | null>,
+  size: Size,
+  fit: View | undefined,
+  /** false = ľavé ťahanie patrí nástroju pohľadu (napr. vyznačenie oblasti), koliesko ostáva */
+  panEnabled = true,
+) {
   const [custom, setCustom] = useState<View>();
   const view = custom ?? fit;
   const viewRef = useRef(view);
@@ -37,7 +43,7 @@ export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: 
 
   const handlers = {
     onPointerDown(e: PointerEvent<Element>) {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || !panEnabled) return;
       // tlačidlá a polia vo výkrese (lišta, prázdny stav) musia dostať klik — nezachytávať ukazovateľ
       if (e.target instanceof Element && e.target.closest(INTERACTIVE)) return;
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -70,6 +76,11 @@ export function usePanZoom(ref: RefObject<HTMLElement | null>, size: Size, fit: 
     view,
     handlers,
     dragMove,
+    /** vycentruje pohľad na bod sveta so zachovanou mierkou */
+    centerOn: (p: { x: number; y: number }) => {
+      const current = viewRef.current;
+      if (current) setCustom({ ...current, cx: p.x, cy: p.y });
+    },
     /** skončilo posledné stlačenie ťahaním? (vtedy klik neznamená akciu) */
     wasDrag: () => lastWasDrag.current,
     reset: () => setCustom(undefined),
