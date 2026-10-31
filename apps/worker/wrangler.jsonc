@@ -19,7 +19,7 @@
       "binding": "DB",
       "database_name": "modeler-mostov",
       // doplní sa po `wrangler d1 create modeler-mostov` (docs/nasadenie.md); lokálny vývoj funguje aj bez neho
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "a90e2ad0-9ef6-4278-9699-ed0018a07670",
       "migrations_dir": "migrations"
     }
   ],
