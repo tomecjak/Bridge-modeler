@@ -1,5 +1,5 @@
 import type { AlignmentIssue } from '@bridge/alignment';
-import { profileDrawing, projectSupport } from '@bridge/drawing';
+import { planDrawing, profileDrawing, projectSupport, sectionDrawing } from '@bridge/drawing';
 import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
   bridgeAxisPlan,
@@ -196,6 +196,17 @@ export function App() {
   const sectionSupports = roadSupports
     .filter((r) => Math.abs(r.support.station - sectionAt) <= 0.5 && r.axis)
     .flatMap((r) => projectSupport(r, item?.alignment.origin.z ?? 0) ?? []);
+
+  const planView = useMemo(
+    () => road && planDrawing({ alignment: road, decks: roadDecks, supports: roadSupports }),
+    [road, roadDecks, roadSupports],
+  );
+  const drawnSections = sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []));
+  const sectionView = sectionDrawing({
+    decks: drawnSections,
+    supports: sectionSupports,
+    terrain: sectionTerrain.flatMap((t) => t.runs),
+  });
 
   /** Klik v pôdoryse: podpera pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie ku kliknutiu. */
   function addSupportAt(s: number, offset: number) {
@@ -669,7 +680,7 @@ export function App() {
             onSelect={setSelectedParameterId}
           />
         }
-        supports={roadSupports}
+        plan={planView}
         onAddSupport={addSupportAt}
         profile={{
           drawing: profileView,
@@ -715,7 +726,7 @@ export function App() {
         }
         sectionView={
           <SectionView
-            sections={sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []))}
+            sections={drawnSections}
             station={sectionAt}
             range={sectionRange}
             onStation={setSectionStation}
@@ -725,6 +736,7 @@ export function App() {
             canInsert={defaultDeckRange() !== undefined}
             supports={sectionSupports}
             terrain={sectionTerrain}
+            drawing={sectionView}
             onInsert={insertExample}
             emptyActions={
               <div className="toolbar">

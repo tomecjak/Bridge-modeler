@@ -1,8 +1,9 @@
-import type { DrawnSection } from '@bridge/drawing';
+import type { Drawing, DrawnSection, LayerId } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
 import { useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
+import { DrawingEntities } from './DrawingEntities.tsx';
 import { StationControl } from './StationControl.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
@@ -30,7 +31,11 @@ interface Props {
   onInsert: (template: 'twin' | 'single') => void;
   /** priečne terénne čiary (x od osi cesty, y v m n. m.) */
   terrain?: readonly { id: string; runs: readonly (readonly Vec2[])[] }[];
+  /** priečny rez ako výkres (terén, podpery; ADR 0012); NK s výberom a kótami kreslí pohľad sám */
+  drawing?: Drawing | undefined;
 }
+
+const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['deck', 'deckVoid', 'roadAxis']);
 
 const mm = (m: number) => formatNumber(m * 1000, 0);
 
@@ -48,6 +53,7 @@ export function SectionView({
   onInsert,
   supports,
   terrain = [],
+  drawing,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
 
@@ -125,27 +131,9 @@ export function SectionView({
               y1={0}
               y2={size.height}
             />
-            {terrain.flatMap((t) =>
-              t.runs.map((run, i) => (
-                <polyline
-                  // biome-ignore lint/suspicious/noArrayIndexKey: úseky terénu sú určené poradím
-                  key={`${t.id}-${i}`}
-                  className="terrain-line"
-                  points={run
-                    .map((p) => `${toScreen(p).x.toFixed(1)},${toScreen(p).y.toFixed(1)}`)
-                    .join(' ')}
-                />
-              )),
+            {drawing && (
+              <DrawingEntities entities={drawing.entities} toScreen={toScreen} skip={OWN_LAYERS} />
             )}
-            {supports.map((s) => (
-              <g key={s.id} className="support-elevation">
-                {s.footing && <path className="support-footing" d={path(s.footing)} />}
-                {s.body.map((b, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: obrysy stĺpov sú určené poradím
-                  <path key={i} className="support-body" d={path(b)} />
-                ))}
-              </g>
-            ))}
             {sections.map((s) => {
               const selected = s.id === selectedId;
               const topY = toScreen({ x: 0, y: s.top }).y - 18;

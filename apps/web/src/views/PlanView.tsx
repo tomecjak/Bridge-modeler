@@ -1,9 +1,9 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
-import { sampleHorizontal, stationTicks } from '@bridge/drawing';
+import { type Drawing, type LayerId, sampleHorizontal, stationTicks } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
-import { type SupportResult, supportPlan } from '@bridge/sections';
 import { type PointerEvent, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
+import { DrawingEntities } from './DrawingEntities.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { boundsOf, fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';
@@ -20,7 +20,10 @@ interface Props {
   alignment: Alignment;
   cursorS: number | undefined;
   onCursor: (cursor: PlanCursor | undefined) => void;
-  supports: readonly SupportResult[];
+  /** pôdorys mosta (obrysy NK, os mosta, podpery; ADR 0012) */
+  drawing: Drawing | undefined;
+  /** vybraný prvok mosta (zvýraznenie) */
+  selected?: string | undefined;
   /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
   onAddSupport: (s: number, offset: number) => void;
 }
@@ -28,15 +31,16 @@ interface Props {
 const MINOR_TICK_PX = 14;
 const LABEL_TICK_PX = 110;
 const MAX_TICKS = 4000;
+/** os cesty (farby podľa prvkov) a staničenie podľa priblíženia kreslí pohľad sám */
+const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['roadAxis', 'stationing']);
 
-export function PlanView({ alignment, cursorS, onCursor, supports, onAddSupport }: Props) {
+export function PlanView({ alignment, cursorS, onCursor, drawing, selected, onAddSupport }: Props) {
   const [addMode, setAddMode] = useState(false);
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
   const bounds = useMemo(() => boundsOf(samples), [samples]);
   const fit = size.width > 0 ? fitView(bounds, size, 56) : undefined;
   const { view, handlers, dragMove, wasDrag, reset } = usePanZoom(ref, size, fit);
-  const plans = useMemo(() => supports.map((r) => ({ r, plan: supportPlan(r) })), [supports]);
 
   const elements = useMemo(
     () =>
@@ -153,27 +157,13 @@ export function PlanView({ alignment, cursorS, onCursor, supports, onAddSupport 
             const p = toScreen(alignment.evaluateHorizontal(s).point);
             return <circle key={s} className="joint" cx={p.x} cy={p.y} r={3} />;
           })}
-          {plans.map(({ r, plan }) =>
-            plan ? (
-              <g key={r.support.id} className="support-plan">
-                {plan.footing && (
-                  <polygon className="support-footing" points={polyline(plan.footing)} />
-                )}
-                {plan.body.map((b, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: obrysy stĺpov sú určené poradím
-                  <polygon key={i} className="support-body" points={polyline(b)} />
-                ))}
-                {r.bearings.map((b) => (
-                  <circle
-                    key={b.index}
-                    className="support-bearing"
-                    cx={toScreen(b.plan).x}
-                    cy={toScreen(b.plan).y}
-                    r={2.5}
-                  />
-                ))}
-              </g>
-            ) : null,
+          {drawing && (
+            <DrawingEntities
+              entities={drawing.entities}
+              toScreen={toScreen}
+              skip={OWN_LAYERS}
+              selected={selected}
+            />
           )}
           {cursor && (
             <circle
