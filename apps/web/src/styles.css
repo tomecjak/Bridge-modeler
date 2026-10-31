@@ -331,6 +331,13 @@ body {
   pointer-events: auto;
 }
 
+.drawing-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 .drawing-title {
   font-size: 12px;
   font-weight: 600;
@@ -552,6 +559,10 @@ select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 3px;
+}
+
+.drawing-toolbar select {
+  width: auto;
 }
 
 .station-input input {
@@ -850,6 +861,7 @@ input[aria-invalid="true"] {
 }
 
 .deck-axis {
+  fill: none;
   stroke: var(--series);
   stroke-width: 1;
   stroke-dasharray: 8 3 2 3;
@@ -913,20 +925,54 @@ input[aria-invalid="true"] {
   fill: var(--series);
 }
 
-.support-marker line {
+/* entity výkresového modelu v 2D pohľadoch (ADR 0012) */
+.dw-deck {
+  fill: color-mix(in srgb, var(--series) 14%, transparent);
   stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.dw-void {
+  fill: var(--canvas);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.dw-deck.dw-selected {
+  fill: color-mix(in srgb, var(--series) 30%, transparent);
+  stroke: var(--series);
   stroke-width: 2;
 }
 
-.support-marker rect {
-  fill: color-mix(in srgb, var(--text) 18%, transparent);
-  stroke: var(--text);
+.dw-support-axis {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 12 3 2 3;
 }
 
-.support-marker text {
+.dw-stationing {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+text.dw-stationing {
+  font-size: 11px;
+  fill: var(--muted);
+  stroke: none;
+}
+
+.dw-label {
   font-size: 11px;
   font-weight: 600;
   fill: var(--text);
+}
+
+.support-body.dw-selected {
+  stroke: var(--series);
+  stroke-width: 2;
 }
 
 .drawing-toolbar button[aria-pressed="true"] {

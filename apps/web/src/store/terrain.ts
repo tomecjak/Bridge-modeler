@@ -1,5 +1,12 @@
 import type { Alignment } from '@bridge/alignment';
-import { crossSection, profileAlong, type Tin, terrainTin } from '@bridge/terrain';
+import type { Vec2 } from '@bridge/geom';
+import {
+  crossSection,
+  profileAlong,
+  profileAlongLine,
+  type Tin,
+  terrainTin,
+} from '@bridge/terrain';
 import { useMemo } from 'react';
 import { useProject } from './projectStore.ts';
 
@@ -28,6 +35,18 @@ export function terrainProfiles(
     runs: profileAlong(tin, alignment, 0, alignment.length).map((r) =>
       r.map((p) => ({ s: p.s, z: p.z + alignment.origin.z })),
     ),
+  }));
+}
+
+/** Terénne čiary pozdĺž čiary so staničením (napr. os mosta) v staničení `s` a výškach v m n. m. */
+export function terrainProfilesAlong(
+  tins: readonly TerrainTin[],
+  line: readonly { s: number; point: Vec2 }[],
+  z0: number,
+): { id: string; runs: { s: number; z: number }[][] }[] {
+  return tins.map(({ id, tin }) => ({
+    id,
+    runs: profileAlongLine(tin, line).map((r) => r.map((p) => ({ s: p.s, z: p.z + z0 }))),
   }));
 }
 

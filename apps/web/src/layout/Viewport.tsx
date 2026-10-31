@@ -1,6 +1,7 @@
 import type { Alignment } from '@bridge/alignment';
+import type { Drawing } from '@bridge/drawing';
 import type { SupportResult } from '@bridge/sections';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { ProfileView } from '../views/ProfileView.tsx';
@@ -19,7 +20,14 @@ interface Props {
   onAddSupport: (s: number, offset: number) => void;
   sectionView: ReactNode;
   view3d: ReactNode;
-  terrain: NonNullable<ComponentProps<typeof ProfileView>['terrain']>;
+  /** pozdĺžny rez v osi vybranej NK */
+  profile: {
+    drawing: Drawing | undefined;
+    decks: readonly { id: string; name: string }[];
+    deckId: string | undefined;
+    onDeck: (id: string) => void;
+  };
+  selectedId: string | undefined;
 }
 
 const TABS: { mode: ViewMode; label: string }[] = [
@@ -41,7 +49,8 @@ export function Viewport({
   supports,
   onAddSupport,
   view3d,
-  terrain,
+  profile,
+  selectedId,
 }: Props) {
   return (
     <main className="viewport">
@@ -87,8 +96,8 @@ export function Viewport({
               alignment={alignment}
               cursorS={cursorS}
               onCursor={onProfileCursor}
-              supports={supports}
-              terrain={terrain}
+              {...profile}
+              selected={selectedId}
             />
           </div>
         )}

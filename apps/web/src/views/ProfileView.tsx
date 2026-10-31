@@ -1,10 +1,16 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
-import { sampleProfile, stationTicks } from '@bridge/drawing';
+import {
+  type Drawing,
+  drawingBounds,
+  type LayerId,
+  sampleProfile,
+  stationTicks,
+} from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
-import type { SupportResult } from '@bridge/sections';
-import { type PointerEvent, useMemo } from 'react';
+import { type PointerEvent, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
+import { DrawingEntities } from './DrawingEntities.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';
@@ -13,26 +19,41 @@ interface Props {
   alignment: Alignment;
   cursorS: number | undefined;
   onCursor: (s: number | undefined) => void;
-  supports: readonly SupportResult[];
-  /** terénne čiary (staničenie s, výška v m n. m.) */
-  terrain?: readonly { id: string; runs: readonly (readonly { s: number; z: number }[])[] }[];
+  /** rozvinutý pozdĺžny rez v osi vybranej NK 1 : 1 (NK, podpery, terén; ADR 0012) */
+  drawing: Drawing | undefined;
+  /** NK na tejto osi cesty; pri viacerých sa volí, v osi ktorej je rez */
+  decks: readonly { id: string; name: string }[];
+  deckId: string | undefined;
+  onDeck: (id: string) => void;
+  /** vybraný prvok mosta (zvýraznenie) */
+  selected?: string | undefined;
 }
 
-/** Prevýšenie pozdĺžneho profilu (výšky : dĺžky). */
-const EXAGGERATION = 10;
+/** Ponúkané prevýšenia (výšky : dĺžky); export je vždy 1 : 1. */
+const EXAGGERATIONS = [1, 2, 5, 10];
+/** niveletu kreslí pohľad sám (s polygónom PVI) */
+const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['grade']);
 const STATION_LABEL_PX = 110;
 const ELEVATION_LINE_PX = 32;
 
-export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = [] }: Props) {
+export function ProfileView({
+  alignment,
+  cursorS,
+  onCursor,
+  drawing,
+  decks,
+  deckId,
+  onDeck,
+  selected,
+}: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
+  const [exaggeration, setExaggeration] = useState(10);
   const samples = useMemo(() => sampleProfile(alignment, 1), [alignment]);
   const profile = alignment.profile;
   const bounds = useMemo(() => {
-    // výškový rozsah zahŕňa niveletu aj terén
-    const zs = [
-      ...samples.map((p) => p.z),
-      ...terrain.flatMap((t) => t.runs.flatMap((r) => r.map((p) => p.z))),
-    ];
+    // výškový rozsah zahŕňa niveletu, terén, NK aj podpery
+    const content = drawing && drawingBounds(drawing);
+    const zs = [...samples.map((p) => p.z), ...(content ? [content.minY, content.maxY] : [])];
     const minZ = Math.min(...zs);
     const maxZ = Math.max(...zs);
     const margin = Math.max(1, (maxZ - minZ) * 0.15);
@@ -40,11 +61,12 @@ export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = 
       minX: samples[0]?.s ?? 0,
       maxX: samples.at(-1)?.s ?? 1,
       minY: minZ - margin,
-      maxY: maxZ + margin,
+      // nad podperami sú zvislé popisy a lišta pohľadu
+      maxY: maxZ + 2.5 * margin,
     };
-  }, [samples, terrain]);
+  }, [samples, drawing]);
   const fit =
-    size.width > 0 && samples.length > 0 ? fitView(bounds, size, 48, EXAGGERATION) : undefined;
+    size.width > 0 && samples.length > 0 ? fitView(bounds, size, 48, exaggeration) : undefined;
   const { view, handlers, dragMove, reset } = usePanZoom(ref, size, fit);
 
   const stationStep = view ? niceStep(STATION_LABEL_PX / view.sx) : 0;
@@ -120,9 +142,34 @@ export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = 
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.profile}</span>
-        <span className="drawing-note">
-          {sk.viewport.exaggeration} {EXAGGERATION}×
-        </span>
+        {decks.length > 1 && (
+          <label className="drawing-note">
+            {sk.viewport.profileDeck}{' '}
+            <select value={deckId} onChange={(e) => onDeck(e.target.value)}>
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="drawing-note" title={sk.viewport.exaggerationTitle}>
+          {sk.viewport.exaggeration}{' '}
+          <select
+            value={exaggeration}
+            onChange={(e) => {
+              setExaggeration(Number(e.target.value));
+              reset();
+            }}
+          >
+            {EXAGGERATIONS.map((k) => (
+              <option key={k} value={k}>
+                {k}×
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" onClick={reset}>
           {sk.viewport.fit}
         </button>
@@ -160,39 +207,15 @@ export function ProfileView({ alignment, cursorS, onCursor, supports, terrain = 
           {polygon.map((p) => (
             <circle key={`${p.x},${p.y}`} className="pvi" cx={p.x} cy={p.y} r={3} />
           ))}
-          {terrain.flatMap((t) =>
-            t.runs.map((run, i) => (
-              <polyline
-                // biome-ignore lint/suspicious/noArrayIndexKey: úseky terénu sú určené poradím
-                key={`${t.id}-${i}`}
-                className="terrain-line"
-                points={run
-                  .map((p) => {
-                    const q = toScreen({ x: p.s, y: p.z });
-                    return `${q.x.toFixed(1)},${q.y.toFixed(1)}`;
-                  })
-                  .join(' ')}
-              />
-            )),
+          {drawing && (
+            <DrawingEntities
+              entities={drawing.entities}
+              toScreen={toScreen}
+              skip={OWN_LAYERS}
+              selected={selected}
+            />
           )}
           <polyline className="profile-line" points={line} />
-          {supports.map((r) => {
-            if (r.bearings.length === 0) return null;
-            const z0 = alignment.origin.z;
-            const top = toScreen({ x: r.s, y: Math.max(...r.bearings.map((b) => b.seat)) + z0 });
-            const bottom = toScreen({ x: r.s, y: r.foundationTop + z0 });
-            const half = (r.footing.width / 2) * (view?.sx ?? 0);
-            const thick = r.footing.thickness * (view?.sy ?? 0);
-            return (
-              <g key={r.support.id} className="support-marker">
-                <line x1={top.x} x2={bottom.x} y1={top.y} y2={bottom.y} />
-                <rect x={bottom.x - half} y={bottom.y} width={2 * half} height={thick} />
-                <text x={top.x} y={top.y - 6} textAnchor="middle">
-                  {r.support.name}
-                </text>
-              </g>
-            );
-          })}
           {cursorPoint && (
             <g className="cursor">
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />

@@ -47,6 +47,8 @@ export const sk = {
     fit: 'Prispôsobiť',
     noProfile: 'Os nemá niveletu.',
     exaggeration: 'prevýšenie',
+    exaggerationTitle: 'Prevýšenie výšok v pohľade; export DXF a SVG je vždy 1 : 1',
+    profileDeck: 'rez v osi',
   },
   viewer3d: {
     title: '3D',

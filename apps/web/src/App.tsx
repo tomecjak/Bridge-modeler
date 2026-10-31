@@ -1,7 +1,8 @@
 import type { AlignmentIssue } from '@bridge/alignment';
-import { projectSupport } from '@bridge/drawing';
+import { profileDrawing, projectSupport } from '@bridge/drawing';
 import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
+  bridgeAxisPlan,
   evaluateSuperstructure,
   globalScope,
   singleBeamHaunched,
@@ -35,11 +36,17 @@ import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject } from './persistence/fileIO.ts';
 import type { ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
+import { useDeckDrawings } from './store/drawings.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
 import { defaultSupport, useSupportState } from './store/supports.ts';
-import { terrainCrossSections, terrainProfiles, useTerrainTins } from './store/terrain.ts';
+import {
+  terrainCrossSections,
+  terrainProfiles,
+  terrainProfilesAlong,
+  useTerrainTins,
+} from './store/terrain.ts';
 import type { Cut } from './viewer/sceneView.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
@@ -72,6 +79,8 @@ export function App() {
     id: string;
   }>();
   const [sectionStation, setSectionStation] = useState<number>();
+  /** NK, v osi ktorej je pozdĺžny rez (výber v profile); inak vybraná alebo prvá NK */
+  const [profileDeckId, setProfileDeckId] = useState<string>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [terrainBusy, setTerrainBusy] = useState(false);
   /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
@@ -104,7 +113,6 @@ export function App() {
 
   const tins = useTerrainTins();
   const road = item?.alignment;
-  const profileTerrain = useMemo(() => (road ? terrainProfiles(tins, road) : []), [tins, road]);
   const sectionTerrain = useMemo(() => {
     const s = road?.stationing.fromDisplay(sectionAt);
     if (!road || s === undefined || tins.length === 0) return [];
@@ -151,6 +159,38 @@ export function App() {
     const axis = project.bridgeAxes.find((a) => a.id === deck?.bridgeAxis);
     return axis !== undefined && axis.alignment === item?.data.name;
   });
+
+  const deckDrawings = useDeckDrawings(alignmentMap, parameterState.set, supportState.supports);
+  const roadDecks = deckDrawings.filter((d) => d.road === item?.data.name);
+  const profileDeck =
+    roadDecks.find((d) => d.id === (profileDeckId ?? selectedSuperstructureId)) ?? roadDecks[0];
+  /** terén pozdĺž osi mosta vybranej NK (bez NK pozdĺž osi cesty) */
+  const profileTerrain = useMemo(() => {
+    if (!road || tins.length === 0) return [];
+    const sup = project.superstructures.find((d) => d.id === profileDeck?.id);
+    const axis = project.bridgeAxes.find((a) => a.id === sup?.bridgeAxis);
+    if (!axis) return terrainProfiles(tins, road);
+    const line = bridgeAxisPlan(axis, road, parameterState.set, 0, road.length);
+    return terrainProfilesAlong(tins, line, road.origin.z);
+  }, [
+    tins,
+    road,
+    profileDeck?.id,
+    project.superstructures,
+    project.bridgeAxes,
+    parameterState.set,
+  ]);
+  const profileView = useMemo(
+    () =>
+      road &&
+      profileDrawing({
+        alignment: road,
+        decks: profileDeck ? [{ id: profileDeck.id, cut: profileDeck.longitudinal }] : [],
+        supports: profileDeck?.supports ?? [],
+        terrain: profileTerrain.flatMap((t) => t.runs),
+      }),
+    [road, profileDeck, profileTerrain],
+  );
 
   /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
   const sectionSupports = roadSupports
@@ -631,7 +671,13 @@ export function App() {
         }
         supports={roadSupports}
         onAddSupport={addSupportAt}
-        terrain={profileTerrain}
+        profile={{
+          drawing: profileView,
+          decks: roadDecks,
+          deckId: profileDeck?.id,
+          onDeck: setProfileDeckId,
+        }}
+        selectedId={selectedElement?.id}
         view3d={
           <Suspense fallback={<p className="panel-empty centered">{sk.viewer3d.loading}</p>}>
             <Viewer3D

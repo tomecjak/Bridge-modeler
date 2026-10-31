@@ -2,7 +2,7 @@ import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { vec2 } from '@bridge/geom';
 import { describe, expect, it } from 'vitest';
-import { crossSection, cutPolyline, profileAlong } from './section.ts';
+import { crossSection, cutPolyline, profileAlong, profileAlongLine } from './section.ts';
 import { createTin, type Tin } from './tin.ts';
 
 const plane = (x: number, y: number) => 250 + 0.02 * x - 0.035 * y;
@@ -114,6 +114,24 @@ describe('profileAlong / crossSection', () => {
       // os je nahradená tetivami ≤ 1 m (oblúk R 250) → poloha bodu na mm
       expect(p.z).toBeCloseTo(plane(q.x, q.y), 3);
     }
+  });
+
+  it('cuts along any line given with stations, e.g. a bridge axis offset 7 m to the right', () => {
+    const line = [0, 20, 40, 60].map((s) => {
+      const h = alignment.evaluateHorizontal(s);
+      return {
+        s,
+        point: vec2(h.point.x + 7 * Math.cos(h.azimuth), h.point.y - 7 * Math.sin(h.azimuth)),
+      };
+    });
+    const [run] = profileAlongLine(tin, line);
+    expect(run?.[0]?.s).toBeCloseTo(0, 9);
+    expect(run?.at(-1)?.s).toBeCloseTo(60, 9);
+    const end = line[3]?.point ?? vec2(0, 0);
+    expect(run?.at(-1)?.z).toBeCloseTo(plane(end.x, end.y), 9);
+    // staničenie bodov rastie spolu s polohou na čiare
+    const ss = (run ?? []).map((p) => p.s);
+    expect(ss).toEqual([...ss].sort((a, b) => a - b));
   });
 
   it('cuts across the axis at a station with offsets positive to the right', () => {

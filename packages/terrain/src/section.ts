@@ -117,24 +117,39 @@ export function profileAlong(
     for (let k = 0; k < n; k++) stations.push(a + ((b - a) * k) / n);
   }
   stations.push(sTo);
-  const line = stations.map((s) => alignment.evaluateHorizontal(s).point);
+  return profileAlongLine(
+    tin,
+    stations.map((s) => ({ s, point: alignment.evaluateHorizontal(s).point })),
+  );
+}
+
+/**
+ * Pozdĺžny profil terénu po polyline so staničením vo vrcholoch (napr. os mosta posunutá od osi cesty):
+ * staničenie bodu rezu sa interpoluje medzi vrcholmi.
+ */
+export function profileAlongLine(
+  tin: Tin,
+  line: readonly { s: number; point: Vec2 }[],
+): ProfilePoint[][] {
   const cum = [0];
   for (let i = 1; i < line.length; i++) {
-    const a = line[i - 1] as Vec2;
-    const b = line[i] as Vec2;
+    const a = (line[i - 1] as (typeof line)[number]).point;
+    const b = (line[i] as (typeof line)[number]).point;
     cum.push((cum[i - 1] as number) + Math.hypot(b.x - a.x, b.y - a.y));
   }
+  const station = (i: number) => (line[i] as (typeof line)[number]).s;
   const toS = (d: number) => {
     let i = 1;
     while (i < cum.length - 1 && (cum[i] as number) < d) i++;
     const c0 = cum[i - 1] as number;
     const c1 = cum[i] as number;
     const k = c1 > c0 ? (d - c0) / (c1 - c0) : 0;
-    return (
-      (stations[i - 1] as number) + k * ((stations[i] as number) - (stations[i - 1] as number))
-    );
+    return station(i - 1) + k * (station(i) - station(i - 1));
   };
-  return cutPolyline(tin, line).map((r) => r.map((p) => ({ s: toS(p.d), z: p.z })));
+  return cutPolyline(
+    tin,
+    line.map((p) => p.point),
+  ).map((r) => r.map((p) => ({ s: toS(p.d), z: p.z })));
 }
 
 export interface CrossPoint {
