@@ -50,6 +50,31 @@ describe('profileParameterValues', () => {
     expect(r.values.get('h')).toBeCloseTo(2.25, 15);
   });
 
+  it('takes an edge law from the resolver plus the allowance, with typed errors', () => {
+    const law = {
+      kind: 'edge' as const,
+      curve: { type: 'alignment' as const, name: '125_L' },
+      side: 'left' as const,
+      add: 'hv + sta / 1000',
+    };
+    const r = profileParameterValues(box, { b: law }, globals, 10, () => ({ ok: true, value: 3 }));
+    expect(r.issues).toEqual([]);
+    expect(r.values.get('b')).toBeCloseTo(3.1, 12);
+    expect(r.values.get('h')).toBeCloseTo(1.55, 12);
+    // nasledujúci parameter h = b / 2 hlási neznáme b — ako pri každom nevyhodnotiteľnom parametri
+    expect(profileParameterValues(box, { b: law }, globals, 10).issues[0]).toMatchObject({
+      code: 'EdgeCurveNotFound',
+      curve: '125_L',
+      parameter: 'b',
+    });
+    const unreached = profileParameterValues(box, { b: law }, globals, 10, () => ({
+      ok: false,
+      issue: { code: 'EdgeCurveNotReached', curve: '125_L', station: 10 },
+    }));
+    expect(unreached.values.has('b')).toBe(false);
+    expect(unreached.issues[0]).toMatchObject({ code: 'EdgeCurveNotReached', parameter: 'b' });
+  });
+
   it('reports laws for unknown parameters', () => {
     const r = profileParameterValues(box, { x: { kind: 'constant', value: '1' } }, globals, 0);
     expect(r.issues).toMatchObject([{ code: 'UnknownProfileParameter', name: 'x' }]);

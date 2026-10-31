@@ -32,6 +32,8 @@ export const MIGRATIONS: Readonly<
   },
   /** 4 → 5: terén (ADR 0011) */
   '4': { to: '5', migrate: (raw) => ({ ...raw, terrains: [] }) },
+  /** 5 → 6: čiary v pôdoryse a okraj NK podľa krivky (Fáza 8a) */
+  '5': { to: '6', migrate: (raw) => ({ ...raw, planLines: [] }) },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

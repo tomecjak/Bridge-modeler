@@ -67,6 +67,10 @@ export type ModelIssue = {
   | { code: 'UnknownBridgeAxis'; id: string }
   | { code: 'UnknownProfile'; id: string }
   | { code: 'UnknownProfileParameter'; name: string }
+  /** krivka okraja (os z LandXML alebo čiara v pôdoryse) v projekte nie je */
+  | { code: 'EdgeCurveNotFound'; curve: string }
+  /** kolmica na os mosta na danej strane krivku nepretne */
+  | { code: 'EdgeCurveNotReached'; curve: string; station: number }
   | { code: 'StationOutsideSuperstructure'; station: number; from: number; to: number }
   | { code: 'UnknownSuperstructure'; id: string }
   | { code: 'InvalidCrossingAngle'; angle: number }

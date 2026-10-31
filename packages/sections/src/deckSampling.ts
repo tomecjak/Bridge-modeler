@@ -54,10 +54,11 @@ export function sampleSuperstructure(
 
   const units = new Map(profile.parameters.map((p) => [p.name, p.unit]));
   const laws: LawRef[] = [
-    ...Object.entries(sup.parameterLaws).map(([name, law]) => ({
-      law,
-      unit: units.get(name) ?? 'none',
-    })),
+    ...Object.entries(sup.parameterLaws).map(([name, law]) =>
+      law.kind === 'edge'
+        ? { law: { kind: 'constant' as const, value: law.add }, unit: 'length' as const }
+        : { law, unit: units.get(name) ?? 'none' },
+    ),
     { law: axis.horizontalOffset, unit: 'length' },
     { law: axis.verticalOffset, unit: 'length' },
     ...(options.globalLaws ?? []),

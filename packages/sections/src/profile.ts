@@ -10,10 +10,11 @@ import {
   vec2,
 } from '@bridge/geom';
 import {
+  type EdgeLaw,
   evaluateLaw,
   type ModelIssue,
   type ProfileDefinition,
-  type StationFunction,
+  type ProfileLaw,
 } from '@bridge/model';
 
 /** Tolerancia geometrických kontrol prierezu [m]. */
@@ -37,15 +38,22 @@ export interface EvaluatedProfile {
   issues: ModelIssue[];
 }
 
+/** Vzdialenosť od osi mosta ku krivke okraja [m] (bez prídavku) alebo typovaná chyba. */
+export type EdgeResolver = (
+  law: EdgeLaw,
+) => { ok: true; value: number } | { ok: false; issue: ModelIssue };
+
 /**
  * Hodnoty parametrov profilu na zobrazovanom staničení `sta`: priebeh z NK, inak predvolený výraz profilu.
  * Parametre sa vyhodnocujú v poradí; môžu odkazovať na skoršie parametre profilu a na globálne parametre.
+ * Okraj podľa krivky (`edge`) vyhodnotí `edge` + prídavok; bez neho je krivka neznáma.
  */
 export function profileParameterValues(
   def: ProfileDefinition,
-  laws: Readonly<Record<string, StationFunction>>,
+  laws: Readonly<Record<string, ProfileLaw>>,
   globals: Scope,
   sta: number,
+  edge?: EdgeResolver,
 ): { values: Map<string, number>; issues: ModelIssue[] } {
   const values = new Map<string, number>();
   const issues: ModelIssue[] = [];
@@ -56,12 +64,29 @@ export function profileParameterValues(
   const scope: Scope = (n) => values.get(n) ?? globals(n);
   for (const p of def.parameters) {
     const law = laws[p.name] ?? { kind: 'constant', value: p.default };
+    if (law.kind === 'edge') {
+      const add = evaluateLaw({ kind: 'constant', value: law.add }, 'length', scope, sta);
+      const d = edge
+        ? edge(law)
+        : {
+            ok: false as const,
+            issue: { code: 'EdgeCurveNotFound' as const, curve: curveName(law) },
+          };
+      if (!add.ok) issues.push({ ...add.issue, parameter: p.name });
+      else if (!d.ok) issues.push({ ...d.issue, parameter: p.name });
+      else values.set(p.name, d.value + add.value);
+      continue;
+    }
     const r = evaluateLaw(law, p.unit, scope, sta);
     if (r.ok) values.set(p.name, r.value);
     else issues.push({ ...r.issue, parameter: p.name });
   }
   return { values, issues };
 }
+
+/** Názov krivky okraja do hlásení (názov osi alebo id čiary). */
+export const curveName = (law: EdgeLaw): string =>
+  law.curve.type === 'alignment' ? law.curve.name : law.curve.id;
 
 // výrazy bodov sa vyhodnocujú pri každom staničení → rozparsované AST sa držia v cache podľa textu
 const parsed = new Map<string, ReturnType<typeof parse>>();

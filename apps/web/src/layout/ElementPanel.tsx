@@ -4,7 +4,7 @@ import type {
   BridgeAxis,
   ParameterUnit,
   ProfileDefinition,
-  StationFunction,
+  ProfileLaw,
   Superstructure,
   Support,
   TerrainSurface,
@@ -460,7 +460,7 @@ function SuperstructureEditor({
   const profiles = useProject((s) => s.project.profiles);
   const profile = profiles.find((p) => p.id === sup.profile);
   const set = (changes: Partial<Superstructure>) => update('superstructures', sup.id, changes);
-  const setLaw = (name: string, law: StationFunction | undefined) => {
+  const setLaw = (name: string, law: ProfileLaw | undefined) => {
     const laws = { ...sup.parameterLaws };
     if (law) laws[name] = law;
     else delete laws[name];
@@ -554,7 +554,7 @@ function SuperstructureEditor({
               )}
             </div>
             {p.description && <p className="hint">{p.description}</p>}
-            {law && (
+            {law && law.kind !== 'edge' && (
               <StationFunctionEditor
                 law={law}
                 range={range}

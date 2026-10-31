@@ -86,6 +86,40 @@ export const ProfileDefinitionSchema = z.object({
 });
 export type ProfileDefinition = z.infer<typeof ProfileDefinitionSchema>;
 
+/** Čiara v pôdoryse (napr. okraj NK) v lokálnych súradniciach projektu [m], zaokrúhlená na mm. */
+export const PlanLineSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  points: z.array(z.object({ x: z.number(), y: z.number() })),
+});
+export type PlanLine = z.infer<typeof PlanLineSchema>;
+
+/** Krivka v pôdoryse: os cesty z LandXML (podľa názvu) alebo čiara v pôdoryse (podľa id). */
+export const CurveRefSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('alignment'), name: z.string() }),
+  z.object({ type: z.literal('planLine'), id: z.string() }),
+]);
+export type CurveRef = z.infer<typeof CurveRefSchema>;
+
+/**
+ * Okraj podľa krivky: vodorovná vzdialenosť od osi mosta ku krivke meraná kolmo na os mosta (v rovine prierezu),
+ * kladná na stranu `side`, plus prídavok `add` [m] (výraz, môže sa meniť so `sta`).
+ */
+export const EdgeLawSchema = z.object({
+  kind: z.literal('edge'),
+  curve: CurveRefSchema,
+  side: z.enum(['left', 'right']),
+  add: ExprSchema,
+});
+export type EdgeLaw = z.infer<typeof EdgeLawSchema>;
+
+/** Priebeh parametra profilu v NK: staničná funkcia alebo okraj podľa krivky. */
+export const ProfileLawSchema = z.discriminatedUnion('kind', [
+  ...StationFunctionSchema.options,
+  EdgeLawSchema,
+]);
+export type ProfileLaw = z.infer<typeof ProfileLawSchema>;
+
 /** Nosná konštrukcia: prierez vedený po osi mosta v rozsahu from–to (zobrazované staničenie). */
 export const SuperstructureSchema = z.object({
   id: z.string().min(1),
@@ -95,7 +129,7 @@ export const SuperstructureSchema = z.object({
   to: z.number(),
   profile: z.string(),
   /** priebehy parametrov profilu po staničení; chýbajúce = predvolená hodnota profilu */
-  parameterLaws: z.record(z.string(), StationFunctionSchema),
+  parameterLaws: z.record(z.string(), ProfileLawSchema),
   orientation: z.enum(['vertical', 'normalToGrade']),
 });
 export type Superstructure = z.infer<typeof SuperstructureSchema>;

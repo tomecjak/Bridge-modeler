@@ -133,6 +133,10 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}prierez neexistuje.`;
     case 'UnknownProfileParameter':
       return `${prefix}prierez nemá parameter „${issue.name}“.`;
+    case 'EdgeCurveNotFound':
+      return `${prefix}krivka okraja „${issue.curve}“ v projekte neexistuje.`;
+    case 'EdgeCurveNotReached':
+      return `${prefix}kolmica na os mosta na staničení ${formatStation(issue.station)} nepretína krivku okraja „${issue.curve}“.`;
     case 'StationOutsideSuperstructure':
       return `${prefix}staničenie ${formatStation(issue.station)} je mimo NK (${formatStation(issue.from)} – ${formatStation(issue.to)}).`;
     case 'UnknownSuperstructure':

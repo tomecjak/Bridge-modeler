@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "5"
+      "const": "6"
     },
     "name": {
       "type": "string"
@@ -977,6 +977,70 @@
                     "expr"
                   ],
                   "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "edge"
+                    },
+                    "curve": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "alignment"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "planLine"
+                            },
+                            "id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "side": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right"
+                      ]
+                    },
+                    "add": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "curve",
+                    "side",
+                    "add"
+                  ],
+                  "additionalProperties": false
                 }
               ]
             }
@@ -1383,6 +1447,46 @@
         ],
         "additionalProperties": false
       }
+    },
+    "planLines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "x",
+                "y"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "points"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -1395,9 +1499,10 @@
     "profiles",
     "superstructures",
     "supports",
-    "terrains"
+    "terrains",
+    "planLines"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-5.json",
-  "title": "Projekt modelára mostov (schemaVersion 5)"
+  "$id": "https://bridge-modeler.local/schema/project-6.json",
+  "title": "Projekt modelára mostov (schemaVersion 6)"
 }

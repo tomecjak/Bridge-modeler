@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   BridgeAxisSchema,
   ParameterSchema,
+  PlanLineSchema,
   ProfileDefinitionSchema,
   SuperstructureSchema,
   SupportSchema,
@@ -9,7 +10,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '5';
+export const SCHEMA_VERSION = '6';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -82,6 +83,7 @@ export const ProjectFileSchema = z.strictObject({
   superstructures: z.array(SuperstructureSchema),
   supports: z.array(SupportSchema),
   terrains: z.array(TerrainSurfaceSchema),
+  planLines: z.array(PlanLineSchema),
 });
 
 export type ProjectFile = z.infer<typeof ProjectFileSchema>;
@@ -98,5 +100,6 @@ export function createEmptyProject(name: string): ProjectFile {
     superstructures: [],
     supports: [],
     terrains: [],
+    planLines: [],
   };
 }
