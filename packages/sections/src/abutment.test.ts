@@ -23,6 +23,7 @@ const ctx: SupportContext = {
   parameters: buildParameterSet([]),
   bridgeAxes: example.bridgeAxes,
   profiles: [example.profile],
+  planLines: [],
   superstructures: example.superstructures as Superstructure[],
 };
 

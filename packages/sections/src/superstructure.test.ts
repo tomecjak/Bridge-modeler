@@ -40,6 +40,7 @@ const ctx: SectionContext = {
     },
   ],
   profiles: [profile],
+  planLines: [],
 };
 
 const sup = (orientation: Superstructure['orientation']): Superstructure => ({

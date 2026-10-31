@@ -1,5 +1,6 @@
 import type { Alignment } from '@bridge/alignment';
 import type { BridgeAxis, IssueOwner, ModelIssue, Superstructure } from '@bridge/model';
+import { edgeBreaks } from './edge.ts';
 import { DEFAULT_SAMPLING, type LawRef, type SamplingOptions, sampleStations } from './sampling.ts';
 import {
   evaluateSuperstructure,
@@ -72,7 +73,12 @@ export function sampleSuperstructure(
       ),
     ),
   );
-  const breaks = supports.flatMap((r) => [r.s, ...r.bearings.map((b) => b.s)]);
+  const breaks = [
+    ...supports.flatMap((r) => [r.s, ...r.bearings.map((b) => b.s)]),
+    ...Object.values(sup.parameterLaws).flatMap((law) =>
+      law.kind === 'edge' ? edgeBreaks(ctx, law.curve, alignment) : [],
+    ),
+  ];
   const stations = sampleStations(
     {
       alignment,

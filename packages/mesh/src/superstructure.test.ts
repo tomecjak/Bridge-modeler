@@ -35,6 +35,7 @@ const ctx: SectionContext = {
   parameters: buildParameterSet([]),
   bridgeAxes: example.bridgeAxes,
   profiles: [example.profile],
+  planLines: [],
 };
 const deck = (id: string, changes: Partial<Superstructure> = {}): Superstructure => ({
   ...(example.superstructures.find((s) => s.id === id) as Superstructure),

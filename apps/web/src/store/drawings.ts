@@ -15,13 +15,13 @@ export function useDeckDrawings(
   supports: readonly SupportResult[],
 ): DeckDrawingData[] {
   const project = useProject((s) => s.project);
-  const { bridgeAxes, profiles, superstructures } = project;
+  const { bridgeAxes, profiles, superstructures, planLines } = project;
   const globals = project.parameters;
   return useMemo(() => {
-    const ctx = { alignments, parameters, bridgeAxes, profiles };
+    const ctx = { alignments, parameters, bridgeAxes, profiles, planLines };
     const globalLaws = globals.map((p) => ({ law: p.law, unit: p.unit }));
     return superstructures.flatMap(
       (sup) => deckDrawingData(ctx, sup, supports, { globalLaws }) ?? [],
     );
-  }, [alignments, parameters, bridgeAxes, profiles, superstructures, supports, globals]);
+  }, [alignments, parameters, bridgeAxes, profiles, planLines, superstructures, supports, globals]);
 }

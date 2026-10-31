@@ -23,6 +23,7 @@ function context(
     parameters: buildParameterSet([]),
     bridgeAxes: example.bridgeAxes,
     profiles: [example.profile],
+    planLines: [],
     superstructures: [{ ...(example.superstructures[0] as Superstructure), parameterLaws: laws }],
   };
 }

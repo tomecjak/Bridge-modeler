@@ -1,6 +1,12 @@
 import { type Alignment, createAlignment } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
-import { buildParameterSet, type ModelIssue, type ProjectFile } from '@bridge/model';
+import {
+  buildParameterSet,
+  type CurveRef,
+  type ModelIssue,
+  type ProjectFile,
+  type Superstructure,
+} from '@bridge/model';
 import {
   evaluateSupport,
   type LawRef,
@@ -65,18 +71,24 @@ export function buildScene(
         bridgeAxes: project.bridgeAxes,
         profiles: project.profiles,
         superstructures: project.superstructures,
+        planLines: project.planLines,
       }),
     );
     const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
     const params = JSON.stringify(project.parameters);
-    const base = (bridgeAxis: string | undefined, profile: string | undefined) => {
-      const axis = project.bridgeAxes.find((a) => a.id === bridgeAxis);
+    const base = (sup: Superstructure | undefined) => {
+      const axis = project.bridgeAxes.find((a) => a.id === sup?.bridgeAxis);
+      // krivky okrajov NK (osi z LandXML, čiary v pôdoryse), na ktoré sa odkazujú priebehy parametrov
+      const curves = Object.values(sup?.parameterLaws ?? {}).flatMap((law) =>
+        law.kind === 'edge' ? [curveData(project, law.curve)] : [],
+      );
       return [
         origin,
         params,
         axis,
         project.alignments.find((a) => a.name === axis?.alignment),
-        project.profiles.find((p) => p.id === profile),
+        project.profiles.find((p) => p.id === sup?.profile),
+        curves,
       ];
     };
 
@@ -101,7 +113,7 @@ export function buildScene(
       const deckInputs = project.supports.some((s) => s.superstructure === sup.id)
         ? own().map((r) => [r.support.kind, r.s, r.crossingAngle, r.bearings.map((b) => b.s)])
         : [];
-      const key = JSON.stringify([sup, ...base(sup.bridgeAxis, sup.profile), deckInputs]);
+      const key = JSON.stringify([sup, ...base(sup), deckInputs]);
       reuse('superstructure', sup.id, key, () => {
         const r = superstructureMesh(kernel, {
           ctx: ctx(),
@@ -120,7 +132,7 @@ export function buildScene(
     }
     project.supports.forEach((support, i) => {
       const sup = project.superstructures.find((s) => s.id === support.superstructure);
-      const key = JSON.stringify([support, sup, ...base(sup?.bridgeAxis, sup?.profile)]);
+      const key = JSON.stringify([support, sup, ...base(sup)]);
       reuse('support', support.id, key, () => {
         const r = results()[i] as SupportResult;
         return {
@@ -171,4 +183,11 @@ export function toRenderBuffers(mesh: TriangleMesh): RenderBuffers {
     positions[i + 2] = (p[i + 2] as number) - center.z;
   }
   return { center, positions, normals: mesh.normals.slice(), indices: mesh.indices.slice() };
+}
+
+/** Dáta krivky okraja NK (os z LandXML alebo čiara v pôdoryse) do kľúča cache. */
+function curveData(project: ProjectFile, ref: CurveRef) {
+  return ref.type === 'alignment'
+    ? project.alignments.find((a) => a.name === ref.name)
+    : project.planLines.find((l) => l.id === ref.id);
 }

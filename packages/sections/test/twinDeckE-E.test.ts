@@ -30,6 +30,7 @@ const ctx: SectionContext = {
   parameters: buildParameterSet([]),
   bridgeAxes: example.bridgeAxes,
   profiles: [example.profile],
+  planLines: [],
 };
 const deck = (id: string) => example.superstructures.find((s) => s.id === id) as Superstructure;
 

@@ -25,9 +25,9 @@ export function useSupportState(
   parameters: ParameterSet,
 ): SupportState {
   const project = useProject((s) => s.project);
-  const { bridgeAxes, profiles, superstructures, supports } = project;
+  const { bridgeAxes, profiles, superstructures, supports, planLines } = project;
   return useMemo(() => {
-    const ctx = { alignments, parameters, bridgeAxes, profiles, superstructures };
+    const ctx = { alignments, parameters, bridgeAxes, profiles, superstructures, planLines };
     const results = supports.map((s) => evaluateSupport(ctx, s));
     const spans = new Map<string, DeckSpans>();
     for (const sup of superstructures) {
@@ -49,7 +49,7 @@ export function useSupportState(
       spans.set(sup.id, result);
     }
     return { supports: results, spans };
-  }, [alignments, parameters, bridgeAxes, profiles, superstructures, supports]);
+  }, [alignments, parameters, bridgeAxes, profiles, superstructures, supports, planLines]);
 }
 
 /**

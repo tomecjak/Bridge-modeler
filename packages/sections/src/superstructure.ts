@@ -7,10 +7,13 @@ import {
   type IssueOwner,
   type ModelIssue,
   type ParameterSet,
+  type PlanLine,
   type ProfileDefinition,
   type Superstructure,
 } from '@bridge/model';
+import { edgeDistance } from './edge.ts';
 import {
+  type EdgeResolver,
   type EvaluatedLoop,
   evaluateProfileDefinition,
   profileParameterValues,
@@ -22,6 +25,8 @@ export interface SectionContext {
   parameters: ParameterSet;
   bridgeAxes: readonly BridgeAxis[];
   profiles: readonly ProfileDefinition[];
+  /** čiary v pôdoryse (okraje NK podľa krivky) */
+  planLines: readonly PlanLine[];
 }
 
 export interface BridgeAxisPoint {
@@ -150,11 +155,28 @@ export function evaluateSuperstructure(
   }
 
   const scope = globalScope(ctx.parameters, station);
-  const params = profileParameterValues(profile, sup.parameterLaws, scope, station);
-  const evaluated = evaluateProfileDefinition(profile, params.values, scope, station);
   const axisPoint = evaluateBridgeAxis(axis, alignment, scope, s);
+  // okraj podľa krivky sa meria od osi mosta po jej vodorovnej normále (rovina prierezu)
+  const edge: EdgeResolver | undefined = axisPoint.ok
+    ? (law) => {
+        const { point, frame } = axisPoint.value;
+        return edgeDistance(
+          ctx,
+          law.curve,
+          vec2(point.x, point.y),
+          vec2(frame.normal.x, frame.normal.y),
+          law.side,
+          station,
+        );
+      }
+    : undefined;
+  const params = profileParameterValues(profile, sup.parameterLaws, scope, station, edge);
+  const evaluated = evaluateProfileDefinition(profile, params.values, scope, station);
   const issues: ModelIssue[] = [
-    ...params.issues.map((i) => ({ owner, ...i })),
+    ...params.issues
+      // bez osi mosta sa okraj nedá zmerať; chybu osi hlási os sama
+      .filter((i) => axisPoint.ok || i.code !== 'EdgeCurveNotFound')
+      .map((i) => ({ owner, ...i })),
     ...evaluated.issues.map((i) => ({
       owner: { kind: 'profile' as const, name: profile.name },
       ...i,

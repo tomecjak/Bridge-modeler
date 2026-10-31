@@ -269,6 +269,7 @@ export function App() {
         parameters: parameterState.set,
         bridgeAxes: project.bridgeAxes,
         profiles: project.profiles,
+        planLines: project.planLines,
       },
       deck,
       s,

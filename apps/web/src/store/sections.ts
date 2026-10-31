@@ -25,9 +25,10 @@ export function useSectionResults(
   const bridgeAxes = useProject((s) => s.project.bridgeAxes);
   const profiles = useProject((s) => s.project.profiles);
   const superstructures = useProject((s) => s.project.superstructures);
+  const planLines = useProject((s) => s.project.planLines);
   return useMemo(() => {
     const start = performance.now();
-    const ctx: SectionContext = { alignments, parameters, bridgeAxes, profiles };
+    const ctx: SectionContext = { alignments, parameters, bridgeAxes, profiles, planLines };
     const results = superstructures.map((sup): SectionResult => {
       const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
       const road = axis ? alignments.get(axis.alignment) : undefined;
@@ -54,5 +55,5 @@ export function useSectionResults(
       };
     });
     return { results, elapsed: performance.now() - start };
-  }, [alignments, parameters, bridgeAxes, profiles, superstructures, station]);
+  }, [alignments, parameters, bridgeAxes, profiles, planLines, superstructures, station]);
 }

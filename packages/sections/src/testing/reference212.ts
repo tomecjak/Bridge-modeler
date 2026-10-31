@@ -121,6 +121,7 @@ export function evaluateReference212() {
     parameters: buildParameterSet([]),
     bridgeAxes: p.bridgeAxes,
     profiles: p.profiles,
+    planLines: p.planLines,
     superstructures: p.superstructures,
   };
   const results = p.supports.map((s) => evaluateSupport(ctx, s));
