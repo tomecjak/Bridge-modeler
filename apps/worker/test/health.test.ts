@@ -7,10 +7,10 @@ const env = {
 
 describe('worker routing', () => {
   it('answers the health check and unknown API paths as JSON', async () => {
-    const ok = await handleApi(new Request('https://x/api/health'), env);
+    const ok = await handleApi(new Request('https://x/api/health'), env, 'local@dev');
     expect(ok.status).toBe(200);
     expect(await ok.json()).toEqual({ ok: true });
-    const missing = await handleApi(new Request('https://x/api/nic'), env);
+    const missing = await handleApi(new Request('https://x/api/nic'), env, 'local@dev');
     expect(missing.status).toBe(404);
     expect(await missing.json()).toMatchObject({ code: 'NotFound' });
   });
