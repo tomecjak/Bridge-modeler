@@ -261,13 +261,12 @@ importers:
       '@bridge/geom':
         specifier: workspace:*
         version: link:../geom
-      '@bridge/sections':
-        specifier: workspace:*
-        version: link:../sections
-    devDependencies:
       '@bridge/model':
         specifier: workspace:*
         version: link:../model
+      '@bridge/sections':
+        specifier: workspace:*
+        version: link:../sections
 
   packages/expr: {}
 
@@ -341,9 +340,15 @@ importers:
 
   tools:
     dependencies:
+      '@bridge/drawing':
+        specifier: workspace:*
+        version: link:../packages/drawing
       '@bridge/model':
         specifier: workspace:*
         version: link:../packages/model
+      '@bridge/sections':
+        specifier: workspace:*
+        version: link:../packages/sections
       zod:
         specifier: 4.6.7
         version: 4.6.7

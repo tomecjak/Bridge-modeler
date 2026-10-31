@@ -1,16 +1,7 @@
 import type { Vec2 } from '@bridge/geom';
-import type { BridgeAxis } from '@bridge/model';
-import {
-  bridgeAxisPlan,
-  cutAlongAxis,
-  type DeckSamples,
-  deckLongitudinal,
-  deckOutline,
-  sampleSuperstructure,
-  supportParts,
-} from '@bridge/sections';
 import { evaluateReference212 } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
+import { type DeckDrawingData, deckDrawingData } from './deck.ts';
 import { type Drawing, type Entity, type TextEntity, textHeight, translate } from './model.ts';
 import { planDrawing } from './plan.ts';
 import { profileDrawing } from './profile.ts';
@@ -18,14 +9,23 @@ import { sectionDrawing } from './section.ts';
 import { readableText } from './text.ts';
 
 const ref = evaluateReference212();
-const samples = sampleSuperstructure(ref.ctx, ref.deck, ref.results) as DeckSamples;
-const axis = bridgeAxisPlan(
-  ref.p.bridgeAxes[0] as BridgeAxis,
-  ref.alignment,
-  ref.ctx.parameters,
-  ref.sFrom - 15,
-  ref.sTo + 15,
-);
+const data = deckDrawingData(ref.ctx, ref.deck, ref.results) as DeckDrawingData;
+
+describe('deckDrawingData', () => {
+  it('collects the outline, the bridge axis over the deck and cuts of all its supports', () => {
+    expect(data.road).toBe(ref.alignment.name);
+    expect(data.axis[0]?.s).toBeCloseTo(ref.sFrom, 9);
+    expect(data.axis.at(-1)?.s).toBeCloseTo(ref.sTo, 9);
+    expect(data.outline.polygon.length).toBeGreaterThan(4);
+    expect(data.longitudinal.outer).toHaveLength(1);
+    expect(data.supports.map((s) => [s.name, s.cut.length > 0])).toEqual([
+      ['1', true],
+      ['2', true],
+      ['3', true],
+      ['4', true],
+    ]);
+  });
+});
 
 const on = (d: Drawing, layer: Entity['layer']) => d.entities.filter((e) => e.layer === layer);
 const texts = (d: Drawing) => d.entities.filter((e): e is TextEntity => e.kind === 'text');
@@ -33,7 +33,7 @@ const texts = (d: Drawing) => d.entities.filter((e): e is TextEntity => e.kind =
 describe('planDrawing', () => {
   const plan = planDrawing({
     alignment: ref.alignment,
-    decks: [{ id: 'nk', outline: deckOutline(samples), axis }],
+    decks: [data],
     supports: ref.results,
     stationing: { step: 20, labelStep: 100 },
   });
@@ -79,13 +79,8 @@ describe('planDrawing', () => {
 describe('profileDrawing', () => {
   const profile = profileDrawing({
     alignment: ref.alignment,
-    decks: [{ id: 'nk', cut: deckLongitudinal(samples) }],
-    supports: ref.results.map((r) => ({
-      id: r.support.id,
-      name: r.support.name,
-      station: r.station,
-      cut: cutAlongAxis(supportParts(r), axis),
-    })),
+    decks: [{ id: data.id, cut: data.longitudinal }],
+    supports: data.supports,
     terrain: [
       [
         { s: 40, z: 310 },

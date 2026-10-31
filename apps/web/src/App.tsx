@@ -1,11 +1,11 @@
 import type { AlignmentIssue } from '@bridge/alignment';
+import { projectSupport } from '@bridge/drawing';
 import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
   evaluateSuperstructure,
   globalScope,
   singleBeamHaunched,
   singleDeckExample,
-  supportElevation,
   twinDeckExample,
 } from '@bridge/sections';
 import { type CorridorOptions, corridorAround, deckRanges } from '@bridge/terrain';
@@ -155,22 +155,7 @@ export function App() {
   /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
   const sectionSupports = roadSupports
     .filter((r) => Math.abs(r.support.station - sectionAt) <= 0.5 && r.axis)
-    .flatMap((r) => {
-      const el = supportElevation(r);
-      if (!el || !r.axis) return [];
-      const dx = r.axis.horizontalOffset;
-      const z0 = item?.alignment.origin.z ?? 0;
-      const move = (poly: readonly { x: number; y: number }[]) =>
-        poly.map((p) => ({ x: p.x + dx, y: p.y + z0 }));
-      return [
-        {
-          id: r.support.id,
-          name: r.support.name,
-          body: el.body.map(move),
-          footing: el.footing && move(el.footing),
-        },
-      ];
-    });
+    .flatMap((r) => projectSupport(r, item?.alignment.origin.z ?? 0) ?? []);
 
   /** Klik v pôdoryse: podpera pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie ku kliknutiu. */
   function addSupportAt(s: number, offset: number) {

@@ -1,4 +1,5 @@
 import type { Alignment } from '@bridge/alignment';
+import { type DrawnSection, projectSection } from '@bridge/drawing';
 import type { ModelIssue, ParameterSet, Superstructure } from '@bridge/model';
 import {
   evaluateSuperstructure,
@@ -6,7 +7,6 @@ import {
   type SuperstructureSection,
 } from '@bridge/sections';
 import { useMemo } from 'react';
-import { type DrawnSection, projectSection } from '../views/sectionGeometry.ts';
 import { useProject } from './projectStore.ts';
 
 export interface SectionResult {

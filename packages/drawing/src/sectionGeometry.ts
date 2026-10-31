@@ -1,6 +1,11 @@
 import type { Alignment } from '@bridge/alignment';
-import type { Vec2 } from '@bridge/geom';
-import { lowestCrossing, type SuperstructureSection } from '@bridge/sections';
+import type { Polygon2D, Vec2 } from '@bridge/geom';
+import {
+  lowestCrossing,
+  type SuperstructureSection,
+  type SupportResult,
+  supportElevation,
+} from '@bridge/sections';
 
 export interface DrawnSection {
   id: string;
@@ -55,5 +60,22 @@ export function projectSection(
     left: Math.min(...xs),
     right: Math.max(...xs),
     top: Math.max(...outer.map((p) => p.y)),
+  };
+}
+
+/** Pohľad na podperu v rovine priečneho rezu: X od osi cesty, Y v m n. m.; `undefined`, ak nie je vyhodnotená. */
+export function projectSupport(
+  r: SupportResult,
+  z0: number,
+): { id: string; name: string; body: Polygon2D[]; footing: Polygon2D | undefined } | undefined {
+  const el = supportElevation(r);
+  if (!el || !r.axis) return undefined;
+  const dx = r.axis.horizontalOffset;
+  const move = (poly: Polygon2D) => poly.map((p) => ({ x: p.x + dx, y: p.y + z0 }));
+  return {
+    id: r.support.id,
+    name: r.support.name,
+    body: el.body.map(move),
+    footing: el.footing && move(el.footing),
   };
 }

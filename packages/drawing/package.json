@@ -13,9 +13,7 @@
   "dependencies": {
     "@bridge/alignment": "workspace:*",
     "@bridge/geom": "workspace:*",
+    "@bridge/model": "workspace:*",
     "@bridge/sections": "workspace:*"
-  },
-  "devDependencies": {
-    "@bridge/model": "workspace:*"
   }
 }

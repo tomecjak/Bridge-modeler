@@ -1,9 +1,9 @@
+import type { DrawnSection } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
 import { useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { StationControl } from './StationControl.tsx';
-import type { DrawnSection } from './sectionGeometry.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { boundsOf, fitView, worldToScreen } from './viewTransform.ts';
