@@ -251,6 +251,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
   - ADR 0011: v projekte (schéma v5), orezaný na koridor, zaokrúhlený na mm, stabilné poradie.
 - [x] viewer: terén ako polopriehľadná sieť, zapínanie/vypínanie
   - prepínač „Terén“, sieť relatívne k stredu, reže ju aj rezová rovina; worker 3D terén nedostáva.
+  - 2026-10-31: stiahnutý DMR pokrýva obdĺžnik E/N okolo mosta (okraj 50 m); na teréne podklad ortofotomapa alebo mapa ZBGIS (WMS, ako Mini-IFC-tools), voľba „Podklad“ v 3D s atribúciou.
 - [ ] golden test: výška v kontrolných bodoch voči Civil 3D ≤ 1 mm
   - `packages/terrain/src/golden.test.ts` ako `it.todo` — treba LandXML povrchu, výkaz profilu terénu po osi a vzorku DMR 5.0 (2026-10-31).
 
