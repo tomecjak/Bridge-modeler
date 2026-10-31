@@ -94,6 +94,14 @@ const PATHS = {
       <path d="M12 11v6M12 7.5v.5" />
     </>
   ),
+  axis: <path d="M2 12h4M9 12h2M14 12h4M21 12h1" />,
+  abutment: (
+    <>
+      <path d="M3 5h9v4h-3v9H3z" />
+      <path d="M12 9h9M2 21h12" />
+    </>
+  ),
+  folder: <path d="M3 6h6l2 2h10v11H3z" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,
   chevronRight: <path d="m9 6 6 6-6 6" />,

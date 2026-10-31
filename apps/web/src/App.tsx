@@ -46,7 +46,7 @@ import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
 import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
-import { ProjectTree } from './layout/ProjectTree.tsx';
+import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { AppMenu, type MenuSection } from './layout/ribbon/AppMenu.tsx';
 import { ribbonTabs, type View3dState } from './layout/ribbon/appRibbon.tsx';
@@ -55,10 +55,11 @@ import { TitleBar } from './layout/ribbon/TitleBar.tsx';
 import { SectionPanel } from './layout/SectionPanel.tsx';
 import { StudyAreaPanel } from './layout/StudyAreaPanel.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
-import { type ViewMode, Viewport } from './layout/Viewport.tsx';
+import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
 import { drawingFileName } from './persistence/fileName.ts';
+import { type BrowserTarget, browserTree } from './store/browserTree.ts';
 import type { ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
@@ -515,6 +516,155 @@ export function App() {
     setSelectedElement(undefined);
   }
 
+  /** Strom prehliadača projektu z projektu a výsledkov výpočtu (ADR 0016). */
+  const browser = useMemo(() => {
+    const elementIssues = new Map<string, number>();
+    for (const r of sections.results)
+      elementIssues.set(
+        r.superstructure.id,
+        r.issues.filter((i) => i.severity !== 'warning').length,
+      );
+    for (const r of supportState.supports)
+      elementIssues.set(r.support.id, r.issues.filter((i) => i.severity !== 'warning').length);
+    const spans = new Map(
+      [...supportState.spans].map(([id, s]) => [id, s.spans.map((x) => x.length)] as const),
+    );
+    return browserTree({
+      project,
+      issues: {
+        alignment: (name) =>
+          lastImport.issues.filter((i) => i.alignment === name).length +
+          (alignments.find((a) => a.data.name === name)?.issues.length ?? 0),
+        element: (id) => elementIssues.get(id) ?? 0,
+        parameter: (name) => issuesOf(parameterState.issues, name).length,
+      },
+      spans,
+      views: VIEW_TABS,
+    });
+  }, [
+    project,
+    sections.results,
+    supportState,
+    lastImport.issues,
+    alignments,
+    parameterState.issues,
+  ]);
+
+  const browserSelection: BrowserTarget | undefined = selectedElement
+    ? { type: 'element', ...selectedElement }
+    : sidePanel === 'studyArea'
+      ? { type: 'studyArea' }
+      : mode === 'parameters' && selectedParameterId
+        ? { type: 'parameter', id: selectedParameterId }
+        : alignments.length > 0
+          ? { type: 'alignment', index: selected }
+          : undefined;
+
+  /** Klik v prehliadači: výber (vlastnosti vpravo); pohľad sa nemení, okrem pohľadov a parametrov. */
+  function selectTarget(target: BrowserTarget) {
+    switch (target.type) {
+      case 'view':
+        setMode(target.mode);
+        return;
+      case 'alignment':
+        setSelected(target.index);
+        setSelectedElement(undefined);
+        setSidePanel(undefined);
+        return;
+      case 'element': {
+        setSelectedElement({ collection: target.collection, id: target.id });
+        const support = project.supports.find((x) => x.id === target.id);
+        if (support) setSectionStation(support.station);
+        return;
+      }
+      case 'studyArea':
+        setSelectedElement(undefined);
+        setSidePanel('studyArea');
+        return;
+      case 'parameter':
+        setSelectedElement(undefined);
+        setSidePanel(undefined);
+        setSelectedParameterId(target.id);
+        setMode('parameters');
+        return;
+    }
+  }
+
+  /** Staničenie prvku na priblíženie (podpera, stred NK). */
+  function targetStation(target: BrowserTarget): number | undefined {
+    if (target.type !== 'element') return undefined;
+    const support = project.supports.find((x) => x.id === target.id);
+    if (support) return support.station;
+    const deck = project.superstructures.find((x) => x.id === target.id);
+    return deck ? (deck.from + deck.to) / 2 : undefined;
+  }
+
+  /** Dvojklik v prehliadači: prvok sa ukáže v pohľade, kde sa s ním pracuje. */
+  function openTarget(target: BrowserTarget) {
+    selectTarget(target);
+    if (target.type === 'view' || target.type === 'parameter') return;
+    if (target.type === 'alignment') {
+      setMode('2d');
+      setFitRequest((f) => ({ whole: true, nonce: f.nonce + 1 }));
+      return;
+    }
+    if (target.type === 'studyArea') {
+      setMode('2d');
+      setFitRequest((f) => ({ whole: false, nonce: f.nonce + 1 }));
+      return;
+    }
+    switch (target.collection) {
+      case 'profiles':
+        setMode('section');
+        return;
+      case 'terrains':
+        setMode('3d');
+        return;
+      case 'planLines':
+      case 'bridgeAxes':
+        setMode('2d');
+        return;
+    }
+    const station = targetStation(target);
+    if (station === undefined) return;
+    if (mode === 'section') {
+      setSectionStation(station);
+      return;
+    }
+    if (mode === '3d') {
+      // 3D prispôsobí pohľad na vybraný prvok
+      setFitRequest((f) => ({ whole: false, nonce: f.nonce + 1 }));
+      return;
+    }
+    const s = road?.stationing.fromDisplay(station);
+    setMode('2d');
+    if (s !== undefined) setGoTo((g) => ({ s, nonce: (g?.nonce ?? 0) + 1 }));
+  }
+
+  function renameTarget(target: BrowserTarget, name: string) {
+    const { dispatch } = projectStore.getState();
+    if (target.type === 'element')
+      dispatch({
+        type: 'updateElement',
+        collection: target.collection,
+        id: target.id,
+        changes: { name },
+      });
+    else if (target.type === 'parameter')
+      dispatch({ type: 'renameParameter', id: target.id, name });
+  }
+
+  function deleteTarget(target: BrowserTarget) {
+    const { dispatch } = projectStore.getState();
+    if (target.type === 'element') {
+      dispatch({ type: 'removeElement', collection: target.collection, id: target.id });
+      if (selectedElement?.id === target.id) setSelectedElement(undefined);
+    } else if (target.type === 'parameter') {
+      dispatch({ type: 'removeParameter', id: target.id });
+      if (selectedParameterId === target.id) setSelectedParameterId(undefined);
+    }
+  }
+
   const menuText = sk.ribbon.menu;
   const menuSections: MenuSection[] = [
     {
@@ -919,88 +1069,16 @@ export function App() {
         }}
       />
       <aside className="panel panel-left" aria-label={sk.projectTree.title}>
-        <ProjectTree
+        <ProjectBrowser
           projectName={project.name}
-          alignments={alignments}
-          issueCount={(name) =>
-            importIssuesOf(name).length +
-            (alignments.find((a) => a.data.name === name)?.issues.length ?? 0)
-          }
-          parameters={project.parameters.map((p) => ({
-            id: p.id,
-            name: p.name,
-            issues: issuesOf(parameterState.issues, p.name).length,
-          }))}
-          selectedParameterId={mode === 'parameters' ? selectedParameterId : undefined}
-          onSelectParameter={(id) => {
-            setSelectedParameterId(id);
-            setMode('parameters');
-            setSidePanel(undefined);
-          }}
-          fileIssues={lastImport.fileIssues}
-          elements={[
-            {
-              collection: 'bridgeAxes',
-              title: sk.tree.bridgeAxes,
-              items: project.bridgeAxes.map((a) => ({ id: a.id, name: a.name, issues: 0 })),
-            },
-            {
-              collection: 'profiles',
-              title: sk.tree.profiles,
-              items: project.profiles.map((p) => ({ id: p.id, name: p.name, issues: 0 })),
-            },
-            {
-              collection: 'superstructures',
-              title: sk.tree.superstructures,
-              items: sections.results.map((r) => ({
-                id: r.superstructure.id,
-                name: r.superstructure.name,
-                issues: r.issues.filter((i) => i.severity !== 'warning').length,
-              })),
-            },
-            {
-              collection: 'supports',
-              title: sk.tree.supports,
-              items: supportState.supports.map((r) => ({
-                id: r.support.id,
-                name: r.support.name,
-                issues: r.issues.filter((i) => i.severity !== 'warning').length,
-              })),
-            },
-            {
-              collection: 'terrains',
-              title: sk.tree.terrains,
-              items: project.terrains.map((t) => ({ id: t.id, name: t.name, issues: 0 })),
-            },
-            {
-              collection: 'planLines',
-              title: sk.tree.planLines,
-              items: project.planLines.map((l) => ({ id: l.id, name: l.name, issues: 0 })),
-            },
-          ]}
-          selectedElement={selectedElement}
-          onSelectElement={(collection, id) => {
-            setSelectedElement({ collection, id });
-            const support = project.supports.find((x) => x.id === id);
-            if (support) setSectionStation(support.station);
-            // 3D ukazuje NK aj podpery; inak podpery v pôdoryse a profile, ostatné prvky v priereze
-            if (collection === 'terrains') return;
-            // čiary sa upravujú v pôdoryse
-            if (collection === 'planLines') {
-              setMode('2d');
-              return;
-            }
-            if (mode === '3d' && (collection === 'supports' || collection === 'superstructures'))
-              return;
-            if (collection !== 'supports') setMode('section');
-            else if (mode !== '2d' && mode !== 'section') setMode('2d');
-          }}
+          tree={browser}
+          selected={browserSelection}
+          onSelect={selectTarget}
+          onOpen={openTarget}
+          onRename={renameTarget}
+          onDelete={deleteTarget}
           notices={openErrors}
-          selected={selected}
-          onSelect={(i) => {
-            setSelected(i);
-            setSelectedElement(undefined);
-          }}
+          fileIssues={lastImport.fileIssues}
         />
       </aside>
       <Viewport

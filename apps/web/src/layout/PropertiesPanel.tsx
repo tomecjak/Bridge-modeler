@@ -4,7 +4,7 @@ import type { Vec3 } from '@bridge/geom';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import type { EvaluatedAlignment } from '../store/derived.ts';
-import { IssueList } from './ProjectTree.tsx';
+import { IssueList } from './IssueList.tsx';
 
 interface Props {
   item: EvaluatedAlignment | undefined;

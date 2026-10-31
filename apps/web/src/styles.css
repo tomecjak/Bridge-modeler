@@ -650,7 +650,7 @@ input[aria-invalid="true"] {
 }
 
 .app:has(.panel-wide) {
-  grid-template-columns: 260px 1fr 420px;
+  grid-template-columns: 280px 1fr 420px;
 }
 
 .sf-editor {
@@ -1755,4 +1755,92 @@ text.dw-stationing {
 
 .view-bar .hint {
   margin: 0;
+}
+
+/* prehliadač projektu (10a2) */
+.browser-tree,
+.browser-tree ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.browser-row {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 4px;
+}
+
+.browser-row:hover {
+  background: var(--ribbon-hover);
+}
+
+.browser-row[data-selected] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.browser-chevron {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.browser-item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 4px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.browser-item .icon {
+  color: var(--muted);
+}
+
+.browser-label {
+  white-space: nowrap;
+}
+
+.browser-detail {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-item .badge {
+  margin-left: auto;
+}
+
+.browser-rename {
+  flex: 1;
+  min-width: 0;
+  margin: 1px 0;
+  font: inherit;
+}
+
+.browser-empty {
+  margin: 2px 8px 6px 34px;
+}
+
+.browser-menu {
+  position: fixed;
+  min-width: 200px;
+  border-radius: 4px;
 }
