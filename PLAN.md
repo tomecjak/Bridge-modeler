@@ -353,13 +353,18 @@ pred začatím rozpracuje v plan mode; otázky a odpovede sú v Otvorených otá
 nová verzia + migrácia + test (dnes v6). Poradie podfáz: 10a → 10g, 10i (rímsy), 10h.
 
 #### 10a — Zadanie, postup a oblasť mosta
-- [ ] panel „Postup“ v ľavom stĺpci: kroky 1–9 so stavom (hotové / upozornenie / chýba) z projektu a issues, tlačidlá do správneho pohľadu, krátka nápoveda; nie vynútený sprievodca, strom prvkov ostáva pod ním
-- [ ] krok „Zadanie“: stavba (názov, číslo), objekt (číslo a názov), kategória prevádzanej cesty → voľná šírka na moste (s ručnou úpravou pri rozšírení); návrh ďalších údajov v plan mode 10a; schéma v7
-- [ ] oblasť mosta v projekte (`studyArea`: os, od, do; schéma v7), zadanie ťahom v pozdĺžnom profile alebo staničeniami; riadi rozsah novej NK (namiesto 25 % nivelety) a koridor terénu bez NK (namiesto celej osi)
-- [ ] „Stiahnuť terén“ aj z pozdĺžneho profilu; „Prejsť na staničenie“ a priblíženie na oblasť v pôdoryse aj profile
-- [ ] vloženie NK výberom typológie s náhľadmi (z knižnice prierezov) namiesto dvoch pevných tlačidiel
+- [x] panel „Postup“ v ľavom stĺpci: kroky 1–9 so stavom (hotové / upozornenie / chýba) z projektu a issues, tlačidlá do správneho pohľadu, krátka nápoveda; nie vynútený sprievodca, strom prvkov ostáva pod ním
+  - `store/workflow.ts` (`workflowSteps`, test) a `layout/WorkflowPanel.tsx`; zatiaľ 6 krokov (Zadanie, Podklady, Oblasť mosta, Prierez NK, Polia a podpery, Výstupy) — Prekážky, Kontroly a Varianty pribudnú v 10f, 10g, 10h. Rozbalený krok má nápovedu a tlačidlá (import, stiahnutie DMR, vyznačenie oblasti, vloženie NK, pridanie podpery v pôdoryse, pohľady). Strom „Prvky projektu“ je zbaliteľný pod postupom.
+- [x] krok „Zadanie“: stavba (názov, číslo), objekt (číslo a názov), kategória prevádzanej cesty → voľná šírka na moste (s ručnou úpravou pri rozšírení); návrh ďalších údajov v plan mode 10a; schéma v7
+  - `brief` v projekte (schéma v7, migrácia 6 → 7): stavba, objekt, objednávateľ, zodpovedný projektant, vypracoval, druh mosta, prekážka, kategória, voľná šírka. Voľná šírka = ručná hodnota, inak b z označenia kategórie (`parseRoadCategory`, STN 73 6102; rozhodnutie 2026-10-31); v UI v mm s tlačidlom „Podľa kategórie“. Editor zadania vpravo (`layout/BriefPanel.tsx`) má aj názov projektu (súbor). Krok vyžaduje kategóriu cesty len pri cestnom moste alebo nezadanom druhu mosta.
+- [x] oblasť mosta v projekte (`studyArea`: os, od, do; schéma v7), zadanie ťahom v pozdĺžnom profile alebo staničeniami; riadi rozsah novej NK (namiesto 25 % nivelety) a koridor terénu bez NK (namiesto celej osi)
+  - nástroj „Oblasť mosta“ v profile (ťah, celé metre, Esc), šrafovaný pás s popismi, zvýraznený úsek osi v pôdoryse, panel od / do / dĺžka / zrušiť. Terén: `bridgeRanges` (NK → oblasť → celá os); bez NK a oblasti na osi dlhšej ako 2 km sa nesťahuje a postup otvorí krok Oblasť mosta. „Prispôsobiť“ priblíži na oblasť (inak NK), „Celá os“ ukáže celú os.
+- [x] „Stiahnuť terén“ aj z pozdĺžneho profilu; „Prejsť na staničenie“ a priblíženie na oblasť v pôdoryse aj profile
+  - „Prejsť na“ vycentruje profil aj pôdorys so zachovanou mierkou. Overené na reálnej službe ZBGIS: os 125-00, oblasť 200 m za 15 s; os SO 171-11-01 leží mimo pokrytia DMR 5.0 (typovaná hláška).
+- [x] vloženie NK výberom typológie s náhľadmi (z knižnice prierezov) namiesto dvoch pevných tlačidiel
+  - `layout/DeckInsertDialog.tsx`: šablóny, firemná knižnica a prierezy projektu (`useProfileSources`, spoločné s knižnicou), názov, od / do z oblasti, posun osi mosta; os, kópia prierezu a NK jedným krokom späť (`deckFromProfile`, test pre všetky šablóny). Príklad dvojice NK ostáva v dialógu.
 
-**Hotové, keď:** junior otvorí trasu dlhú 12 km, vyznačí oblasť, stiahne terén a vloží NK bez prepisovania staničení.
+**Hotové, keď:** junior otvorí trasu dlhú 12 km, vyznačí oblasť, stiahne terén a vloží NK bez prepisovania staničení. — *2026-10-31:* overené v prehliadači na osiach SO 171-11-01 (723 m) a 125-00 (557 m); **dlhú trasu (12 km) treba overiť** — v inboxe nie je (`Trasa LandXML.xml` alebo `R4_Lip-Stroc-Trasa.xml`).
 
 #### 10b — Os mosta: dĺžky, profil v ľubovoľnej osi, merania, kóty
 - [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
@@ -543,6 +548,7 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 20. Ložiská z prierezu „≈ 1,4 m od kraja, celé číslo“: meria sa 1,4 m od okraja spodnej plochy prierezu (spodku trámu, komory)? Čo sa zaokrúhľuje na celé číslo: počet ložísk, alebo poloha (napr. na celé dm)? — pred 10e
 21. Opora: „predsadenie pred uloženie“ = predná líca prahu pred osou uloženia (212-00: 0,90) a „odsadenie od uloženia“ = koniec NK za osou uloženia (212-00: 0,50)? — potvrdí sa na workshope 10d
 22. Kategórie ciest pre krok Zadanie: zoznam kategórií (STN 73 6101) a k nim voľná šírka na moste — dodáš tabuľku, alebo ju mám naštudovať a dať na potvrdenie? — pred 10a
+*odpoveď (2026-10-31, v plan mode 10a):* voľná šírka na moste = b z označenia kategórie (C 9,5/70 → 9,5 m), vždy ručne upraviteľná; tabuľka z STN 73 6201 sa doplní neskôr. *Predpoklad:* návrhy kategórií vo výbere (`ROAD_CATEGORY_SUGGESTIONS`: C 7,5/60, C 9,5/70, C 11,5/80, R 22,5/100, R 24,5/120, D 26,5/120) sú len ukážky, kým nepríde tabuľka — oprav ich, ak nezodpovedajú platným normám.
 23. Meračka: robiť z bodov meračky aj terén (TIN), ktorý má v zameranom území prednosť pred DMR? Body v ukážke majú výšky len v textoch a línie sú 2D. — pred 10f
 
 ### Zistené z podkladov
