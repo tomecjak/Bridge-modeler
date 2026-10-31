@@ -31,6 +31,8 @@ export interface EvaluatedLoop {
 export interface EvaluatedProfile {
   /** súradnice bodov v rámci prierezu, posunuté tak, že referenčný bod je (0, 0) */
   points: Map<string, Vec2>;
+  /** pôvodná poloha referenčného bodu (čísla vo výrazoch bodov sú v tomto rámci) */
+  origin: Vec2;
   /** len platné obrysy (uzavreté, bez samopretínania) */
   loops: EvaluatedLoop[];
   area: number;
@@ -228,5 +230,5 @@ export function evaluateProfileDefinition(
     sy += r.area * r.centroid.y;
   }
   const centroid = area > 0 ? vec2(sx / area, sy / area) : vec2(0, 0);
-  return { points, loops, area, centroid, issues };
+  return { points, origin, loops, area, centroid, issues };
 }

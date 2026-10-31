@@ -1,4 +1,5 @@
 export * from './abutment.ts';
+export * from './constraints.ts';
 export * from './crossing.ts';
 export * from './deckOutline.ts';
 export * from './deckSampling.ts';
