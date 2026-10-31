@@ -3,7 +3,7 @@ import { type DeckEnd, deckTopAt, type SupportResult, seatAt } from './supports.
 
 /** Časť podpery ako zvislý hranol: pôdorys a výška spodnej a hornej plochy v bode pôdorysu (lokálne z). */
 export interface SolidPart {
-  name: 'seat' | 'stem' | 'backwall' | 'wing';
+  name: 'footing' | 'seat' | 'stem' | 'backwall' | 'wing';
   plan: Polygon2D;
   bottom: (p: Vec2) => number;
   top: (p: Vec2) => number;

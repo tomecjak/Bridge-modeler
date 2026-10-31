@@ -1,5 +1,5 @@
 import { centroid, type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
-import { abutmentParts } from './abutment.ts';
+import { abutmentParts, type SolidPart, transverseOffset } from './abutment.ts';
 import { type SupportResult, seatAt } from './supports.ts';
 
 /** Počet strán mnohouholníka, ktorým sa v pôdoryse nahradí kruhový stĺp. */
@@ -112,4 +112,38 @@ export function supportElevation(r: SupportResult): SupportElevation | undefined
         ]
       : undefined;
   return { body, footing };
+}
+
+/**
+ * Podpera ako zvislé hranoly (ADR 0008, 0010): základ (ak má hrúbku), opora z `abutmentParts`, inak driek / stĺpy
+ * od hornej hrany základu po hornú hranu podpery (`seatAt`, lineárne medzi ložiskami). Prázdne, ak podpera nie je
+ * vyhodnotená. Spoločné pre 3D teleso a rez v osi mosta.
+ */
+export function supportParts(r: SupportResult): SolidPart[] {
+  const plan = supportPlan(r);
+  const top = r.foundationTop;
+  if (!plan || !r.axis || !Number.isFinite(top) || r.bearings.length === 0) return [];
+  const thickness = r.footing.thickness;
+  const footing: SolidPart[] =
+    plan.footing && thickness > 0
+      ? [
+          {
+            name: 'footing',
+            plan: plan.footing,
+            bottom: () => top - thickness,
+            top: () => top,
+            foldsAtBearings: false,
+          },
+        ]
+      : [];
+  const body: SolidPart[] =
+    abutmentParts(r) ??
+    plan.body.map((b) => ({
+      name: 'stem',
+      plan: b,
+      bottom: () => top,
+      top: (p) => seatAt(r, transverseOffset(r, p)),
+      foldsAtBearings: true,
+    }));
+  return [...footing, ...body];
 }

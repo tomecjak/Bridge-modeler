@@ -2,6 +2,7 @@ export * from './abutment.ts';
 export * from './crossing.ts';
 export * from './deckSampling.ts';
 export * from './expressions.ts';
+export * from './longitudinal.ts';
 export * from './profile.ts';
 export * from './sampling.ts';
 export * from './spans.ts';

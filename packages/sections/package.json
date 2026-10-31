@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Prierez NK na staničení a rozvinutý pozdĺžny rez.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test"
