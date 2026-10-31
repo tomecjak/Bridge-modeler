@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "3"
+      "const": "4"
     },
     "name": {
       "type": "string"
@@ -1104,21 +1104,70 @@
                     "type": "string",
                     "const": "abutment"
                   },
+                  "length": {
+                    "type": "string"
+                  },
                   "seatLength": {
+                    "type": "string"
+                  },
+                  "seatHeight": {
+                    "type": "string"
+                  },
+                  "frontOffset": {
                     "type": "string"
                   },
                   "stemThickness": {
                     "type": "string"
                   },
-                  "length": {
+                  "backwallThickness": {
                     "type": "string"
+                  },
+                  "gap": {
+                    "type": "string"
+                  },
+                  "wings": {
+                    "type": "object",
+                    "properties": {
+                      "angle": {
+                        "type": "string"
+                      },
+                      "length": {
+                        "type": "string"
+                      },
+                      "thickness": {
+                        "type": "string"
+                      },
+                      "support": {
+                        "type": "string",
+                        "enum": [
+                          "hung",
+                          "founded"
+                        ]
+                      },
+                      "endHeight": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "angle",
+                      "length",
+                      "thickness",
+                      "support",
+                      "endHeight"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
                   "type",
+                  "length",
                   "seatLength",
+                  "seatHeight",
+                  "frontOffset",
                   "stemThickness",
-                  "length"
+                  "backwallThickness",
+                  "gap",
+                  "wings"
                 ],
                 "additionalProperties": false
               }
@@ -1196,6 +1245,6 @@
     "supports"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-3.json",
-  "title": "Projekt modelára mostov (schemaVersion 3)"
+  "$id": "https://bridge-modeler.local/schema/project-4.json",
+  "title": "Projekt modelára mostov (schemaVersion 4)"
 }

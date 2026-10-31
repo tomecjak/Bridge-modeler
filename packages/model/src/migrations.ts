@@ -1,5 +1,6 @@
 import type { ModelIssue } from './issues.ts';
 import { SCHEMA_VERSION } from './schema.ts';
+import { defaultAbutmentGeometry } from './types.ts';
 
 type RawProject = Record<string, unknown>;
 
@@ -16,6 +17,19 @@ export const MIGRATIONS: Readonly<
   },
   /** 2 → 3: podpery (ADR 0008) */
   '2': { to: '3', migrate: (raw) => ({ ...raw, supports: [] }) },
+  /** 3 → 4: opora s prahom, múrikom a krídlami (ADR 0010); pôvodné rozmery ostávajú, nové predvolené */
+  '3': {
+    to: '4',
+    migrate: (raw) => ({
+      ...raw,
+      supports: (Array.isArray(raw.supports) ? raw.supports : []).map((s: RawProject) => {
+        const g = s.geometry as RawProject | undefined;
+        return g?.type === 'abutment'
+          ? { ...s, geometry: { ...defaultAbutmentGeometry(), ...g } }
+          : s;
+      }),
+    }),
+  },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

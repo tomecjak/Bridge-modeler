@@ -1,7 +1,12 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { dot3, type Polygon2D, signedArea, sub3, type Vec2, type Vec3, vec2 } from '@bridge/geom';
-import { buildParameterSet, type Superstructure, type Support } from '@bridge/model';
+import {
+  buildParameterSet,
+  defaultAbutmentGeometry,
+  type Superstructure,
+  type Support,
+} from '@bridge/model';
 import {
   evaluateSuperstructure,
   evaluateSupport,
@@ -154,7 +159,7 @@ describe('šikmý koniec NK podľa opory', () => {
       station: 1011,
       crossingAngle: '70',
       offset: '0',
-      geometry: { type: 'abutment', seatLength: '1', stemThickness: '1.5', length: '16' },
+      geometry: defaultAbutmentGeometry('16'),
       footing: { length: '17', width: '5', thickness: '1.5' },
       connection: 'bearing',
       bearingHeight: '0.35',

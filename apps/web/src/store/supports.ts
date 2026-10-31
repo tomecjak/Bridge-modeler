@@ -1,5 +1,5 @@
 import type { Alignment } from '@bridge/alignment';
-import type { ParameterSet, Support } from '@bridge/model';
+import { defaultAbutmentGeometry, type ParameterSet, type Support } from '@bridge/model';
 import {
   evaluateSpans,
   evaluateSupport,
@@ -59,7 +59,7 @@ export function defaultSupport(
     offset: '0',
     geometry:
       kind === 'abutment'
-        ? { type: 'abutment', seatLength: '1.5', stemThickness: '1.2', length: '12' }
+        ? defaultAbutmentGeometry()
         : { type: 'wall', thickness: '1.2', length: '4' },
     footing:
       kind === 'abutment'
@@ -88,6 +88,6 @@ export function defaultGeometry(type: Support['geometry']['type']): Support['geo
         spacing: '4',
       };
     case 'abutment':
-      return { type, seatLength: '1.5', stemThickness: '1.2', length: '12' };
+      return defaultAbutmentGeometry();
   }
 }

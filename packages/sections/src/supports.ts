@@ -125,10 +125,14 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
     width: num(support.footing.width, 'dimension'),
     thickness: num(support.footing.thickness, 'dimension'),
   };
+  // hrúbka 0 = bez základu; dĺžka a šírka sa potom nekontrolujú
+  const noFooting = footing.thickness === 0;
   for (const [name, value] of Object.entries(footing)) {
-    if (value !== undefined && !(value > 0))
-      issues.push({ code: 'InvalidDimension', name: `footing.${name}`, value });
+    if (value === undefined || noFooting) continue;
+    if (!(value > 0)) issues.push({ code: 'InvalidDimension', name: `footing.${name}`, value });
   }
+  if (footing.thickness !== undefined && footing.thickness < 0)
+    issues.push({ code: 'InvalidDimension', name: 'footing.thickness', value: footing.thickness });
   if (
     angleDeg === undefined ||
     offset === undefined ||

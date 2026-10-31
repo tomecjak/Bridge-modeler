@@ -93,7 +93,7 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('3');
+      expect(r.project.schemaVersion).toBe('4');
       expect(r.project.supports).toEqual([]);
       expect(r.project.bridgeAxes).toEqual([]);
       expect(r.project.parameters).toHaveLength(1);
@@ -106,12 +106,51 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '3', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '4', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '3', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '4', name: 'Starý most', parameters: [] },
     });
+  });
+
+  it('adds a backwall and wings to version 3 abutments and keeps their dimensions', () => {
+    const support = (geometry: Record<string, unknown>) => ({
+      id: 'o1',
+      name: 'O1',
+      kind: 'abutment',
+      superstructure: 'nk',
+      station: 100,
+      crossingAngle: '90',
+      offset: '0',
+      geometry,
+      footing: { length: '13', width: '5', thickness: '1.2' },
+      connection: 'bearing',
+      bearingHeight: '0.35',
+      bearings: ['-1.8', '1.8'],
+      foundationTop: '240',
+    });
+    const v3 = {
+      ...createEmptyProject('Opora v3'),
+      schemaVersion: '3',
+      supports: [
+        support({ type: 'abutment', seatLength: '1.5', stemThickness: '1.2', length: '12' }),
+        { ...support({ type: 'wall', thickness: '1.2', length: '4' }), id: 'p1', kind: 'pier' },
+      ],
+    };
+    const r = openProject(JSON.stringify(v3));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const [abutment, pier] = r.project.supports;
+    expect(abutment?.geometry).toMatchObject({
+      type: 'abutment',
+      seatLength: '1.5',
+      stemThickness: '1.2',
+      length: '12',
+      gap: '0.08',
+      wings: { angle: '0', support: 'hung' },
+    });
+    expect(pier?.geometry).toEqual({ type: 'wall', thickness: '1.2', length: '4' });
   });
 });

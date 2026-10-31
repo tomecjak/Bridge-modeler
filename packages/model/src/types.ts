@@ -114,15 +114,56 @@ export const SupportGeometrySchema = z.discriminatedUnion('type', [
     count: ExprSchema,
     spacing: ExprSchema,
   }),
-  /** zjednodušená opora: úložný prah (šírka v smere osi mosta), hrúbka drieku, dĺžka pozdĺž osi podpery */
+  /**
+   * Opora (ADR 0010): úložný prah, voliteľný driek, záverný múrik a krídla. Hrúbky a šírky kolmo na os podpery,
+   * vzdialenosti od osi ložísk kladné smerom do poľa.
+   */
   z.object({
     type: z.literal('abutment'),
-    seatLength: ExprSchema,
-    stemThickness: ExprSchema,
+    /** dĺžka pozdĺž osi podpery (medzi vonkajšími lícami krídel) */
     length: ExprSchema,
+    /** šírka úložného prahu */
+    seatLength: ExprSchema,
+    /** výška prahu pod hornou hranou podpery */
+    seatHeight: ExprSchema,
+    /** predná líca prahu od osi ložísk */
+    frontOffset: ExprSchema,
+    /** hrúbka drieku pod prahom (driek vznikne, len ak je základ nižšie ako spodok prahu) */
+    stemThickness: ExprSchema,
+    /** hrúbka záverného múrika */
+    backwallThickness: ExprSchema,
+    /** medzera medzi koncom NK a záverným múrikom, meraná v osi mosta */
+    gap: ExprSchema,
+    wings: z.object({
+      /** uhol od osi mosta [°], + roztvorené von; 0 = rovnobežné s osou mosta */
+      angle: ExprSchema,
+      /** dĺžka od zadnej líce opory pozdĺž krídla */
+      length: ExprSchema,
+      thickness: ExprSchema,
+      /** zavesené krídlo (spodná hrana stúpa ku koncu) alebo založené na základe opory */
+      support: z.enum(['hung', 'founded']),
+      /** výška zaveseného krídla na voľnom konci */
+      endHeight: ExprSchema,
+    }),
   }),
 ]);
 export type SupportGeometry = z.infer<typeof SupportGeometrySchema>;
+export type AbutmentGeometry = Extract<SupportGeometry, { type: 'abutment' }>;
+
+/** Predvolená opora podľa vzorového mosta 212-00 (ADR 0010); `length` doplní volajúci podľa šírky NK. */
+export function defaultAbutmentGeometry(length = '12'): AbutmentGeometry {
+  return {
+    type: 'abutment',
+    length,
+    seatLength: '2.05',
+    seatHeight: '1.1',
+    frontOffset: '0.9',
+    stemThickness: '1.2',
+    backwallThickness: '0.5',
+    gap: '0.08',
+    wings: { angle: '0', length: '4', thickness: '0.6', support: 'hung', endHeight: '1.5' },
+  };
+}
 
 /** Podpera (ADR 0008): patrí jednej NK, leží na jej osi mosta. */
 export const SupportSchema = z.object({
@@ -137,6 +178,7 @@ export const SupportSchema = z.object({
   /** posun stredu podpery kolmo od osi NK [m], + vpravo */
   offset: ExprSchema,
   geometry: SupportGeometrySchema,
+  /** základ; hrúbka 0 = bez základu (napr. prah na pilótach, pilóty sa nemodelujú) */
   footing: z.object({ length: ExprSchema, width: ExprSchema, thickness: ExprSchema }),
   connection: z.enum(['bearing', 'hinge', 'fixed']),
   /** výška uloženia [m] (ložisko + podložiskový blok) */

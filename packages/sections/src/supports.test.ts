@@ -1,6 +1,11 @@
 import { type AlignmentData, createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
-import { buildParameterSet, type Superstructure, type Support } from '@bridge/model';
+import {
+  buildParameterSet,
+  defaultAbutmentGeometry,
+  type Superstructure,
+  type Support,
+} from '@bridge/model';
 import { describe, expect, it } from 'vitest';
 import { evaluateSupport, type SupportContext } from './supports.ts';
 import { singleDeckExample } from './templates/singleBeamHaunched.ts';
@@ -148,7 +153,7 @@ describe('evaluateSupport — opora pri šikmom konci NK', () => {
         kind: 'abutment',
         station: 1021,
         crossingAngle: '60',
-        geometry: { type: 'abutment', seatLength: '1.5', stemThickness: '1.2', length: '12' },
+        geometry: defaultAbutmentGeometry(),
       }),
     );
     expect(r.issues).toEqual([]);
@@ -160,5 +165,26 @@ describe('evaluateSupport — opora pri šikmom konci NK', () => {
   it('still rejects a pier bearing outside the deck', () => {
     const r = evaluateSupport(context(), pier({ station: 1021, crossingAngle: '60' }));
     expect(r.issues.some((i) => i.code === 'StationOutsideSuperstructure')).toBe(true);
+  });
+});
+
+describe('evaluateSupport — bez základu', () => {
+  it('accepts a zero footing thickness (seat on piles) and skips footing length and width', () => {
+    const r = evaluateSupport(
+      context(),
+      pier({ footing: { length: '0', width: '0', thickness: '0' } }),
+    );
+    expect(r.issues).toEqual([]);
+    expect(r.footing.thickness).toBe(0);
+  });
+
+  it('rejects a negative footing thickness', () => {
+    const r = evaluateSupport(
+      context(),
+      pier({ footing: { length: '8', width: '4', thickness: '-1' } }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({ code: 'InvalidDimension', name: 'footing.thickness' }),
+    );
   });
 });

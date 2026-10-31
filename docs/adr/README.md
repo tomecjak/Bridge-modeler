@@ -15,6 +15,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0007](0007-os-mosta-a-prierez.md) | Os mosta a parametrický prierez NK | Prijaté |
 | [0008](0008-podpery.md) | Podpery, uloženie a polia | Prijaté |
 | [0009](0009-3d-model.md) | 3D model a viewer | Prijaté |
+| [0010](0010-opora.md) | Opora s úložným prahom, záverným múrikom a krídlami | Prijaté |
 
 ## Šablóna
 

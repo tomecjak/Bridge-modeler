@@ -1,6 +1,11 @@
 import { suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
-import { createEmptyProject, type ProjectFile, type Support } from '@bridge/model';
+import {
+  createEmptyProject,
+  defaultAbutmentGeometry,
+  type ProjectFile,
+  type Support,
+} from '@bridge/model';
 import { twinDeckExample } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
 import { meshVolume } from './mesh.ts';
@@ -21,7 +26,7 @@ function support(id: string, deck: string, kind: Support['kind'], station: numbe
     offset: '0',
     geometry:
       kind === 'abutment'
-        ? { type: 'abutment', seatLength: '1.5', stemThickness: '1.2', length: '12' }
+        ? defaultAbutmentGeometry()
         : { type: 'wall', thickness: '1.2', length: '4' },
     footing: { length: '8', width: '4', thickness: '1.2' },
     connection: 'bearing',
