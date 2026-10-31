@@ -16,7 +16,7 @@ export function projectFileName(name: string): string {
 export function drawingFileName(
   project: string,
   view: string,
-  extension: 'dxf' | 'svg' | 'json',
+  extension: 'dxf' | 'svg' | 'json' | 'step',
 ): string {
   return `${safeName(project, 'projekt')} – ${safeName(view, 'výkres')}.${extension}`;
 }

@@ -4,6 +4,9 @@ import { type InitOptions, OcctKernel, type ShapeHandle } from 'occt-wasm';
 
 /** Odchýlka tetivy pri tesselácii presných telies [m] (rovnaká tolerancia ako vzorkovanie NK, ADR 0009). */
 export const OCCT_DEFLECTION = 0.002;
+/** Vnútorná jednotka occt-wasm pri importe / exporte STEP je milimeter. */
+const MM_PER_M = 1000;
+const MILLIMETRE_UNIT = 'SI_UNIT(.MILLI.,.METRE.)';
 /** Tolerancia zošitia stien hranola [m]. */
 const SEW_TOLERANCE = 1e-6;
 
@@ -161,32 +164,33 @@ export class OcctGeometryKernel implements GeometryKernel<ShapeHandle> {
 
   /**
    * STEP (AP214, metre) s pomenovanými telesami, posunutými o `offset` (napr. lokálny počiatok → S-JTSK).
-   * Časová pečiatka v hlavičke sa nahradí pevnou, aby rovnaký model dal rovnaký súbor (princíp 7).
+   * occt-wasm berie vnútorné jednotky ako milimetre: súbor sa zapíše „v mm“ bez prepočtu (čísla = metre modelu)
+   * a jednotka dĺžky sa v ňom prepíše na meter. Zväčšenie na mm by v S-JTSK dalo súradnice ~1e9, pri ktorých
+   * tolerancie OCCT už nestačia. Časová pečiatka v hlavičke sa nahradí pevnou (princíp 7).
    */
   exportStep(solids: readonly NamedSolid[], offset: Vec3 = vec3(0, 0, 0)): string {
     const doc = this.oc.createXCAFDocument();
-    const moved: ShapeHandle[] = [];
+    const temporary: ShapeHandle[] = [];
     try {
       for (const s of solids) {
-        const shape =
-          offset.x === 0 && offset.y === 0 && offset.z === 0
-            ? s.solid
-            : this.oc.translate(s.solid, offset.x, offset.y, offset.z);
-        if (shape !== s.solid) moved.push(shape);
-        doc.setName(doc.addShape(shape), s.name);
+        const moved = this.oc.translate(s.solid, offset.x, offset.y, offset.z);
+        temporary.push(moved);
+        doc.setName(doc.addShape(moved), s.name);
       }
-      return normalizeStepHeader(doc.exportSTEP({ unit: 'm', schema: 'AP214' }));
+      const step = doc.exportSTEP({ unit: 'mm', schema: 'AP214' });
+      return normalizeStepHeader(step.replaceAll(MILLIMETRE_UNIT, 'SI_UNIT($,.METRE.)'));
     } finally {
       doc.close();
-      for (const m of moved) this.oc.release(m);
+      for (const t of temporary) this.oc.release(t);
     }
   }
 
-  /** Načíta STEP (kontrola spätného načítania) a vráti objemy telies v ňom. */
+  /** Načíta STEP (kontrola spätného načítania) a vráti objemy telies v ňom [m³]. */
   stepVolumes(step: string): number[] {
     const shape = this.oc.importStep(step);
     const solids = this.oc.getSubShapes(shape, 'solid');
-    return solids.map((s) => this.oc.getVolume(s));
+    // import vracia milimetre
+    return solids.map((s) => this.oc.getVolume(s) / MM_PER_M ** 3);
   }
 
   /** Uvoľní všetky telesá v aréne jadra. */

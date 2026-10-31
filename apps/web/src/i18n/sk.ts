@@ -88,6 +88,21 @@ export const sk = {
     failed: 'Generovanie 3D modelu zlyhalo.',
     noWebgl: 'Prehliadač nepodporuje WebGL, 3D náhľad sa nedá zobraziť.',
     hint: 'ľavé tlačidlo: otáčanie · pravé: posun · koliesko: priblíženie · klik: výber',
+    exact: 'Presný model',
+    exactTitle:
+      'Presné telesá cez OpenCascade: konce NK orezané rovinou opory, zjednotené podpery, export STEP (načíta ≈ 4,6 MB)',
+    exactLoading: 'Načítavam OpenCascade a počítam presný model…',
+    exactGenerated: (ms: number) => `presný model za ${ms.toFixed(0)} ms`,
+    exactFailed: (detail: string) =>
+      `Presný model sa nepodarilo vypočítať (${detail}); zobrazuje sa sieť.`,
+    occtLicense:
+      'OpenCascade (occt-wasm), LGPL-2.1 — samostatný modul, zdroj: github.com/andymai/occt-wasm',
+    step: 'Export STEP',
+    stepSjtsk: 'STEP v S-JTSK',
+    stepLocal: 'STEP v lokálnych súradniciach',
+    stepFileName: 'model',
+    stepDone: (file: string) => `Exportované: ${file}`,
+    stepFailed: 'Export STEP zlyhal.',
   },
   parameters: {
     tab: 'Parametre',

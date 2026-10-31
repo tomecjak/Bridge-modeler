@@ -108,6 +108,18 @@ describe('OcctGeometryKernel', () => {
       expect(step).toContain("PRODUCT('NK 1 (nk)'");
       expect(step).toContain("PRODUCT('Pilier P2 (p2)'");
       expect(kernel.stepVolumes(step).sort()).toEqual([expect.closeTo(2, 6), expect.closeTo(3, 6)]);
+      // súradnice v súbore sú v metroch v S-JTSK (nie milimetre ani tisíciny)
+      const xs = [...step.matchAll(/CARTESIAN_POINT\('',\(([-\d.E+]+),([-\d.E+]+)/g)].map((m) => [
+        Number(m[1]),
+        Number(m[2]),
+      ]);
+      expect(Math.min(...xs.map((p) => p[0] as number))).toBeCloseTo(-460000, 6);
+      // pôvodná chyba mm ↔ m dala súradnice v tisícinách (≈ −460); body umiestnenia plôch môžu byť pri 0
+      expect(xs.some((p) => Math.abs((p[0] as number) + 459994) < 1e-6)).toBe(true);
+      expect(xs.filter((p) => (p[0] as number) < -400 && (p[0] as number) > -500)).toEqual([]);
+      expect(step).not.toContain('.MILLI.');
+      expect(Math.min(...xs.map((p) => p[1] as number))).toBeCloseTo(-1240000, 6);
+      expect(step).toContain('SI_UNIT($,.METRE.)');
     } finally {
       quiet.mockRestore();
     }

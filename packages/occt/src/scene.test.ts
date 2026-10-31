@@ -93,10 +93,13 @@ describe('exactScene (212-00)', () => {
     const quiet = vi.spyOn(output, 'log').mockImplementation(() => undefined);
     try {
       const origin = project.crs.origin as { x: number; y: number; z: number };
-      const step = exactSceneStep(kernel, objects, origin);
-      expect(exactSceneStep(kernel, objects, origin)).toBe(step);
+      const sjtsk = exactSceneStep(kernel, objects, origin);
+      expect(exactSceneStep(kernel, objects, origin)).toBe(sjtsk);
+      // spätné načítanie v lokálnych súradniciach: OCCT číta v mm a súradnice S-JTSK (~1e9 mm) by jeho tolerancie
+      // nezvládli; zápis v S-JTSK je ten istý so začiatkom posunutým o počiatok
+      const step = exactSceneStep(kernel, objects);
       const named = objects.flatMap((o) => o.solids);
-      for (const s of named) expect(step).toContain(`PRODUCT('${s.name}'`);
+      for (const s of named) expect(sjtsk).toContain(`PRODUCT('${s.name}'`);
       const volumes = kernel.stepVolumes(step);
       expect(volumes).toHaveLength(named.length);
       const total = named.reduce((a, s) => a + kernel.volume(s.solid), 0);

@@ -3,12 +3,14 @@ import { sampleHorizontal } from '@bridge/drawing';
 import type { ProjectFile } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
+import { downloadText } from '../persistence/fileIO.ts';
+import { drawingFileName } from '../persistence/fileName.ts';
 import type { TerrainTin } from '../store/terrain.ts';
 import { StationControl } from '../views/StationControl.tsx';
 import { BASEMAPS, type BasemapKind, loadBasemap } from './basemap.ts';
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
 import { terrainBuffers } from './terrainMesh.ts';
-import { useMeshWorker } from './useMeshWorker.ts';
+import { useExactWorker, useMeshWorker } from './useMeshWorker.ts';
 
 export interface Viewer3DProps {
   project: ProjectFile;
@@ -81,6 +83,9 @@ export default function Viewer3D({
   const [basemap, setBasemap] = useState<BasemapKind>('none');
   const [maps, setMaps] = useState<(HTMLImageElement | undefined)[]>([]);
   const [mapNote, setMapNote] = useState<string>();
+  /** presný model cez OpenCascade (ADR 0014); undefined info = ešte sa počíta */
+  const [exactOn, setExactOn] = useState(false);
+  const [stepNote, setStepNote] = useState<string>();
   const origin = project.crs.origin;
 
   // obrázok mapy ZBGIS cez obálku každého terénu (EPSG:5514)
@@ -142,15 +147,33 @@ export default function Viewer3D({
     };
   }, []);
 
-  useMeshWorker(
+  const onSceneUpdate = (update: Parameters<SceneView['apply']>[0]) => {
+    viewRef.current?.apply(update);
+    setInfo({ count: update.keys.length, elapsed: update.elapsed });
+    setError(undefined);
+  };
+  useMeshWorker(project, onSceneUpdate, () => setError(sk.viewer3d.failed), !exactOn);
+  const exportStep = useExactWorker(
     project,
-    (update) => {
-      viewRef.current?.apply(update);
-      setInfo({ count: update.keys.length, elapsed: update.elapsed });
-      setError(undefined);
+    onSceneUpdate,
+    (e) => {
+      // pri chybe (napr. starý prehliadač bez WASM SIMD) sa vráti sieť
+      setExactOn(false);
+      setError(sk.viewer3d.exactFailed(e instanceof Error ? e.message : String(e)));
     },
-    () => setError(sk.viewer3d.failed),
+    exactOn,
   );
+
+  async function downloadStep(sjtsk: boolean) {
+    try {
+      const step = await exportStep(sjtsk && origin ? origin : undefined);
+      const file = drawingFileName(project.name, sk.viewer3d.stepFileName, 'step');
+      downloadText(step, file, 'model/step');
+      setStepNote(sk.viewer3d.stepDone(file));
+    } catch {
+      setStepNote(sk.viewer3d.stepFailed);
+    }
+  }
 
   useEffect(() => {
     viewRef.current?.setAxis(axisPoints(alignment));
@@ -237,12 +260,58 @@ export default function Viewer3D({
             </button>
           </>
         )}
+        <button
+          type="button"
+          className="button"
+          aria-pressed={exactOn}
+          title={sk.viewer3d.exactTitle}
+          disabled={project.superstructures.length === 0}
+          onClick={() => {
+            setInfo(undefined);
+            setStepNote(undefined);
+            setExactOn((v) => !v);
+          }}
+        >
+          {sk.viewer3d.exact}
+        </button>
+        {exactOn && info && (
+          <details className="export-menu">
+            <summary>{sk.viewer3d.step}</summary>
+            <div className="export-menu-panel">
+              <button
+                type="button"
+                disabled={!origin}
+                onClick={(e) => {
+                  e.currentTarget.closest('details')?.removeAttribute('open');
+                  void downloadStep(true);
+                }}
+              >
+                {sk.viewer3d.stepSjtsk}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.currentTarget.closest('details')?.removeAttribute('open');
+                  void downloadStep(false);
+                }}
+              >
+                {sk.viewer3d.stepLocal}
+              </button>
+            </div>
+          </details>
+        )}
         {cutOn && <StationControl station={station} range={stationRange} onStation={onStation} />}
+        {exactOn && !info && <span className="hint">{sk.viewer3d.exactLoading}</span>}
         {info && (
           <span className="hint">
-            {sk.viewer3d.objects(info.count)} · {sk.viewer3d.generated(info.elapsed)}
+            {sk.viewer3d.objects(info.count)} ·{' '}
+            {exactOn
+              ? sk.viewer3d.exactGenerated(info.elapsed)
+              : sk.viewer3d.generated(info.elapsed)}
           </span>
         )}
+        {exactOn && <span className="hint">{sk.viewer3d.occtLicense}</span>}
+        {stepNote && <span className="hint">{stepNote}</span>}
         <span className="hint viewer3d-controls">{sk.viewer3d.hint}</span>
       </div>
       <div
