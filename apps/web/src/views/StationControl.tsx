@@ -7,18 +7,21 @@ interface Props {
   station: number;
   range: { from: number; to: number } | undefined;
   onStation: (station: number) => void;
+  /** bez vlastného popisu (popis má riadok mriežky vlastností) */
+  compact?: boolean;
 }
 
 /** Pole so staničením (km 1,234 567) a posuvník v rozsahu NK — prierez aj rez v 3D. */
-export function StationControl({ station, range, onStation }: Props) {
+export function StationControl({ station, range, onStation, compact = false }: Props) {
   const [draft, setDraft] = useState(formatStation(station));
   useEffect(() => setDraft(formatStation(station)), [station]);
   return (
     <>
       <label className="station-input">
-        {sk.section.station}
+        {!compact && sk.section.station}
         <input
           type="text"
+          aria-label={compact ? sk.section.station : undefined}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => {

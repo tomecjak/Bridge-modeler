@@ -1,22 +1,16 @@
 import { formatStation } from '@bridge/alignment';
-import { vec2 } from '@bridge/geom';
 import type {
   AbutmentGeometry,
-  BridgeAxis,
   ParameterUnit,
-  PlanLine,
   ProfileDefinition,
   ProfileLaw,
   Superstructure,
   Support,
-  TerrainSurface,
 } from '@bridge/model';
 import type { SectionContext, SupportResult } from '@bridge/sections';
-import { useEffect, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
-import { terrainSize } from '../import/importTerrain.ts';
 import type { ElementCollection, ElementCollections } from '../store/commands.ts';
 import {
   parsePointList,
@@ -30,7 +24,7 @@ import { defaultGeometry } from '../store/supports.ts';
 import { ExpressionInput } from '../views/ExpressionInput.tsx';
 import { Field } from '../views/Field.tsx';
 import { ProfileLawEditor } from '../views/ProfileLawEditor.tsx';
-import { StationField, StationFunctionEditor } from '../views/StationFunctionEditor.tsx';
+import { StationField } from '../views/StationFunctionEditor.tsx';
 import { TextField } from '../views/TextField.tsx';
 import { SectionResultDetails } from './SectionPanel.tsx';
 
@@ -41,9 +35,6 @@ interface Props {
   supportResult: SupportResult | undefined;
   spans: DeckSpans | undefined;
   onRemoved: () => void;
-  /** sťahuje sa terén zo ZBGIS */
-  terrainBusy: boolean;
-  onRedownloadTerrain: (id: string) => void;
   /** vstupy výpočtu prierezov (náhľad okraja NK podľa krivky) */
   sectionContext: SectionContext | undefined;
   /** vybraný bod prierezu (zvýraznenie v tabuľke, výber v editore) */
@@ -69,8 +60,6 @@ export function ElementPanel({
   supportResult,
   spans,
   onRemoved,
-  terrainBusy,
-  onRedownloadTerrain,
   sectionContext,
   selectedPoint,
   onSelectPoint,
@@ -84,7 +73,6 @@ export function ElementPanel({
         {element ? `: ${element.name}` : ''}
       </h2>
       {!element && <p className="panel-empty">{sk.properties.nothingSelected}</p>}
-      {element && collection === 'bridgeAxes' && <BridgeAxisEditor axis={element as BridgeAxis} />}
       {element && collection === 'profiles' && (
         <ProfileEditor
           def={element as ProfileDefinition}
@@ -103,14 +91,6 @@ export function ElementPanel({
       {element && collection === 'supports' && (
         <SupportEditor support={element as Support} result={supportResult} />
       )}
-      {element && collection === 'planLines' && <PlanLineEditor line={element as PlanLine} />}
-      {element && collection === 'terrains' && (
-        <TerrainEditor
-          terrain={element as TerrainSurface}
-          busy={terrainBusy}
-          onRedownload={() => onRedownloadTerrain(id)}
-        />
-      )}
       {element && (
         <button
           type="button"
@@ -124,234 +104,6 @@ export function ElementPanel({
         </button>
       )}
     </aside>
-  );
-}
-
-/** Čiara v pôdoryse (Fáza 8a): názov, vrcholy v S-JTSK a NK, ktoré ju používajú ako okraj. */
-function PlanLineEditor({ line }: { line: PlanLine }) {
-  const origin = useProject((s) => s.project.crs.origin) ?? { x: 0, y: 0, z: 0 };
-  const superstructures = useProject((s) => s.project.superstructures);
-  const t = sk.planLines;
-  const setPoints = (points: PlanLine['points']) => update('planLines', line.id, { points });
-  const users = superstructures.filter((sup) =>
-    Object.values(sup.parameterLaws).some(
-      (law) => law.kind === 'edge' && law.curve.type === 'planLine' && law.curve.id === line.id,
-    ),
-  );
-  const last = line.points.at(-1);
-  const prev = line.points.at(-2);
-  return (
-    <div className="sf-editor">
-      <Field label={sk.elements.name}>
-        <TextField
-          value={line.name}
-          ariaLabel={sk.elements.name}
-          onCommit={(name) => update('planLines', line.id, { name })}
-        />
-      </Field>
-      <p className="hint">
-        {users.length > 0 ? t.usedBy(users.map((u) => u.name).join(', ')) : t.unused}
-      </p>
-      <h3 className="panel-subtitle">{t.vertices}</h3>
-      <table className="mini-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>E [m]</th>
-            <th>N [m]</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {line.points.map((p, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: vrchol čiary je určený poradím
-            <tr key={i}>
-              <td>{i + 1}</td>
-              <td>
-                <CoordinateField
-                  ariaLabel={`${i + 1} E`}
-                  value={p.x + origin.x}
-                  onCommit={(e) =>
-                    setPoints(line.points.map((q, j) => (j === i ? vec2(e - origin.x, q.y) : q)))
-                  }
-                />
-              </td>
-              <td>
-                <CoordinateField
-                  ariaLabel={`${i + 1} N`}
-                  value={p.y + origin.y}
-                  onCommit={(n) =>
-                    setPoints(line.points.map((q, j) => (j === i ? vec2(q.x, n - origin.y) : q)))
-                  }
-                />
-              </td>
-              <td>
-                {line.points.length > 2 && (
-                  <RemoveButton
-                    label={t.removeVertex}
-                    onClick={() => setPoints(line.points.filter((_, j) => j !== i))}
-                  />
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <button
-        type="button"
-        className="button"
-        disabled={!last}
-        onClick={() => {
-          if (!last) return;
-          // nový vrchol v predĺžení posledného úseku (alebo 10 m na východ)
-          const d = prev ? vec2(last.x - prev.x, last.y - prev.y) : vec2(10, 0);
-          setPoints([...line.points, vec2(last.x + d.x, last.y + d.y)]);
-        }}
-      >
-        {t.addVertex}
-      </button>
-      <p className="hint">{t.vertexHint}</p>
-    </div>
-  );
-}
-
-/** Súradnica v m na 3 desatinné miesta (desatinná čiarka aj bodka, medzery ignoruje). */
-function CoordinateField({
-  value,
-  onCommit,
-  ariaLabel,
-}: {
-  value: number;
-  onCommit: (v: number) => void;
-  ariaLabel: string;
-}) {
-  const text = formatNumber(value, 3);
-  const [draft, setDraft] = useState(text);
-  useEffect(() => setDraft(text), [text]);
-  const parse = (v: string) => {
-    // slovenský formát: medzery v tisícoch, desatinná čiarka, znak mínus U+2212
-    const n = Number(v.replace(/\s/g, '').replace(',', '.').replace('\u2212', '-'));
-    return Number.isFinite(n) && v.trim() !== '' ? Math.round(n * 1000) / 1000 : undefined;
-  };
-  return (
-    <input
-      type="text"
-      className="mono"
-      value={draft}
-      aria-label={ariaLabel}
-      aria-invalid={parse(draft) === undefined}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
-        const v = parse(draft);
-        if (v === undefined) setDraft(text);
-        else if (Math.abs(v - value) > 5e-4) onCommit(v);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur();
-        if (e.key === 'Escape') setDraft(text);
-      }}
-    />
-  );
-}
-
-/** Terén (ADR 0011): názov, zdroj, veľkosť a koridor, na ktorý bol orezaný. */
-function TerrainEditor({
-  terrain,
-  busy,
-  onRedownload,
-}: {
-  terrain: TerrainSurface;
-  busy: boolean;
-  onRedownload: () => void;
-}) {
-  const t = sk.terrain;
-  const size = terrainSize(terrain);
-  return (
-    <div className="sf-editor">
-      <Field label={sk.elements.name}>
-        <TextField
-          value={terrain.name}
-          ariaLabel={sk.elements.name}
-          onCommit={(name) => update('terrains', terrain.id, { name })}
-        />
-      </Field>
-      <dl className="props">
-        <dt>{t.source}</dt>
-        <dd>{t.sources[terrain.source]}</dd>
-        <dt>{t.size}</dt>
-        <dd>
-          {t.points(size.points)} ·{' '}
-          {terrain.data.kind === 'tin' ? t.triangles(size.cells) : t.cells(size.cells)}
-        </dd>
-        <dt>{t.area}</dt>
-        <dd>
-          {terrain.corridor.shape === 'rectangle'
-            ? t.rectangleUsed(terrain.corridor.margin)
-            : t.corridorUsed(terrain.corridor.halfWidth, terrain.corridor.margin)}
-        </dd>
-        {terrain.attribution && (
-          <>
-            <dt>{t.attribution}</dt>
-            <dd>{terrain.attribution}</dd>
-          </>
-        )}
-      </dl>
-      {terrain.source === 'zbgis' ? (
-        <>
-          <button type="button" className="button" disabled={busy} onClick={onRedownload}>
-            {t.redownload}
-          </button>
-          <p className="hint">{t.redownloadHint}</p>
-        </>
-      ) : (
-        <p className="hint">{t.reimportHint}</p>
-      )}
-    </div>
-  );
-}
-
-function BridgeAxisEditor({ axis }: { axis: BridgeAxis }) {
-  const alignments = useProject((s) => s.project.alignments);
-  const set = (changes: Partial<BridgeAxis>) => update('bridgeAxes', axis.id, changes);
-  const range = { from: 0, to: 100 };
-  return (
-    <div className="sf-editor">
-      <Field label={sk.elements.name}>
-        <TextField
-          value={axis.name}
-          ariaLabel={sk.elements.name}
-          onCommit={(name) => set({ name })}
-        />
-      </Field>
-      <Field label={sk.elements.alignment}>
-        <select
-          value={axis.alignment}
-          aria-label={sk.elements.alignment}
-          onChange={(e) => set({ alignment: e.target.value })}
-        >
-          {!alignments.some((a) => a.name === axis.alignment) && (
-            <option value={axis.alignment}>{axis.alignment} (?)</option>
-          )}
-          {alignments.map((a) => (
-            <option key={a.name} value={a.name}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <h3 className="panel-subtitle">{sk.elements.horizontalOffset}</h3>
-      <StationFunctionEditor
-        law={axis.horizontalOffset}
-        range={range}
-        onChange={(horizontalOffset) => set({ horizontalOffset })}
-      />
-      <h3 className="panel-subtitle">{sk.elements.verticalOffset}</h3>
-      <StationFunctionEditor
-        law={axis.verticalOffset}
-        range={range}
-        onChange={(verticalOffset) => set({ verticalOffset })}
-      />
-    </div>
   );
 }
 

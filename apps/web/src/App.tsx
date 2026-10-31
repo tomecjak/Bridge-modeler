@@ -41,19 +41,27 @@ import {
   type TerrainFile,
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
-import { BriefPanel } from './layout/BriefPanel.tsx';
 import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
 import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
-import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
+import { AxisOffsetDialog } from './layout/properties/AxisOffsetDialog.tsx';
+import { PlanLineVerticesDialog } from './layout/properties/PlanLineVerticesDialog.tsx';
+import { ProjectInfoDialog } from './layout/properties/ProjectInfoDialog.tsx';
+import { PropertiesPalette } from './layout/properties/PropertyGrid.tsx';
+import {
+  alignmentSheet,
+  bridgeAxisSheet,
+  planLineSheet,
+  studyAreaSheet,
+  terrainSheet,
+  viewSheet,
+} from './layout/properties/simpleSheets.tsx';
 import { AppMenu, type MenuSection } from './layout/ribbon/AppMenu.tsx';
 import { ribbonTabs, type View3dState } from './layout/ribbon/appRibbon.tsx';
 import { Ribbon } from './layout/ribbon/Ribbon.tsx';
 import { TitleBar } from './layout/ribbon/TitleBar.tsx';
-import { SectionPanel } from './layout/SectionPanel.tsx';
-import { StudyAreaPanel } from './layout/StudyAreaPanel.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
@@ -120,8 +128,15 @@ export function App() {
   /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
   const [dmrProgress, setDmrProgress] = useState<number>();
   const dmrCancel = useRef(false);
-  /** panel vpravo otvorený z ribbonu (zadanie, oblasť mosta) */
-  const [sidePanel, setSidePanel] = useState<'brief' | 'studyArea'>();
+  /** výber mimo prvkov mosta (oblasť mosta, os cesty); bez výberu sa vpravo ukážu vlastnosti pohľadu */
+  const [panelTarget, setPanelTarget] = useState<'studyArea' | 'alignment'>();
+  /** dialógy: informácie o projekte, posun osi mosta, vrcholy čiary */
+  const [projectInfoOpen, setProjectInfoOpen] = useState(false);
+  const [axisOffset, setAxisOffset] = useState<{
+    axisId: string;
+    which: 'horizontalOffset' | 'verticalOffset';
+  }>();
+  const [planLineVertices, setPlanLineVertices] = useState<string>();
   /** stav pohľadov ovládaný ribbonom (ADR 0016) */
   const [ribbonTab, setRibbonTab] = useState('home');
   const [tool, setTool] = useState<ViewTool>('none');
@@ -552,11 +567,11 @@ export function App() {
 
   const browserSelection: BrowserTarget | undefined = selectedElement
     ? { type: 'element', ...selectedElement }
-    : sidePanel === 'studyArea'
+    : panelTarget === 'studyArea'
       ? { type: 'studyArea' }
       : mode === 'parameters' && selectedParameterId
         ? { type: 'parameter', id: selectedParameterId }
-        : alignments.length > 0
+        : panelTarget === 'alignment'
           ? { type: 'alignment', index: selected }
           : undefined;
 
@@ -569,7 +584,7 @@ export function App() {
       case 'alignment':
         setSelected(target.index);
         setSelectedElement(undefined);
-        setSidePanel(undefined);
+        setPanelTarget('alignment');
         return;
       case 'element': {
         setSelectedElement({ collection: target.collection, id: target.id });
@@ -579,11 +594,11 @@ export function App() {
       }
       case 'studyArea':
         setSelectedElement(undefined);
-        setSidePanel('studyArea');
+        setPanelTarget('studyArea');
         return;
       case 'parameter':
         setSelectedElement(undefined);
-        setSidePanel(undefined);
+        setPanelTarget(undefined);
         setSelectedParameterId(target.id);
         setMode('parameters');
         return;
@@ -752,7 +767,7 @@ export function App() {
     onInsertDeck: openDeckDialog,
     onEditStudyArea: () => {
       setSelectedElement(undefined);
-      setSidePanel('studyArea');
+      setPanelTarget('studyArea');
     },
     onImportLandXml: () => landXmlInput.current?.click(),
     onImportTerrain: () => terrainInput.current?.click(),
@@ -782,10 +797,7 @@ export function App() {
     setProfileDeckId,
     view3d,
     setView3d,
-    onProjectInfo: () => {
-      setSelectedElement(undefined);
-      setSidePanel('brief');
-    },
+    onProjectInfo: () => setProjectInfoOpen(true),
   });
 
   // Esc zruší aktívny nástroj (rozkreslené čiary a oblasti zahodia pohľady)
@@ -798,10 +810,28 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [tool]);
 
-  // výber prvku v strome, v 3D alebo po vložení zavrie panel otvorený z postupu
+  // výber prvku v strome, v 3D alebo po vložení nahradí výber oblasti alebo osi
   useEffect(() => {
-    if (selectedElement) setSidePanel(undefined);
+    if (selectedElement) setPanelTarget(undefined);
   }, [selectedElement]);
+
+  // Esc bez nástroja zruší výber (mimo polí a dialógov) → vpravo vlastnosti pohľadu
+  useEffect(() => {
+    if (tool !== 'none') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (
+        e.target instanceof Element &&
+        e.target.closest('input, select, textarea, [role="dialog"], [role="menu"]')
+      )
+        return;
+      if (document.querySelector('[role="dialog"]')) return;
+      setSelectedElement(undefined);
+      setPanelTarget(undefined);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tool]);
 
   useEffect(() => {
     let cancelled = false;
@@ -926,7 +956,7 @@ export function App() {
     // celú dlhú os nesťahujeme (tisíce dávok zo ZBGIS) — najprv treba oblasť mosta
     if (ranges.length === 0 && road.length > WHOLE_AXIS_TERRAIN_LIMIT) {
       setMessage(sk.terrain.needsStudyArea);
-      setSidePanel('studyArea');
+      setPanelTarget('studyArea');
       return;
     }
     dmrCancel.current = false;
@@ -991,6 +1021,128 @@ export function App() {
     setLastImport({ issues: [], fileIssues: [] });
     setOpenErrors([]);
     setMessage(undefined);
+  }
+
+  /** Panel vpravo: vlastnosti výberu, bez výberu vlastnosti aktívneho pohľadu (ADR 0016). */
+  function rightPanel() {
+    const dispatch = projectStore.getState().dispatch;
+    const el = selectedElement;
+    if (el?.collection === 'bridgeAxes') {
+      const axis = project.bridgeAxes.find((a) => a.id === el.id);
+      if (axis)
+        return (
+          <PropertiesPalette
+            sheet={bridgeAxisSheet({
+              axis,
+              alignments: project.alignments,
+              onEditOffset: (which) => setAxisOffset({ axisId: axis.id, which }),
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'terrains') {
+      const terrain = project.terrains.find((t) => t.id === el.id);
+      if (terrain)
+        return (
+          <PropertiesPalette
+            sheet={terrainSheet({
+              terrain,
+              busy: dmrProgress !== undefined,
+              onRedownload: () => void downloadDmrTerrain(terrain.id),
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'planLines') {
+      const line = project.planLines.find((l) => l.id === el.id);
+      if (line)
+        return (
+          <PropertiesPalette
+            sheet={planLineSheet({
+              line,
+              superstructures: project.superstructures,
+              onVertices: () => setPlanLineVertices(line.id),
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el && mode !== 'parameters')
+      return (
+        <ElementPanel
+          collection={el.collection}
+          id={el.id}
+          result={sections.results.find((r) => r.superstructure.id === el.id)}
+          supportResult={supportState.supports.find((r) => r.support.id === el.id)}
+          spans={supportState.spans.get(el.id)}
+          onRemoved={() => setSelectedElement(undefined)}
+          sectionContext={sectionContext}
+          selectedPoint={profilePoint}
+          onSelectPoint={setProfilePoint}
+        />
+      );
+    if (panelTarget === 'studyArea')
+      return (
+        <PropertiesPalette
+          sheet={studyAreaSheet({
+            road,
+            area: project.studyArea,
+            suggestion: (() => {
+              const r = defaultDeckRange();
+              return r && { from: r.from, to: r.to };
+            })(),
+            onMark: () => {
+              setMode('2d');
+              setTool('area');
+            },
+            dispatch,
+          })}
+        />
+      );
+    if (panelTarget === 'alignment' && item)
+      return (
+        <PropertiesPalette
+          sheet={alignmentSheet(
+            item,
+            [...importIssuesOf(item.data.name), ...item.issues],
+            project.crs.origin,
+          )}
+        />
+      );
+    if (mode === 'parameters')
+      return (
+        <ParameterPanel
+          parameter={selectedParameter}
+          issues={selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []}
+          set={parameterState.set}
+          alignmentRange={displayRange}
+          referenceStation={station}
+        />
+      );
+    return (
+      <PropertiesPalette
+        sheet={viewSheet({
+          mode,
+          exaggeration,
+          setExaggeration,
+          decks: roadDecks,
+          profileDeckId: profileDeck?.id,
+          setProfileDeckId,
+          section: {
+            station: sectionAt,
+            range: sectionRange,
+            onStation: setSectionStation,
+            results: sections.results,
+          },
+          view3d,
+          setView3d,
+          hasTerrain: project.terrains.length > 0,
+          hasDeck: project.superstructures.length > 0,
+        })}
+      />
+    );
   }
 
   function statusText(): string {
@@ -1111,7 +1263,7 @@ export function App() {
         onStudyArea={(range) => {
           setStudyAreaFrom(range);
           setSelectedElement(undefined);
-          setSidePanel('studyArea');
+          setPanelTarget('studyArea');
         }}
         goTo={goTo}
         otherAlignments={otherAlignments}
@@ -1216,51 +1368,7 @@ export function App() {
           )
         }
       />
-      {sidePanel === 'brief' ? (
-        <BriefPanel />
-      ) : sidePanel === 'studyArea' ? (
-        <StudyAreaPanel
-          road={road}
-          suggestion={(() => {
-            const r = defaultDeckRange();
-            return r && { from: r.from, to: r.to };
-          })()}
-          onMark={() => {
-            setMode('2d');
-            setTool('area');
-          }}
-        />
-      ) : mode !== 'parameters' && selectedElement ? (
-        <ElementPanel
-          collection={selectedElement.collection}
-          id={selectedElement.id}
-          result={sections.results.find((r) => r.superstructure.id === selectedElement.id)}
-          supportResult={supportState.supports.find((r) => r.support.id === selectedElement.id)}
-          spans={supportState.spans.get(selectedElement.id)}
-          terrainBusy={dmrProgress !== undefined}
-          onRedownloadTerrain={(id) => void downloadDmrTerrain(id)}
-          onRemoved={() => setSelectedElement(undefined)}
-          sectionContext={sectionContext}
-          selectedPoint={profilePoint}
-          onSelectPoint={setProfilePoint}
-        />
-      ) : mode === 'section' ? (
-        <SectionPanel results={sections.results} selectedId={undefined} />
-      ) : mode === 'parameters' ? (
-        <ParameterPanel
-          parameter={selectedParameter}
-          issues={selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []}
-          set={parameterState.set}
-          alignmentRange={displayRange}
-          referenceStation={station}
-        />
-      ) : (
-        <PropertiesPanel
-          item={item}
-          importIssues={item ? importIssuesOf(item.data.name) : []}
-          origin={project.crs.origin}
-        />
-      )}
+      {rightPanel()}
       <footer className="app-status">{statusText()}</footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
       {libraryOpen && (
@@ -1271,6 +1379,21 @@ export function App() {
             setSelectedElement({ collection: 'profiles', id });
             setMessage(sk.library.inserted(name));
           }}
+        />
+      )}
+      {projectInfoOpen && <ProjectInfoDialog onClose={() => setProjectInfoOpen(false)} />}
+      {axisOffset && (
+        <AxisOffsetDialog
+          axisId={axisOffset.axisId}
+          which={axisOffset.which}
+          range={sectionRange ?? { from: 0, to: 100 }}
+          onClose={() => setAxisOffset(undefined)}
+        />
+      )}
+      {planLineVertices && (
+        <PlanLineVerticesDialog
+          lineId={planLineVertices}
+          onClose={() => setPlanLineVertices(undefined)}
         />
       )}
       {deckDialog &&

@@ -1844,3 +1844,176 @@ text.dw-stationing {
   min-width: 200px;
   border-radius: 4px;
 }
+
+/* vlastnosti ako mriežka v Revite (10a2) */
+.prop-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  background: var(--ribbon);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.prop-type select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-weight: 600;
+}
+
+.prop-type-label {
+  font-weight: 600;
+}
+
+.prop-type-kind {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.prop-group {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.prop-group-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  background: var(--ribbon);
+  border: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+.prop-rows {
+  padding: 2px 0 4px;
+}
+
+.prop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 44%) minmax(0, 1fr);
+  align-items: center;
+  min-height: 28px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.prop-row:first-child {
+  border-top: none;
+}
+
+.prop-label {
+  overflow: hidden;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prop-value {
+  min-width: 0;
+  padding: 2px 6px 2px 0;
+}
+
+.prop-value input[type="text"],
+.prop-value select {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+}
+
+.prop-readonly {
+  display: block;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prop-with-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.prop-with-action > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.prop-action {
+  flex: none;
+  padding: 1px 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.prop-action:hover {
+  border-color: var(--accent);
+}
+
+.prop-note {
+  margin: 4px 8px;
+  font-size: 12px;
+}
+
+.prop-note-muted {
+  color: var(--muted);
+}
+
+.prop-note-warning {
+  color: var(--warning);
+}
+
+.prop-note-error {
+  color: var(--error);
+}
+
+.prop-station {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prop-station .station-input input {
+  width: 100%;
+}
+
+.prop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.prop-actions .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+}
+
+.properties .result {
+  padding: 0 8px;
+}
+
+.dialog-body {
+  max-height: 70vh;
+  overflow: auto;
+}
