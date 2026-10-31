@@ -79,6 +79,7 @@ import { type BrowserTarget, browserTree } from './store/browserTree.ts';
 import type { ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
+import { duplicateElement } from './store/duplicate.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
@@ -148,6 +149,8 @@ export function App() {
   const [bearingsOf, setBearingsOf] = useState<string>();
   const [lawDialog, setLawDialog] = useState<{ deckId: string; parameter: string }>();
   const [profileTables, setProfileTables] = useState<string>();
+  /** Upraviť → Premenovať začne premenovanie vybraného prvku v prehliadači */
+  const [renameRequest, setRenameRequest] = useState<{ key: string; nonce: number }>();
   /** nástroj a druh nového obrysu v editore prierezu (kontextová karta) */
   const [profileTool, setProfileTool] = useState<ProfileTool>('select');
   const [loopRole, setLoopRole] = useState<'outer' | 'void'>('void');
@@ -539,6 +542,35 @@ export function App() {
     );
   }
 
+  /** Kópia prvku jedným príkazom (späť / znova); kópia sa vyberie. */
+  function duplicate(target: { collection: ElementCollection; id: string }) {
+    const r = duplicateElement(project, target.collection, target.id, newId);
+    if (!r) return;
+    projectStore.getState().dispatch(r.command);
+    setSelectedElement(r.selected);
+    // nový prvok je zatiaľ len v príkaze (projekt v tejto funkcii je stav pred kópiou)
+    const added =
+      r.command.type === 'addElements'
+        ? [
+            ...(r.command.supports ?? []),
+            ...(r.command.superstructures ?? []),
+            ...(r.command.bridgeAxes ?? []),
+            ...(r.command.profiles ?? []),
+            ...(r.command.planLines ?? []),
+          ]
+        : [];
+    const name = added.find((e) => e.id === r.selected.id)?.name;
+    if (name) setMessage(sk.ribbon.duplicated(name));
+  }
+
+  function renameSelected() {
+    if (selectedElement)
+      setRenameRequest((r) => ({
+        key: `${selectedElement.collection}:${selectedElement.id}`,
+        nonce: (r?.nonce ?? 0) + 1,
+      }));
+  }
+
   function deleteSelected() {
     if (!selectedElement) return;
     projectStore.getState().dispatch({ type: 'removeElement', ...selectedElement });
@@ -779,6 +811,30 @@ export function App() {
       kind: contextualKinds[selectedElement.collection],
       label: sk.elements.titles[selectedElement.collection],
       onDelete: deleteSelected,
+      onDuplicate:
+        selectedElement.collection !== 'terrains' ? () => duplicate(selectedElement) : undefined,
+      onRename: renameSelected,
+      onShowInSection: () => {
+        const station = targetStation({ type: 'element', ...selectedElement });
+        if (station !== undefined) setSectionStation(station);
+        setMode('section');
+      },
+      onAddSupport: () => {
+        setMode('2d');
+        setTool('support');
+      },
+      onEditProfile: () => {
+        const deck = project.superstructures.find((d) => d.id === selectedElement.id);
+        if (!deck) return;
+        setSelectedElement({ collection: 'profiles', id: deck.profile });
+        setMode('section');
+      },
+      onVertices: () => setPlanLineVertices(selectedElement.id),
+      onRedownload:
+        project.terrains.find((t) => t.id === selectedElement.id)?.source === 'zbgis'
+          ? () => void downloadDmrTerrain(selectedElement.id)
+          : undefined,
+      onAxisOffset: (which) => setAxisOffset({ axisId: selectedElement.id, which }),
       profileTool,
       setProfileTool: (next) => {
         setMode('section');
@@ -818,6 +874,11 @@ export function App() {
     onOpenLibrary: () => setLibraryOpen(true),
     onInsertTwinExample: insertTwinExample,
     onDelete: deleteSelected,
+    onDuplicate:
+      selectedElement && selectedElement.collection !== 'terrains'
+        ? () => duplicate(selectedElement)
+        : undefined,
+    onRename: renameSelected,
     onFit: (whole) => setFitRequest((f) => ({ whole, nonce: f.nonce + 1 })),
     goTo: (
       <GoToStation
@@ -1326,6 +1387,9 @@ export function App() {
           onOpen={openTarget}
           onRename={renameTarget}
           onDelete={deleteTarget}
+          canDuplicate={(target) => target.type === 'element' && target.collection !== 'terrains'}
+          onDuplicate={(target) => target.type === 'element' && duplicate(target)}
+          renameRequest={renameRequest}
           notices={openErrors}
           fileIssues={lastImport.fileIssues}
         />

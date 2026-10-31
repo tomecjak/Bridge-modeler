@@ -369,14 +369,21 @@ nová verzia + migrácia + test (dnes v6). Poradie podfáz: 10a → 10g, 10i (r�
 
 #### 10a2 — Rozhranie v štýle CAD (ADR 0016)
 Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Postup sa ruší úplne.
-- [ ] ribbon ako v Revite: menu Súbor (nový, otvoriť, uložiť, export), karty Domov, Vložiť, Upraviť, Pohľad, Správa; panel rýchleho prístupu (uložiť, späť, znova); vlastné SVG ikony; pohľady bez vlastných líšt, stav nástrojov v `App.tsx`; odstránenie panela Postup
-- [ ] prehliadač projektu: pohľady, model hierarchicky (os cesty → os mosta → NK → podpery, oblasť mosta), podklady, prierezy, parametre; ikony, zbalenie, kontextové menu, dvojklik priblíži
-- [ ] vlastnosti ako mriežka v Revite (výber typu, skupiny Názov | Hodnota, dialógy „…“); bez výberu vlastnosti aktívneho pohľadu; os cesty, oblasť mosta, terén, čiara, os mosta; dialóg Informácie o projekte (zadanie)
-- [ ] vlastnosti podpery a NK v mriežke (priebehy a ložiská v dialógoch)
-- [ ] vlastnosti prierezu, dialóg bodov a obrysov, nástroje editora prierezu v kontextovej karte
-- [ ] kontextová karta „Upraviť | typ“, Duplikovať a Premenovať
+- [x] ribbon ako v Revite: menu Súbor (nový, otvoriť, uložiť, export), karty Domov, Vložiť, Upraviť, Pohľad, Správa; panel rýchleho prístupu (uložiť, späť, znova); vlastné SVG ikony; pohľady bez vlastných líšt, stav nástrojov v `App.tsx`; odstránenie panela Postup
+  - `layout/ribbon/` (Ribbon, AppMenu, TitleBar, `ribbonTabs`), `icons/Icon.tsx`; nástroje (`ViewTool`), Prispôsobiť / Celá os (`FitRequest`), prevýšenie a 3D prepínače v App; Esc ruší nástroj, stavový riadok ukazuje výzvu nástroja. Export DXF / SVG / STEP v menu Súbor (STEP po výpočte presného modelu v 3D). Priečny rez, 3D a editor prierezu majú spodný pruh (staničenie, stav). Ribbon sa zbalí dvojklikom na kartu.
+- [x] prehliadač projektu: pohľady, model hierarchicky (os cesty → os mosta → NK → podpery, oblasť mosta), podklady, prierezy, parametre; ikony, zbalenie, kontextové menu, dvojklik priblíži
+  - `store/browserTree.ts` (`browserTree`, test), `layout/ProjectBrowser.tsx`; NK s prierezom a poliami v popise, podpery podľa staničenia, Nepriradené pre prvky bez nadradeného; F2 / Delete, kontextové menu (priblížiť, premenovať, duplikovať, odstrániť); zbalenie sa pamätá v prehliadači.
+- [x] vlastnosti ako mriežka v Revite (výber typu, skupiny Názov | Hodnota, dialógy „…“); bez výberu vlastnosti aktívneho pohľadu; os cesty, oblasť mosta, terén, čiara, os mosta; dialóg Informácie o projekte (zadanie)
+  - `layout/properties/` (PropertyGrid, Dialog, `simpleSheets`, test); Esc bez nástroja zruší výber.
+- [x] vlastnosti podpery a NK v mriežke (priebehy a ložiská v dialógoch)
+  - `elementSheets` (`supportSheet`, `deckSheet`, test): typ podpery / prierez NK ako výber typu, opora po častiach, ložiská s vypočítanými výškami v dialógu, parametre prierezu so súhrnom priebehu a dialógom s grafom.
+- [x] vlastnosti prierezu, dialóg bodov a obrysov, nástroje editora prierezu v kontextovej karte
+  - `profileSheet` (test), `ProfileTablesDialog` (tabuľky z bývalého `ElementPanel`); nástroje a druh obrysu v App, prvé Esc ukončí nástroj, druhé zruší výber.
+- [x] kontextová karta „Upraviť | typ“, Duplikovať a Premenovať
+  - `contextualTab` podľa druhu (NK: podpera, prierez, rez; podpera: rez; čiara: vrcholy; terén: stiahnuť znova; os mosta: posuny); `store/duplicate.ts` (test): podpera s ďalším číslom posunutá o 5 m, NK s kópiou osi mosta, čiara posunutá o 5 m; Premenovať začne premenovanie v prehliadači.
+  - *Ostáva:* panel parametra v pohľade Parametre ostal formulár (tabuľka parametrov je pohľad); ikony sú jednoduché a dajú sa vylepšiť podľa firemných zvyklostí.
 
-**Hotové, keď:** všetky doterajšie funkcie sú dostupné z ribbonu, prehliadača a vlastností, pohľady nemajú vlastné lišty a úprava podpery aj NK v mriežke má späť / znova.
+**Hotové, keď:** všetky doterajšie funkcie sú dostupné z ribbonu, prehliadača a vlastností, pohľady nemajú vlastné lišty a úprava podpery aj NK v mriežke má späť / znova. — *2026-10-31:* overené v prehliadači (Chrome bez okna) na SO 171-11-01 a 125-00, svetlá aj tmavá téma.
 
 #### 10b — Os mosta: dĺžky, profil v ľubovoľnej osi, merania, kóty
 - [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m

@@ -15,6 +15,11 @@ interface Props {
   onOpen: (target: BrowserTarget) => void;
   onRename: (target: BrowserTarget, name: string) => void;
   onDelete: (target: BrowserTarget) => void;
+  /** kópia prvku; undefined pre prvky, ktoré sa nekopírujú (terén, parametre) */
+  canDuplicate: (target: BrowserTarget) => boolean;
+  onDuplicate: (target: BrowserTarget) => void;
+  /** Upraviť → Premenovať: nová hodnota `nonce` začne premenovanie položky `key` */
+  renameRequest: { key: string; nonce: number } | undefined;
   /** chyby pri otvorení projektového súboru a problémy súboru LandXML */
   notices: readonly string[];
   fileIssues: readonly AlignmentIssue[];
@@ -51,6 +56,9 @@ export function ProjectBrowser({
   onOpen,
   onRename,
   onDelete,
+  canDuplicate,
+  onDuplicate,
+  renameRequest,
   notices,
   fileIssues,
 }: Props) {
@@ -59,6 +67,11 @@ export function ProjectBrowser({
   const [renaming, setRenaming] = useState<string>();
   const [menu, setMenu] = useState<MenuState>();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: premenovanie len pri novej žiadosti z ribbonu
+  useEffect(() => {
+    if (renameRequest) setRenaming(renameRequest.key);
+  }, [renameRequest?.nonce]);
 
   useEffect(() => {
     try {
@@ -234,6 +247,21 @@ export function ProjectBrowser({
                 </span>
                 {t.menu.rename}
               </button>
+              {canDuplicate(menu.node.target) && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    if (menu.node.target) onDuplicate(menu.node.target);
+                    setMenu(undefined);
+                  }}
+                >
+                  <span className="app-menu-icon">
+                    <Icon name="duplicate" size={16} />
+                  </span>
+                  {t.menu.duplicate}
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"

@@ -36,6 +36,9 @@ export interface RibbonContext {
   onOpenLibrary: () => void;
   onInsertTwinExample: () => void;
   onDelete: () => void;
+  /** kópia vybraného prvku; undefined = vybraný prvok sa nedá kopírovať */
+  onDuplicate: (() => void) | undefined;
+  onRename: () => void;
   onFit: (whole: boolean) => void;
   /** pole „Prejsť na“ */
   goTo: ReactNode;
@@ -211,6 +214,24 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
         {
           label: t.groups.element,
           items: [
+            {
+              kind: 'button',
+              id: 'duplicate',
+              label: t.duplicate,
+              icon: 'duplicate',
+              title: t.duplicateTitle,
+              disabled: !c.onDuplicate,
+              onClick: () => c.onDuplicate?.(),
+            },
+            {
+              kind: 'button',
+              id: 'rename',
+              label: t.rename,
+              icon: 'rename',
+              title: t.renameTitle,
+              disabled: !c.hasSelection,
+              onClick: c.onRename,
+            },
             {
               kind: 'button',
               id: 'delete',
@@ -395,6 +416,17 @@ export interface ContextualContext {
   /** názov druhu v karte (napr. „Prierez“) */
   label: string;
   onDelete: () => void;
+  onDuplicate: (() => void) | undefined;
+  onRename: () => void;
+  /** podpera, NK: prierez na jej staničení */
+  onShowInSection: () => void;
+  /** NK: nástroj Podpera a prechod do editora jej prierezu */
+  onAddSupport: () => void;
+  onEditProfile: () => void;
+  /** čiara: tabuľka vrcholov; terén: stiahnuť znova (len DMR zo ZBGIS); os mosta: posuny */
+  onVertices: () => void;
+  onRedownload: (() => void) | undefined;
+  onAxisOffset: (which: 'horizontalOffset' | 'verticalOffset') => void;
   /** editor prierezu (Fáza 8b) */
   profileTool: ProfileTool;
   setProfileTool: (tool: ProfileTool) => void;
@@ -412,24 +444,30 @@ const PROFILE_TOOL_ICONS: Record<ProfileTool, RibbonButton['icon']> = {
 
 /** Kontextová karta pri výbere prvku (ako „Modify | …“ v Revite). */
 export function contextualTab(c: ContextualContext): RibbonTab {
+  const t = sk.ribbon;
+  const button = (
+    id: string,
+    label: string,
+    icon: RibbonButton['icon'],
+    onClick: () => void,
+    title?: string,
+  ): RibbonButton => ({ kind: 'button', id, label, icon, onClick, ...(title ? { title } : {}) });
   const element = {
-    label: sk.ribbon.groups.element,
+    label: t.groups.element,
     items: [
-      {
-        kind: 'button' as const,
-        id: 'ctx-delete',
-        label: sk.ribbon.delete,
-        icon: 'trash' as const,
-        title: sk.ribbon.deleteTitle,
-        onClick: c.onDelete,
-      },
+      ...(c.onDuplicate
+        ? [button('ctx-duplicate', t.duplicate, 'duplicate', c.onDuplicate, t.duplicateTitle)]
+        : []),
+      button('ctx-rename', t.rename, 'rename', c.onRename, t.renameTitle),
+      button('ctx-delete', t.delete, 'trash', c.onDelete, t.deleteTitle),
     ],
   };
-  const groups: RibbonTab['groups'] =
-    c.kind === 'profile'
-      ? [
+  const specific: RibbonTab['groups'] = (() => {
+    switch (c.kind) {
+      case 'profile':
+        return [
           {
-            label: sk.ribbon.groups.tools,
+            label: t.groups.tools,
             items: (['select', 'point', 'loop', 'delete'] as const).map((tool) => ({
               kind: 'button' as const,
               id: `profile-${tool}`,
@@ -441,10 +479,10 @@ export function contextualTab(c: ContextualContext): RibbonTab {
             })),
           },
           {
-            label: sk.ribbon.groups.loopRole,
+            label: t.groups.loopRole,
             items: [
               {
-                kind: 'select',
+                kind: 'select' as const,
                 id: 'loop-role',
                 label: sk.elements.role,
                 value: c.loopRole,
@@ -452,24 +490,69 @@ export function contextualTab(c: ContextualContext): RibbonTab {
                   value: r,
                   label: sk.elements.roles[r],
                 })),
-                onChange: (v) => c.setLoopRole(v as 'outer' | 'void'),
+                onChange: (v: string) => c.setLoopRole(v as 'outer' | 'void'),
               },
             ],
           },
           {
-            label: sk.ribbon.groups.profile,
+            label: t.groups.profile,
             items: [
-              {
-                kind: 'button',
-                id: 'profile-tables',
-                label: sk.properties.tables,
-                icon: 'parameters',
-                onClick: c.onProfileTables,
-              },
+              button('profile-tables', sk.properties.tables, 'parameters', c.onProfileTables),
             ],
           },
-          element,
-        ]
-      : [element];
-  return { id: 'contextual', label: sk.ribbon.contextual(c.label), contextual: true, groups };
+        ];
+      case 'support':
+        return [
+          {
+            label: t.groups.support,
+            items: [button('support-section', t.showInSection, 'section', c.onShowInSection)],
+          },
+        ];
+      case 'deck':
+        return [
+          {
+            label: t.groups.bridge,
+            items: [
+              button('deck-support', t.support, 'pier', c.onAddSupport, t.supportTitle),
+              button('deck-profile', t.editProfile, 'section', c.onEditProfile),
+              button('deck-section', t.showInSection, 'section', c.onShowInSection),
+            ],
+          },
+        ];
+      case 'planLine':
+        return [
+          {
+            label: t.groups.line,
+            items: [button('line-vertices', t.vertices, 'line', c.onVertices)],
+          },
+        ];
+      case 'terrain':
+        return c.onRedownload
+          ? [
+              {
+                label: t.groups.terrain,
+                items: [button('terrain-redownload', sk.terrain.redownload, 'dmr', c.onRedownload)],
+              },
+            ]
+          : [];
+      case 'bridgeAxis':
+        return [
+          {
+            label: t.groups.axis,
+            items: [
+              button('axis-h', t.horizontalOffset, 'axis', () =>
+                c.onAxisOffset('horizontalOffset'),
+              ),
+              button('axis-v', t.verticalOffset, 'axis', () => c.onAxisOffset('verticalOffset')),
+            ],
+          },
+        ];
+    }
+  })();
+  return {
+    id: 'contextual',
+    label: t.contextual(c.label),
+    contextual: true,
+    groups: [...specific, element],
+  };
 }
