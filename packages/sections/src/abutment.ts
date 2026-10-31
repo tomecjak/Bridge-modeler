@@ -53,15 +53,26 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
   const front = dim.frontOffset as number;
   const { d, f, t, into } = frame(r, end);
   const c = r.center;
-  const at = (u: number, w: number) => vec2(c.x + u * d.x + w * f.x, c.y + u * d.y + w * f.y);
+  const n = vec2(r.axis.frame.normal.x, r.axis.frame.normal.y);
+  const dn = d.x * n.x + d.y * n.y;
+  const fn = f.x * n.x + f.y * n.y;
+  const x = (p: Vec2) => transverseOffset(r, p);
+  // bočné líca opory sú rovnobežné s osou mosta cez konce opory na osi ložísk (krídla pod okrajmi NK)
+  const ends = [-1, 1].map((k) => x(vec2(c.x + ((k * L) / 2) * d.x, c.y + ((k * L) / 2) * d.y)));
+  const xc = x(c);
+  /** bod na priamke vo vzdialenosti `w` od osi ložísk s priečnou polohou `xs` */
+  const at = (w: number, xs: number) => {
+    const u = (xs - xc - w * fn) / dn;
+    return vec2(c.x + u * d.x + w * f.x, c.y + u * d.y + w * f.y);
+  };
+  const [xa, xb] = ends as [number, number];
   const rect = (w0: number, w1: number): Polygon2D => [
-    at(-L / 2, w0),
-    at(L / 2, w0),
-    at(L / 2, w1),
-    at(-L / 2, w1),
+    at(w0, xa),
+    at(w0, xb),
+    at(w1, xb),
+    at(w1, xa),
   ];
   const wOf = (p: Vec2) => (p.x - c.x) * f.x + (p.y - c.y) * f.y;
-  const x = (p: Vec2) => transverseOffset(r, p);
   const seatTop = (p: Vec2) => seatAt(r, x(p));
   const seatBottom = (p: Vec2) => seatTop(p) - seatHeight;
   // horný povrch NK predĺžený v sklone nivelety (bod na šikmom konci leží na inom staničení ako os)
@@ -109,20 +120,18 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
   if (wingLength > 0) {
     const root = Math.min(front - seatLength, backwallBack);
     const angle = ((dim.wingAngle as number) * Math.PI) / 180;
-    // od poľa = proti smeru do poľa pozdĺž osi mosta; bočný smer = zložka osi podpery kolmá na os mosta
+    // od poľa = proti smeru do poľa pozdĺž osi mosta; bočne von = od osi mosta
     const away = vec2(-into * t.x, -into * t.y);
-    const dt = d.x * t.x + d.y * t.y;
-    const lat0 = vec2(d.x - dt * t.x, d.y - dt * t.y);
-    const latLen = Math.hypot(lat0.x, lat0.y);
-    for (const side of [-1, 1]) {
-      const lat = vec2((side * lat0.x) / latLen, (side * lat0.y) / latLen);
+    for (const xEnd of ends) {
+      const out = Math.sign(xEnd - xc) || 1;
+      const lat = vec2(out * n.x, out * n.y);
       const dir = vec2(
         Math.cos(angle) * away.x + Math.sin(angle) * lat.x,
         Math.cos(angle) * away.y + Math.sin(angle) * lat.y,
       );
       let inward = vec2(-dir.y, dir.x);
       if (inward.x * lat.x + inward.y * lat.y > 0) inward = vec2(-inward.x, -inward.y);
-      const r0 = at((side * L) / 2, root);
+      const r0 = at(root, xEnd);
       const r1 = vec2(r0.x + wingLength * dir.x, r0.y + wingLength * dir.y);
       const i1 = vec2(r1.x + thickness * inward.x, r1.y + thickness * inward.y);
       // vnútorná líca končí na zadnej líci opory
@@ -151,26 +160,26 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
 }
 
 /**
- * Celková dĺžka mosta v osi (ADR 0010): od krajného bodu začiatočnej opory po krajný bod koncovej opory
- * (konce krídel) premietnuté na os mosta. Bez opory na konci sa počíta od konca NK. Lokálne priama os.
+ * Celková dĺžka mosta (ADR 0010): vzdialenosť koncov krídel (bez krídel zadných líc opôr) meraná rovnobežne
+ * s osou mosta, zvlášť na ľavej a pravej strane; výsledok je väčšia z nich. Bez opory na konci sa počíta od konca NK.
+ * Lokálne priama os.
  */
 export function overallLength(
   supports: readonly SupportResult[],
   deck: { sFrom: number; sTo: number },
-): { from: number; to: number; length: number } {
-  let from = deck.sFrom;
-  let to = deck.sTo;
+): number {
+  const from = { left: deck.sFrom, right: deck.sFrom };
+  const to = { left: deck.sTo, right: deck.sTo };
   for (const r of supports) {
     const end = r.deckEnd;
     const parts = abutmentParts(r);
     if (!end || !parts) continue;
-    const along = parts
-      .flatMap((p) => p.plan)
-      .map(
-        (p) => end.s + (p.x - end.point.x) * end.tangent.x + (p.y - end.point.y) * end.tangent.y,
-      );
-    if (end.side === 'start') from = Math.min(from, ...along);
-    else to = Math.max(to, ...along);
+    for (const p of parts.flatMap((part) => part.plan)) {
+      const s = end.s + (p.x - end.point.x) * end.tangent.x + (p.y - end.point.y) * end.tangent.y;
+      const side = transverseOffset(r, p) < 0 ? 'left' : 'right';
+      if (end.side === 'start') from[side] = Math.min(from[side], s);
+      else to[side] = Math.max(to[side], s);
+    }
   }
-  return { from, to, length: to - from };
+  return Math.max(to.left - from.left, to.right - from.right);
 }

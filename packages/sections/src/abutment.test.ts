@@ -146,8 +146,7 @@ describe('abutmentParts — kolmá opora', () => {
     const r = shallow();
     const s = (station: number) => alignment.stationing.fromDisplay(station) as number;
     const total = overallLength([r], { sFrom: s(1020), sTo: s(1045) });
-    expect(total.from).toBeCloseTo(s(1020.5) - 1.15 - 4, 9);
-    expect(total.to).toBe(s(1045));
+    expect(total).toBeCloseTo(s(1045) - (s(1020.5) - 1.15 - 4), 9);
   });
 
   it('shows the seat, backwall and wings in the plan and drops the footing when its thickness is 0', () => {
