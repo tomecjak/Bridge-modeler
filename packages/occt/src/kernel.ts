@@ -76,16 +76,33 @@ export class OcctGeometryKernel implements GeometryKernel<ShapeHandle> {
   ): ShapeHandle {
     const lo = piece.map((p) => vec3(p.x, p.y, bottom(p)));
     const hi = piece.map((p) => vec3(p.x, p.y, top(p)));
-    const faces = [this.oc.makeFace(this.polygonWire(lo)), this.oc.makeFace(this.polygonWire(hi))];
+    const faces = [...this.faces(lo), ...this.faces(hi)];
     for (let i = 0; i < piece.length; i++) {
       const j = (i + 1) % piece.length;
-      const quad = [lo[i], lo[j], hi[j], hi[i]] as Vec3[];
       // bok nulovej výšky na oboch koncoch vynechá; trojuholník, ak je nulová len jedna strana
-      const pts = quad.filter((p, k) => k === 0 || !samePoint(p, quad[k - 1] as Vec3));
-      if (pts.length > 2 && samePoint(pts[0] as Vec3, pts[pts.length - 1] as Vec3)) pts.pop();
-      if (pts.length >= 3) faces.push(this.oc.makeFace(this.polygonWire(pts)));
+      faces.push(...this.faces([lo[i], lo[j], hi[j], hi[i]] as Vec3[]));
     }
     return this.outward(this.oc.sewAndSolidify(faces, SEW_TOLERANCE));
+  }
+
+  /**
+   * Stena z mnohouholníka bez opakovaných bodov: rovinná, inak nerovinná plocha, inak vejár trojuholníkov
+   * (napr. horná plocha časti, ktorá nie je presne rovinná).
+   */
+  private faces(points: readonly Vec3[]): ShapeHandle[] {
+    const pts = points.filter((p, k) => k === 0 || !samePoint(p, points[k - 1] as Vec3));
+    while (pts.length > 2 && samePoint(pts[0] as Vec3, pts[pts.length - 1] as Vec3)) pts.pop();
+    if (pts.length < 3) return [];
+    try {
+      return [this.oc.makeFace(this.polygonWire(pts))];
+    } catch {
+      try {
+        return [this.oc.makeNonPlanarFace(this.polygonWire(pts))];
+      } catch {
+        const a = pts[0] as Vec3;
+        return pts.slice(1, -1).map((b, k) => this.oc.buildTriFace(a, b, pts[k + 2] as Vec3));
+      }
+    }
   }
 
   /** Teleso s normálami von (zošité steny môžu dať obrátenú orientáciu = záporný objem). */

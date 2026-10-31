@@ -51,7 +51,12 @@ export function supportMesh<S>(kernel: GeometryKernel<S>, r: SupportResult): Tri
 }
 
 /** Časť konvexného mnohouholníka s `lo ≤ x(p) ≤ hi` (Sutherland–Hodgman pre dve rovnobežné priamky). */
-function clipToSlab(poly: Polygon2D, x: (p: Vec2) => number, lo: number, hi: number): Vec2[] {
+export function clipToSlab(
+  poly: Polygon2D,
+  x: (p: Vec2) => number,
+  lo: number,
+  hi: number,
+): Vec2[] {
   const clip = (input: readonly Vec2[], inside: (v: number) => boolean, limit: number): Vec2[] => {
     const out: Vec2[] = [];
     for (let i = 0; i < input.length; i++) {
