@@ -1,8 +1,14 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { type Polygon2D, pointInPolygon, signedArea, vec2 } from '@bridge/geom';
-import { buildParameterSet, type Superstructure, type Support } from '@bridge/model';
 import {
+  buildParameterSet,
+  defaultAbutmentGeometry,
+  type Superstructure,
+  type Support,
+} from '@bridge/model';
+import {
+  abutmentParts,
   evaluateSupport,
   type SupportContext,
   type SupportResult,
@@ -119,5 +125,61 @@ describe('supportMesh', () => {
     const r = pier({ crossingAngle: '70' });
     const plan = supportPlan(r) as { footing: Polygon2D };
     expect(Math.abs(signedArea(plan.footing))).toBeCloseTo(32, 9);
+  });
+});
+
+describe('supportMesh — opora', () => {
+  const abutment = (changes: Partial<Support> = {}) =>
+    pier({
+      kind: 'abutment',
+      station: 1021,
+      crossingAngle: '70',
+      geometry: defaultAbutmentGeometry('16'),
+      footing: { length: '0', width: '0', thickness: '0' },
+      foundationTop: '238',
+      ...changes,
+    });
+
+  /** Objem častí numericky: ∫∫ (vrch − spodok) dA po pôdoryse každej časti (mriežka 1 cm). */
+  function partsVolume(r: SupportResult): number {
+    const step = 0.01;
+    let v = 0;
+    for (const part of abutmentParts(r) ?? []) {
+      const xs = part.plan.map((p) => p.x);
+      const ys = part.plan.map((p) => p.y);
+      for (let x = Math.min(...xs) + step / 2; x < Math.max(...xs); x += step) {
+        for (let y = Math.min(...ys) + step / 2; y < Math.max(...ys); y += step) {
+          const p = vec2(x, y);
+          if (pointInPolygon(p, part.plan)) v += (part.top(p) - part.bottom(p)) * step * step;
+        }
+      }
+    }
+    return v;
+  }
+
+  it('builds seat, stem, backwall and hung wings of a skewed abutment without a footing', () => {
+    const r = abutment();
+    expect(r.issues).toEqual([]);
+    expect(abutmentParts(r)?.map((p) => p.name)).toEqual([
+      'seat',
+      'stem',
+      'backwall',
+      'wing',
+      'wing',
+    ]);
+    const mesh = supportMesh(kernel, r);
+    const bearings = r.bearings.reduce(
+      (a, b) => a + BEARING_PLAN_SIZE ** 2 * (b.soffit - b.seat),
+      0,
+    );
+    expect(meshVolume(mesh)).toBeCloseTo(partsVolume(r) + bearings, 0);
+    expect(meshBounds(mesh)?.min.z).toBeCloseTo(r.foundationTop, 9);
+  });
+
+  it('reaches the deck top with the backwall and wings', () => {
+    const r = abutment();
+    const parts = abutmentParts(r) ?? [];
+    const highest = Math.max(...parts.flatMap((part) => part.plan.map((p) => part.top(p))));
+    expect(meshBounds(supportMesh(kernel, r))?.max.z).toBeCloseTo(highest, 9);
   });
 });

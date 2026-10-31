@@ -1,5 +1,12 @@
 import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
-import { type SupportResult, seatAt, supportPlan } from '@bridge/sections';
+import {
+  abutmentParts,
+  type SolidPart,
+  type SupportResult,
+  seatAt,
+  supportPlan,
+  transverseOffset,
+} from '@bridge/sections';
 import type { GeometryKernel } from './kernel.ts';
 import { mergeMeshes, type TriangleMesh } from './mesh.ts';
 
@@ -7,9 +14,10 @@ import { mergeMeshes, type TriangleMesh } from './mesh.ts';
 export const BEARING_PLAN_SIZE = 0.6;
 
 /**
- * Teleso podpery (Fáza 5): základ ako kváder pod hornou hranou základu, driek / stĺpy / opora ako hranol
- * od hornej hrany základu po hornú hranu podpery (`seatAt`, lineárne medzi ložiskami) a ložiská ako kvádre
- * od hornej hrany podpery po spodok NK. Prázdna sieť, ak podpera nie je vyhodnotená.
+ * Teleso podpery (Fáza 5, ADR 0010): základ ako kváder pod hornou hranou základu (ak má hrúbku), pilier ako hranol
+ * od hornej hrany základu po hornú hranu podpery (`seatAt`, lineárne medzi ložiskami), opora z častí `abutmentParts`
+ * (prah, driek, záverný múrik, krídla) a ložiská ako kvádre od hornej hrany podpery po spodok NK.
+ * Prázdna sieť, ak podpera nie je vyhodnotená.
  */
 export function supportMesh<S>(kernel: GeometryKernel<S>, r: SupportResult): TriangleMesh {
   const plan = supportPlan(r);
@@ -28,24 +36,27 @@ export function supportMesh<S>(kernel: GeometryKernel<S>, r: SupportResult): Tri
     );
   }
 
-  // priečna poloha x od osi NK; horná hrana je lineárna medzi ložiskami → pôdorys sa delí na pásy medzi nimi
-  const n = vec2(axis.frame.normal.x, axis.frame.normal.y);
-  const o = vec2(axis.point.x, axis.point.y);
-  const xOf = (p: Vec2) => (p.x - o.x) * n.x + (p.y - o.y) * n.y;
+  const xOf = (p: Vec2) => transverseOffset(r, p);
+  const parts: SolidPart[] =
+    abutmentParts(r) ??
+    plan.body.map((body) => ({
+      name: 'stem',
+      plan: body,
+      bottom: () => top,
+      top: (p) => seatAt(r, xOf(p)),
+      foldsAtBearings: true,
+    }));
+  // plochy lineárne medzi ložiskami → pôdorys sa delí na pásy v priečnych polohách ložísk
   const cuts = [...new Set(r.bearings.map((b) => b.x))].sort((a, b) => a - b);
   const slabs = [-Infinity, ...cuts, Infinity];
-  for (const body of plan.body) {
-    const pieces = slabs
-      .slice(1)
-      .map((hi, i) => clipToSlab(body, xOf, slabs[i] as number, hi))
-      .filter((piece) => piece.length >= 3);
-    solids.push(
-      kernel.prism(
-        pieces,
-        () => top,
-        (p) => seatAt(r, xOf(p)),
-      ),
-    );
+  for (const part of parts) {
+    const pieces = part.foldsAtBearings
+      ? slabs
+          .slice(1)
+          .map((hi, i) => clipToSlab(part.plan, xOf, slabs[i] as number, hi))
+          .filter((piece) => piece.length >= 3)
+      : [part.plan];
+    solids.push(kernel.prism(pieces, part.bottom, part.top));
   }
 
   const d = r.direction;
