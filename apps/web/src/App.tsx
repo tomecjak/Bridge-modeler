@@ -48,11 +48,14 @@ import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
+import { AppMenu, type MenuSection } from './layout/ribbon/AppMenu.tsx';
+import { ribbonTabs, type View3dState } from './layout/ribbon/appRibbon.tsx';
+import { Ribbon } from './layout/ribbon/Ribbon.tsx';
+import { TitleBar } from './layout/ribbon/TitleBar.tsx';
 import { SectionPanel } from './layout/SectionPanel.tsx';
 import { StudyAreaPanel } from './layout/StudyAreaPanel.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
-import { type StepAction, WorkflowPanel } from './layout/WorkflowPanel.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
 import { drawingFileName } from './persistence/fileName.ts';
@@ -69,13 +72,13 @@ import {
   terrainProfilesAlong,
   useTerrainTins,
 } from './store/terrain.ts';
-import { type StepId, workflowSteps } from './store/workflow.ts';
 import type { Cut } from './viewer/sceneView.ts';
-import type { ExportFormat } from './views/ExportMenu.tsx';
+import { GoToStation } from './views/GoToStation.tsx';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { ProfileEditorView } from './views/ProfileEditorView.tsx';
 import { SectionView } from './views/SectionView.tsx';
 import { StationControl } from './views/StationControl.tsx';
+import type { FitRequest, ViewTool } from './views/viewState.ts';
 
 // three.js je veľký → 3D náhľad sa načíta až pri otvorení záložky (samostatný chunk)
 const Viewer3D = lazy(() => import('./viewer/Viewer3D.tsx'));
@@ -116,12 +119,25 @@ export function App() {
   /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
   const [dmrProgress, setDmrProgress] = useState<number>();
   const dmrCancel = useRef(false);
-  /** rozbalený krok postupu a panel vpravo otvorený z postupu (Fáza 10a) */
-  const [expandedStep, setExpandedStep] = useState<StepId>();
+  /** panel vpravo otvorený z ribbonu (zadanie, oblasť mosta) */
   const [sidePanel, setSidePanel] = useState<'brief' | 'studyArea'>();
-  /** žiadosti o nástroj „Pridať podperu“ v pôdoryse a „Oblasť mosta“ v profile (počítadlá, aby sa dali zopakovať) */
-  const [supportToolRequest, setSupportToolRequest] = useState(0);
-  const [areaToolRequest, setAreaToolRequest] = useState(0);
+  /** stav pohľadov ovládaný ribbonom (ADR 0016) */
+  const [ribbonTab, setRibbonTab] = useState('home');
+  const [tool, setTool] = useState<ViewTool>('none');
+  const [fitRequest, setFitRequest] = useState<FitRequest>({ whole: false, nonce: 0 });
+  const [exaggeration, setExaggeration] = useState(10);
+  const [view3d, setView3dState] = useState<View3dState>({
+    cut: false,
+    terrain: true,
+    basemap: 'none',
+    exact: false,
+  });
+  const setView3d = (changes: Partial<View3dState>) =>
+    setView3dState((v) => ({ ...v, ...changes }));
+  /** presný model je vypočítaný → dá sa exportovať STEP; žiadosť o export z menu Súbor */
+  const [exactReady, setExactReady] = useState(false);
+  const [stepRequest, setStepRequest] = useState<{ sjtsk: boolean; nonce: number }>();
+  const projectInput = useRef<HTMLInputElement>(null);
   /** „Prejsť na“ staničenie v pôdoryse aj profile (spojité s; nonce zopakuje rovnaké staničenie) */
   const [goTo, setGoTo] = useState<{ s: number; nonce: number }>();
   const landXmlInput = useRef<HTMLInputElement>(null);
@@ -359,7 +375,7 @@ export function App() {
   }, [selectedElement, project.profiles, parameterState.set, sectionAt, sections.results]);
 
   /** Stiahne pohľad ako DXF alebo SVG (ADR 0012). */
-  function exportDrawing(drawing: Drawing | undefined, view: string, format: ExportFormat) {
+  function exportDrawing(drawing: Drawing | undefined, view: string, format: 'dxf' | 'svg') {
     if (!drawing) return;
     const file = drawingFileName(project.name, view, format);
     if (format === 'dxf') downloadText(toDxf(drawing), file, 'application/dxf');
@@ -472,99 +488,165 @@ export function App() {
 
   const importIssuesOf = (name: string) => lastImport.issues.filter((i) => i.alignment === name);
 
-  const steps = workflowSteps({
-    brief: project.brief,
-    alignments: alignments.map((a) => ({
-      hasProfile: a.alignment.profile !== undefined,
-      errors: [...a.issues, ...importIssuesOf(a.data.name)].filter((i) => i.severity === 'error')
-        .length,
-    })),
-    terrains: project.terrains.length,
-    hasStudyArea: project.studyArea !== null,
-    decks: sections.results.map((r) => ({
-      errors: r.issues.filter((i) => i.severity !== 'warning').length,
-    })),
-    spans: project.superstructures.flatMap((sup) => {
-      const spans = supportState.spans.get(sup.id);
-      if (!spans) return [];
-      const supportErrors = supportState.supports
-        .filter((r) => r.support.superstructure === sup.id)
-        .flatMap((r) => r.issues.filter((i) => i.severity !== 'warning'));
-      return [
-        {
-          supports: spans.supports.length,
-          errors:
-            supportErrors.length + spans.issues.filter((i) => i.severity !== 'warning').length,
-          warnings: spans.issues.filter((i) => i.severity === 'warning').length,
-        },
-      ];
-    }),
-  });
   const hasRoad = alignments.some((a) => a.alignment.profile !== undefined);
-  const stepActions: Partial<Record<StepId, StepAction[]>> = {
-    brief: [
-      {
-        label: sk.workflow.actions.editBrief,
-        onClick: () => {
-          setSelectedElement(undefined);
-          setSidePanel('brief');
+
+  /** Pôdorys na export (staničenie každých 20 m, popis každých 100 m), v S-JTSK alebo lokálne. */
+  function exportPlan(format: 'dxf' | 'svg', sjtsk: boolean) {
+    if (!road) return;
+    const drawing = planDrawing({
+      alignment: road,
+      decks: roadDecks,
+      supports: roadSupports,
+      otherAlignments,
+      planLines: project.planLines,
+      stationing: { step: 20, labelStep: 100 },
+    });
+    const origin = project.crs.origin;
+    exportDrawing(
+      sjtsk && origin ? translate(drawing, origin.x, origin.y) : drawing,
+      sk.export.names.plan,
+      format,
+    );
+  }
+
+  function deleteSelected() {
+    if (!selectedElement) return;
+    projectStore.getState().dispatch({ type: 'removeElement', ...selectedElement });
+    setSelectedElement(undefined);
+  }
+
+  const menuText = sk.ribbon.menu;
+  const menuSections: MenuSection[] = [
+    {
+      items: [
+        { label: menuText.new, icon: 'newFile', onClick: newProject },
+        { label: menuText.open, icon: 'open', onClick: () => projectInput.current?.click() },
+        {
+          label: menuText.save,
+          icon: 'save',
+          onClick: () => downloadProject(projectStore.getState().project),
         },
-      },
-    ],
-    sources: [
-      { label: sk.import.button, onClick: () => landXmlInput.current?.click() },
-      {
-        label: sk.terrain.import,
-        onClick: () => terrainInput.current?.click(),
-        disabled: !project.crs.origin,
-      },
-      {
-        label: sk.terrain.download,
-        onClick: () => void downloadDmrTerrain(),
-        disabled: !hasRoad || project.terrains.length > 0 || dmrProgress !== undefined,
-      },
-    ],
-    studyArea: [
-      {
-        label: sk.workflow.actions.markStudyArea,
-        onClick: () => {
+      ],
+    },
+    {
+      title: menuText.export,
+      items: [
+        {
+          label: menuText.planDxf,
+          icon: 'export',
+          disabled: !road,
+          onClick: () => exportPlan('dxf', true),
+        },
+        { label: menuText.planDxfLocal, disabled: !road, onClick: () => exportPlan('dxf', false) },
+        { label: menuText.planSvg, disabled: !road, onClick: () => exportPlan('svg', true) },
+        {
+          label: menuText.profileDxf,
+          disabled: !profileView,
+          onClick: () =>
+            exportDrawing(profileView, sk.export.names.profile(profileDeck?.name ?? ''), 'dxf'),
+        },
+        {
+          label: menuText.profileSvg,
+          disabled: !profileView,
+          onClick: () =>
+            exportDrawing(profileView, sk.export.names.profile(profileDeck?.name ?? ''), 'svg'),
+        },
+        {
+          label: menuText.sectionDxf,
+          disabled: drawnSections.length === 0,
+          onClick: () =>
+            exportDrawing(sectionView, sk.export.names.section(formatStation(sectionAt, 3)), 'dxf'),
+        },
+        {
+          label: menuText.sectionSvg,
+          disabled: drawnSections.length === 0,
+          onClick: () =>
+            exportDrawing(sectionView, sk.export.names.section(formatStation(sectionAt, 3)), 'svg'),
+        },
+      ],
+    },
+    {
+      title: menuText.model,
+      items: [
+        {
+          label: menuText.stepSjtsk,
+          icon: 'cube',
+          disabled: !exactReady || mode !== '3d' || !project.crs.origin,
+          title: exactReady ? undefined : menuText.stepHint,
+          onClick: () => setStepRequest((r) => ({ sjtsk: true, nonce: (r?.nonce ?? 0) + 1 })),
+        },
+        {
+          label: menuText.stepLocal,
+          disabled: !exactReady || mode !== '3d',
+          title: exactReady ? undefined : menuText.stepHint,
+          onClick: () => setStepRequest((r) => ({ sjtsk: false, nonce: (r?.nonce ?? 0) + 1 })),
+        },
+      ],
+    },
+  ];
+
+  const tabs = ribbonTabs({
+    mode,
+    setMode,
+    tool,
+    setTool: (next) => {
+      setTool(next);
+      if (next !== 'none') setMessage(undefined);
+    },
+    hasRoad,
+    hasOrigin: project.crs.origin !== null,
+    hasDeck: project.superstructures.length > 0,
+    hasTerrain: project.terrains.length > 0,
+    hasSelection: selectedElement !== undefined,
+    dmrBusy: dmrProgress !== undefined,
+    onInsertDeck: openDeckDialog,
+    onEditStudyArea: () => {
+      setSelectedElement(undefined);
+      setSidePanel('studyArea');
+    },
+    onImportLandXml: () => landXmlInput.current?.click(),
+    onImportTerrain: () => terrainInput.current?.click(),
+    onDownloadDmr: () => void downloadDmrTerrain(),
+    onCancelDmr: () => {
+      dmrCancel.current = true;
+    },
+    onOpenLibrary: () => setLibraryOpen(true),
+    onInsertTwinExample: insertTwinExample,
+    onDelete: deleteSelected,
+    onFit: (whole) => setFitRequest((f) => ({ whole, nonce: f.nonce + 1 })),
+    goTo: (
+      <GoToStation
+        onStation={(station) => {
+          const s = road?.stationing.fromDisplay(station);
+          if (s === undefined) return;
           setMode('2d');
-          setAreaToolRequest((n) => n + 1);
-        },
-        disabled: !hasRoad,
-      },
-      {
-        label: sk.workflow.actions.editStudyArea,
-        onClick: () => {
-          setSelectedElement(undefined);
-          setSidePanel('studyArea');
-        },
-      },
-    ],
-    deck: [
-      {
-        label: sk.workflow.actions.insertDeck,
-        onClick: openDeckDialog,
-        disabled: !hasRoad,
-      },
-      { label: sk.library.open, onClick: () => setLibraryOpen(true) },
-    ],
-    supports: [
-      {
-        label: sk.workflow.actions.addSupport,
-        onClick: () => {
-          setMode('2d');
-          setSupportToolRequest((n) => n + 1);
-        },
-        disabled: project.superstructures.length === 0,
-      },
-    ],
-    outputs: [
-      { label: sk.workflow.actions.open3d, onClick: () => setMode('3d') },
-      { label: sk.workflow.actions.open2d, onClick: () => setMode('2d') },
-      { label: sk.workflow.actions.openSection, onClick: () => setMode('section') },
-    ],
-  };
+          setGoTo((g) => ({ s, nonce: (g?.nonce ?? 0) + 1 }));
+          setCursor({ source: 'profile', s });
+        }}
+      />
+    ),
+    exaggeration,
+    setExaggeration,
+    decks: roadDecks,
+    profileDeckId: profileDeck?.id,
+    setProfileDeckId,
+    view3d,
+    setView3d,
+    onProjectInfo: () => {
+      setSelectedElement(undefined);
+      setSidePanel('brief');
+    },
+  });
+
+  // Esc zruší aktívny nástroj (rozkreslené čiary a oblasti zahodia pohľady)
+  useEffect(() => {
+    if (tool === 'none') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTool('none');
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tool]);
 
   // výber prvku v strome, v 3D alebo po vložení zavrie panel otvorený z postupu
   useEffect(() => {
@@ -694,7 +776,7 @@ export function App() {
     // celú dlhú os nesťahujeme (tisíce dávok zo ZBGIS) — najprv treba oblasť mosta
     if (ranges.length === 0 && road.length > WHOLE_AXIS_TERRAIN_LIMIT) {
       setMessage(sk.terrain.needsStudyArea);
-      setExpandedStep('studyArea');
+      setSidePanel('studyArea');
       return;
     }
     dmrCancel.current = false;
@@ -763,6 +845,7 @@ export function App() {
 
   function statusText(): string {
     if (message) return message;
+    if (tool !== 'none') return sk.ribbon.toolHints[tool];
     if (cursor && item && project.crs.origin)
       return formatCursor(cursor, item.alignment, project.crs.origin);
     return sk.statusBar.ready;
@@ -788,96 +871,54 @@ export function App() {
       }}
       onDrop={onDrop}
     >
-      <header className="app-header">
-        <span className="app-title">{sk.app.title}</span>
-        <div className="toolbar">
-          <button type="button" className="button" onClick={newProject}>
-            {sk.persistence.newProject}
-          </button>
-          <label className="button">
-            {sk.persistence.open}
-            <input
-              type="file"
-              accept=".json,application/json"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void openProjectFile(file);
-                e.target.value = '';
-              }}
-            />
-          </label>
-          <button
-            type="button"
-            className="button"
-            onClick={() => downloadProject(projectStore.getState().project)}
-          >
-            {sk.persistence.save}
-          </button>
-          <span className="toolbar-separator" />
-          <button
-            type="button"
-            className="button"
-            disabled={!canUndo}
-            title={sk.history.undoShortcut}
-            onClick={() => projectStore.getState().undo()}
-          >
-            {sk.history.undo}
-          </button>
-          <button
-            type="button"
-            className="button"
-            disabled={!canRedo}
-            title={sk.history.redoShortcut}
-            onClick={() => projectStore.getState().redo()}
-          >
-            {sk.history.redo}
-          </button>
-          <label className="button">
-            {sk.import.button}
-            <input
-              ref={landXmlInput}
-              type="file"
-              accept=".xml,.landxml"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void openLandXml(file);
-                e.target.value = '';
-              }}
-            />
-          </label>
-          <label className="button">
-            {sk.terrain.import}
-            <input
-              ref={terrainInput}
-              type="file"
-              accept=".xml,.landxml,.tif,.tiff"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void openTerrainFile(file);
-                e.target.value = '';
-              }}
-            />
-          </label>
-        </div>
-      </header>
+      <TitleBar
+        projectName={project.name}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onSave={() => downloadProject(projectStore.getState().project)}
+        onUndo={() => projectStore.getState().undo()}
+        onRedo={() => projectStore.getState().redo()}
+      />
+      <Ribbon
+        tabs={tabs}
+        active={ribbonTab}
+        onActive={setRibbonTab}
+        menu={<AppMenu sections={menuSections} />}
+      />
+      <input
+        ref={projectInput}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void openProjectFile(file);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={landXmlInput}
+        type="file"
+        accept=".xml,.landxml"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void openLandXml(file);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={terrainInput}
+        type="file"
+        accept=".xml,.landxml,.tif,.tiff"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void openTerrainFile(file);
+          e.target.value = '';
+        }}
+      />
       <aside className="panel panel-left" aria-label={sk.projectTree.title}>
-        <WorkflowPanel
-          steps={steps}
-          actions={stepActions}
-          expanded={expandedStep}
-          onExpand={(id) => {
-            setExpandedStep(id);
-            if (id === 'brief' || id === 'studyArea') {
-              setSelectedElement(undefined);
-              setSidePanel(id);
-            } else {
-              setSidePanel(undefined);
-            }
-          }}
-        />
         <ProjectTree
           projectName={project.name}
           alignments={alignments}
@@ -981,57 +1022,24 @@ export function App() {
           />
         }
         plan={planView}
+        profile={profileView}
         onAddSupport={addSupportAt}
-        supportToolRequest={supportToolRequest}
+        tool={tool}
+        onTool={setTool}
+        fitRequest={fitRequest}
+        exaggeration={exaggeration}
         studyArea={studyAreaS}
         focus={viewFocus}
-        onStudyArea={setStudyAreaFrom}
-        areaToolRequest={areaToolRequest}
-        goTo={goTo}
-        onGoTo={(s) => {
-          setGoTo((g) => ({ s, nonce: (g?.nonce ?? 0) + 1 }));
-          setCursor({ source: 'profile', s });
+        onStudyArea={(range) => {
+          setStudyAreaFrom(range);
+          setSelectedElement(undefined);
+          setSidePanel('studyArea');
         }}
-        terrainDownload={
-          hasRoad && project.terrains.length === 0
-            ? {
-                progress: dmrProgress,
-                onDownload: () => void downloadDmrTerrain(),
-                onCancel: () => {
-                  dmrCancel.current = true;
-                },
-              }
-            : undefined
-        }
+        goTo={goTo}
         otherAlignments={otherAlignments}
         planLines={project.planLines}
         onAddPlanLine={addPlanLine}
         onMovePlanLineVertex={movePlanLineVertex}
-        profile={{
-          drawing: profileView,
-          decks: roadDecks,
-          deckId: profileDeck?.id,
-          onDeck: setProfileDeckId,
-          onExport: (format) =>
-            exportDrawing(profileView, sk.export.names.profile(profileDeck?.name ?? ''), format),
-        }}
-        onExportPlan={(format, coordinates) => {
-          if (!road) return;
-          const drawing = planDrawing({
-            alignment: road,
-            decks: roadDecks,
-            supports: roadSupports,
-            otherAlignments,
-            planLines: project.planLines,
-            stationing: { step: 20, labelStep: 100 },
-          });
-          const origin = project.crs.origin;
-          exportDrawing(
-            coordinates === 'sjtsk' && origin ? translate(drawing, origin.x, origin.y) : drawing,
-            sk.export.names.plan,
-            format,
-          );
-        }}
         selectedId={selectedElement?.id}
         view3d={
           <Suspense fallback={<p className="panel-empty centered">{sk.viewer3d.loading}</p>}>
@@ -1060,11 +1068,14 @@ export function App() {
               onStation={setSectionStation}
               cut={cut}
               terrains={tins}
-              terrainProgress={dmrProgress}
-              onRequestTerrain={() => void downloadDmrTerrain()}
-              onCancelTerrain={() => {
-                dmrCancel.current = true;
-              }}
+              cutOn={view3d.cut}
+              terrainOn={view3d.terrain}
+              basemap={view3d.basemap}
+              exactOn={view3d.exact}
+              onExactFailed={() => setView3d({ exact: false })}
+              onExactReady={setExactReady}
+              fitNonce={mode === '3d' ? fitRequest.nonce : 0}
+              stepRequest={stepRequest}
             />
           </Suspense>
         }
@@ -1107,15 +1118,7 @@ export function App() {
               supports={sectionSupports}
               terrain={sectionTerrain}
               drawing={sectionView}
-              onExport={(format) =>
-                exportDrawing(
-                  sectionView,
-                  sk.export.names.section(formatStation(sectionAt, 3)),
-                  format,
-                )
-              }
-              onAddDeck={openDeckDialog}
-              onOpenLibrary={() => setLibraryOpen(true)}
+              fitRequest={fitRequest}
               emptyActions={
                 <div className="toolbar">
                   <button
@@ -1124,7 +1127,7 @@ export function App() {
                     disabled={!defaultDeckRange()}
                     onClick={openDeckDialog}
                   >
-                    {sk.workflow.actions.insertDeck}
+                    {sk.ribbon.deck}
                   </button>
                   <button type="button" className="button" onClick={insertTwinExample}>
                     {sk.section.insertExample}
@@ -1146,7 +1149,7 @@ export function App() {
           })()}
           onMark={() => {
             setMode('2d');
-            setAreaToolRequest((n) => n + 1);
+            setTool('area');
           }}
         />
       ) : mode !== 'parameters' && selectedElement ? (

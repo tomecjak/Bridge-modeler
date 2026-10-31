@@ -8,6 +8,9 @@ import { drawingFileName } from '../persistence/fileName.ts';
 import type { TerrainTin } from '../store/terrain.ts';
 import { StationControl } from '../views/StationControl.tsx';
 import { BASEMAPS, type BasemapKind, loadBasemap } from './basemap.ts';
+
+export type { BasemapKind };
+
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
 import { terrainBuffers } from './terrainMesh.ts';
 import { useExactWorker, useMeshWorker } from './useMeshWorker.ts';
@@ -25,11 +28,20 @@ export interface Viewer3DProps {
   cut: Cut | undefined;
   /** TIN terénov projektu (sieť sa zostaví pri ich zmene) */
   terrains: readonly TerrainTin[];
-  /** priebeh sťahovania DMR 5.0 [%] */
-  terrainProgress: number | undefined;
-  /** projekt nemá terén → stiahnuť DMR 5.0 zo ZBGIS */
-  onRequestTerrain: () => void;
-  onCancelTerrain: () => void;
+  /** prepínače 3D z ribbonu (ADR 0016) */
+  cutOn: boolean;
+  terrainOn: boolean;
+  basemap: BasemapKind;
+  /** presný model cez OpenCascade (ADR 0014) */
+  exactOn: boolean;
+  /** pri chybe presného modelu sa vráti sieť */
+  onExactFailed: () => void;
+  /** presný model je vypočítaný (dá sa exportovať STEP) */
+  onExactReady: (ready: boolean) => void;
+  /** Prispôsobiť z ribbonu (nová hodnota `nonce`) */
+  fitNonce: number;
+  /** export STEP z menu Súbor (nová hodnota `nonce`) */
+  stepRequest: { sjtsk: boolean; nonce: number } | undefined;
 }
 
 /** Posun myši, do ktorého sa uvoľnenie tlačidla berie ako klik (výber), nie ťahanie [px]. */
@@ -68,23 +80,23 @@ export default function Viewer3D({
   onStation,
   cut,
   terrains,
-  terrainProgress,
-  onRequestTerrain,
-  onCancelTerrain,
+  cutOn,
+  terrainOn,
+  basemap,
+  exactOn,
+  onExactFailed,
+  onExactReady,
+  fitNonce,
+  stepRequest,
 }: Viewer3DProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<SceneView | undefined>(undefined);
   const down = useRef<{ x: number; y: number } | undefined>(undefined);
   const [info, setInfo] = useState<{ count: number; elapsed: number }>();
   const [error, setError] = useState<string>();
-  const [cutOn, setCutOn] = useState(false);
-  const [terrainOn, setTerrainOn] = useState(true);
   const terrainMeshes = useMemo(() => terrains.map((t) => terrainBuffers(t.tin)), [terrains]);
-  const [basemap, setBasemap] = useState<BasemapKind>('none');
   const [maps, setMaps] = useState<(HTMLImageElement | undefined)[]>([]);
   const [mapNote, setMapNote] = useState<string>();
-  /** presný model cez OpenCascade (ADR 0014); undefined info = ešte sa počíta */
-  const [exactOn, setExactOn] = useState(false);
   const [stepNote, setStepNote] = useState<string>();
   const origin = project.crs.origin;
 
@@ -158,7 +170,7 @@ export default function Viewer3D({
     onSceneUpdate,
     (e) => {
       // pri chybe (napr. starý prehliadač bez WASM SIMD) sa vráti sieť
-      setExactOn(false);
+      onExactFailed();
       setError(sk.viewer3d.exactFailed(e instanceof Error ? e.message : String(e)));
     },
     exactOn,
@@ -174,6 +186,24 @@ export default function Viewer3D({
       setStepNote(sk.viewer3d.stepFailed);
     }
   }
+
+  // zapnutie / vypnutie presného modelu: kým sa počíta, nie je čo zobraziť ani exportovať
+  // biome-ignore lint/correctness/useExhaustiveDependencies: info sa zahodí len pri prepnutí
+  useEffect(() => {
+    setInfo(undefined);
+    setStepNote(undefined);
+  }, [exactOn]);
+  useEffect(() => {
+    onExactReady(exactOn && info !== undefined);
+  }, [exactOn, info, onExactReady]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa len pri novej žiadosti z ribbonu
+  useEffect(() => {
+    if (fitNonce > 0) viewRef.current?.fit();
+  }, [fitNonce]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: export len pri novej žiadosti z menu
+  useEffect(() => {
+    if (stepRequest && exactOn && info) void downloadStep(stepRequest.sjtsk);
+  }, [stepRequest?.nonce]);
 
   useEffect(() => {
     viewRef.current?.setAxis(axisPoints(alignment));
@@ -203,117 +233,6 @@ export default function Viewer3D({
 
   return (
     <div className="section-view">
-      <div className="section-toolbar">
-        <button
-          type="button"
-          className="button"
-          title={sk.viewer3d.fitTitle}
-          onClick={() => viewRef.current?.fit()}
-        >
-          {sk.viewer3d.fit}
-        </button>
-        <button
-          type="button"
-          className="button"
-          aria-pressed={cutOn}
-          title={sk.viewer3d.cutTitle}
-          onClick={() => setCutOn((v) => !v)}
-        >
-          {sk.viewer3d.cut}
-        </button>
-        <button
-          type="button"
-          className="button"
-          aria-pressed={terrainOn && terrains.length > 0}
-          title={terrains.length === 0 ? sk.viewer3d.terrainDownloadTitle : undefined}
-          disabled={terrainProgress !== undefined}
-          onClick={() => {
-            // bez terénu zapnutie stiahne DMR 5.0 zo ZBGIS
-            if (terrains.length === 0) {
-              setTerrainOn(true);
-              onRequestTerrain();
-            } else setTerrainOn((v) => !v);
-          }}
-        >
-          {sk.viewer3d.terrain}
-        </button>
-        {terrains.length > 0 && terrainOn && (
-          <label className="station-input">
-            {sk.viewer3d.basemap}
-            <select
-              value={basemap}
-              aria-label={sk.viewer3d.basemap}
-              onChange={(e) => setBasemap(e.target.value as BasemapKind)}
-            >
-              <option value="none">{sk.viewer3d.basemaps.none}</option>
-              <option value="ortofoto">{sk.viewer3d.basemaps.ortofoto}</option>
-              <option value="mapa">{sk.viewer3d.basemaps.mapa}</option>
-            </select>
-          </label>
-        )}
-        {mapNote && terrainOn && <span className="hint">{mapNote}</span>}
-        {terrainProgress !== undefined && (
-          <>
-            <span className="hint">{sk.terrain.downloading(terrainProgress)}</span>
-            <button type="button" className="button" onClick={onCancelTerrain}>
-              {sk.terrain.cancelDownload}
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          className="button"
-          aria-pressed={exactOn}
-          title={sk.viewer3d.exactTitle}
-          disabled={project.superstructures.length === 0}
-          onClick={() => {
-            setInfo(undefined);
-            setStepNote(undefined);
-            setExactOn((v) => !v);
-          }}
-        >
-          {sk.viewer3d.exact}
-        </button>
-        {exactOn && info && (
-          <details className="export-menu">
-            <summary>{sk.viewer3d.step}</summary>
-            <div className="export-menu-panel">
-              <button
-                type="button"
-                disabled={!origin}
-                onClick={(e) => {
-                  e.currentTarget.closest('details')?.removeAttribute('open');
-                  void downloadStep(true);
-                }}
-              >
-                {sk.viewer3d.stepSjtsk}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.currentTarget.closest('details')?.removeAttribute('open');
-                  void downloadStep(false);
-                }}
-              >
-                {sk.viewer3d.stepLocal}
-              </button>
-            </div>
-          </details>
-        )}
-        {cutOn && <StationControl station={station} range={stationRange} onStation={onStation} />}
-        {exactOn && !info && <span className="hint">{sk.viewer3d.exactLoading}</span>}
-        {info && (
-          <span className="hint">
-            {sk.viewer3d.objects(info.count)} ·{' '}
-            {exactOn
-              ? sk.viewer3d.exactGenerated(info.elapsed)
-              : sk.viewer3d.generated(info.elapsed)}
-          </span>
-        )}
-        {exactOn && <span className="hint">{sk.viewer3d.occtLicense}</span>}
-        {stepNote && <span className="hint">{stepNote}</span>}
-        <span className="hint viewer3d-controls">{sk.viewer3d.hint}</span>
-      </div>
       <div
         ref={hostRef}
         className="viewer3d-canvas"
@@ -325,6 +244,22 @@ export default function Viewer3D({
         {(error || project.superstructures.length === 0) && (
           <p className="viewer3d-notice">{error ?? sk.viewer3d.noDeck}</p>
         )}
+      </div>
+      <div className="view-bar">
+        {cutOn && <StationControl station={station} range={stationRange} onStation={onStation} />}
+        {exactOn && !info && <span className="hint">{sk.viewer3d.exactLoading}</span>}
+        {info && (
+          <span className="hint">
+            {sk.viewer3d.objects(info.count)} ·{' '}
+            {exactOn
+              ? sk.viewer3d.exactGenerated(info.elapsed)
+              : sk.viewer3d.generated(info.elapsed)}
+          </span>
+        )}
+        {mapNote && terrainOn && <span className="hint">{mapNote}</span>}
+        {stepNote && <span className="hint">{stepNote}</span>}
+        {exactOn && <span className="hint">{sk.viewer3d.occtLicense}</span>}
+        <span className="hint viewer3d-controls">{sk.viewer3d.hint}</span>
       </div>
     </div>
   );

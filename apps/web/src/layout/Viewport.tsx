@@ -4,9 +4,9 @@ import type { Vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
-import type { ExportCoordinates, ExportFormat } from '../views/ExportMenu.tsx';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { ProfileView } from '../views/ProfileView.tsx';
+import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
 
 export type ViewMode = '3d' | '2d' | 'section' | 'parameters';
@@ -21,23 +21,20 @@ interface Props {
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
-  onExportPlan: (format: ExportFormat, coordinates: ExportCoordinates) => void;
+  /** rozvinutý pozdĺžny rez v osi vybranej NK */
+  profile: Drawing | undefined;
   onAddSupport: (s: number, offset: number) => void;
-  /** zmena hodnoty zapne v pôdoryse nástroj „Pridať podperu“ (z postupu) */
-  supportToolRequest: number;
+  /** stav pohľadov z ribbonu (ADR 0016) */
+  tool: ViewTool;
+  onTool: (tool: ViewTool) => void;
+  fitRequest: FitRequest;
+  exaggeration: number;
   /** oblasť mosta a úsek na prispôsobenie pohľadov v spojitom staničení zobrazenej osi (Fáza 10a) */
   studyArea: SRange | undefined;
   focus: SRange | undefined;
   onStudyArea: (range: SRange) => void;
-  /** zmena hodnoty zapne v profile nástroj „Oblasť mosta“ */
-  areaToolRequest: number;
   /** prejsť na staničenie v pôdoryse aj profile (nová hodnota `nonce`) */
   goTo: { s: number; nonce: number } | undefined;
-  onGoTo: (s: number) => void;
-  /** bez terénu „Stiahnuť DMR 5.0“ v profile */
-  terrainDownload:
-    | { progress: number | undefined; onDownload: () => void; onCancel: () => void }
-    | undefined;
   /** ďalšie osi projektu a čiary v pôdoryse */
   otherAlignments: readonly Alignment[];
   planLines: readonly PlanLine[];
@@ -45,24 +42,17 @@ interface Props {
   onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
   sectionView: ReactNode;
   view3d: ReactNode;
-  /** pozdĺžny rez v osi vybranej NK */
-  profile: {
-    drawing: Drawing | undefined;
-    decks: readonly { id: string; name: string }[];
-    deckId: string | undefined;
-    onDeck: (id: string) => void;
-    onExport: (format: ExportFormat) => void;
-  };
   selectedId: string | undefined;
 }
 
-const TABS: { mode: ViewMode; label: string }[] = [
+export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
   { mode: '3d', label: sk.viewport.tabs.view3d },
   { mode: '2d', label: sk.viewport.tabs.view2d },
   { mode: 'section', label: sk.section.tab },
   { mode: 'parameters', label: sk.parameters.tab },
 ];
 
+/** Karty pohľadov a aktívny pohľad; nástroje pohľadov sú v ribbone (ADR 0016). */
 export function Viewport({
   mode,
   onModeChange,
@@ -73,28 +63,27 @@ export function Viewport({
   parametersView,
   sectionView,
   plan,
-  onExportPlan,
+  profile,
   onAddSupport,
-  supportToolRequest,
+  tool,
+  onTool,
+  fitRequest,
+  exaggeration,
   studyArea,
   focus,
   onStudyArea,
-  areaToolRequest,
   goTo,
-  onGoTo,
-  terrainDownload,
   otherAlignments,
   planLines,
   onAddPlanLine,
   onMovePlanLineVertex,
   view3d,
-  profile,
   selectedId,
 }: Props) {
   return (
     <main className="viewport">
       <div className="viewport-tabs" role="tablist">
-        {TABS.map((tab) => (
+        {VIEW_TABS.map((tab) => (
           <button
             key={tab.mode}
             type="button"
@@ -129,12 +118,13 @@ export function Viewport({
               onCursor={onPlanCursor}
               drawing={plan}
               selected={selectedId}
-              onExport={onExportPlan}
               onAddSupport={onAddSupport}
-              supportToolRequest={supportToolRequest}
+              tool={tool}
+              onTool={onTool}
+              fitRequest={fitRequest}
               studyArea={studyArea}
-              goTo={goTo}
               focus={focus}
+              goTo={goTo}
               otherAlignments={otherAlignments}
               planLines={planLines}
               onAddPlanLine={onAddPlanLine}
@@ -145,15 +135,16 @@ export function Viewport({
               alignment={alignment}
               cursorS={cursorS}
               onCursor={onProfileCursor}
-              {...profile}
+              drawing={profile}
               selected={selectedId}
+              exaggeration={exaggeration}
+              tool={tool}
+              onTool={onTool}
+              fitRequest={fitRequest}
               studyArea={studyArea}
               focus={focus}
               onStudyArea={onStudyArea}
-              areaToolRequest={areaToolRequest}
               goTo={goTo}
-              onGoTo={onGoTo}
-              terrainDownload={terrainDownload}
             />
           </div>
         )}

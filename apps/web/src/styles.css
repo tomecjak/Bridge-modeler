@@ -44,9 +44,10 @@ body {
 .app {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto 1fr auto;
   grid-template-areas:
-    "header header header"
+    "title title title"
+    "ribbon ribbon ribbon"
     "left viewport right"
     "status status status";
   height: 100%;
@@ -1445,4 +1446,313 @@ text.dw-stationing {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* --- 10a2: rozhranie v štýle CAD (ADR 0016) --- */
+
+:root {
+  --ribbon: #f8f9fb;
+  --ribbon-hover: color-mix(in srgb, var(--accent) 12%, transparent);
+  --ribbon-pressed: color-mix(in srgb, var(--accent) 22%, transparent);
+  --contextual: #15803d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ribbon: #20252e;
+    --contextual: #4ade80;
+  }
+}
+
+.icon {
+  flex: none;
+}
+
+.titlebar {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.titlebar-title {
+  flex: 1;
+  overflow: hidden;
+  color: var(--muted);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-access {
+  display: flex;
+  gap: 2px;
+}
+
+.quick-access button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.quick-access button:hover:not(:disabled) {
+  background: var(--ribbon-hover);
+}
+
+.quick-access button:disabled {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ribbon {
+  grid-area: ribbon;
+  background: var(--ribbon);
+  border-bottom: 1px solid var(--border);
+}
+
+.ribbon-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 2px 8px 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.ribbon-tab {
+  padding: 5px 14px;
+  margin-bottom: -1px;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+.ribbon-tab:hover {
+  background: var(--ribbon-hover);
+}
+
+.ribbon-tab[aria-selected="true"] {
+  font-weight: 600;
+  background: var(--ribbon);
+  border-color: var(--border);
+}
+
+.ribbon-tab-contextual {
+  color: var(--contextual);
+  border-top: 3px solid var(--contextual);
+}
+
+.ribbon-panel {
+  display: flex;
+  align-items: stretch;
+  min-height: 88px;
+  padding: 4px 4px 0;
+  overflow-x: auto;
+}
+
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  padding: 0 6px;
+  border-right: 1px solid var(--border);
+}
+
+.ribbon-group-items {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.ribbon-group-label {
+  padding: 2px 0 3px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ribbon-column {
+  display: flex;
+}
+
+.ribbon-column-small {
+  flex-direction: column;
+  gap: 1px;
+  justify-content: flex-start;
+}
+
+.ribbon-button {
+  display: flex;
+  align-items: center;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ribbon-button:hover:not(:disabled) {
+  background: var(--ribbon-hover);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.ribbon-button[aria-pressed="true"] {
+  background: var(--ribbon-pressed);
+  border-color: var(--accent);
+}
+
+.ribbon-button:disabled {
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ribbon-large {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 58px;
+  max-width: 88px;
+  min-height: 64px;
+  padding: 5px 4px 3px;
+  font-size: 12px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.ribbon-small {
+  gap: 6px;
+  padding: 2px 8px 2px 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ribbon-select,
+.ribbon-custom .drawing-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.ribbon-select select {
+  font: inherit;
+}
+
+.ribbon-select select:disabled,
+.ribbon-select:has(select:disabled) {
+  color: var(--muted);
+}
+
+.ribbon[data-minimized] .ribbon-tabs {
+  border-bottom: none;
+}
+
+.app-menu {
+  position: relative;
+  margin-right: 6px;
+}
+
+.app-menu-button {
+  padding: 5px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+.app-menu-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 300px;
+  padding: 6px 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 0 4px 4px 4px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.app-menu-section + .app-menu-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.app-menu-title {
+  padding: 4px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.app-menu-panel button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 14px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.app-menu-panel button:hover:not(:disabled) {
+  background: var(--ribbon-hover);
+}
+
+.app-menu-panel button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.app-menu-icon {
+  display: inline-grid;
+  width: 16px;
+  place-items: center;
+}
+
+/* spodný pruh pohľadu (ako view control bar v Revite) */
+.view-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 10px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+.view-bar .hint {
+  margin: 0;
 }

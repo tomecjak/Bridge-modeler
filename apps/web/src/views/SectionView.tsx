@@ -1,13 +1,13 @@
 import type { Drawing, DrawnSection, LayerId } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
-import { type ExportFormat, ExportMenu } from './ExportMenu.tsx';
 import { StationControl } from './StationControl.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
+import type { FitRequest } from './viewState.ts';
 import { boundsOf, fitView, worldToScreen } from './viewTransform.ts';
 
 interface Props {
@@ -29,14 +29,12 @@ interface Props {
     body: readonly (readonly Vec2[])[];
     footing: readonly Vec2[] | undefined;
   }[];
-  /** otvorí vloženie NK výberom typológie */
-  onAddDeck: () => void;
   /** priečne terénne čiary (x od osi cesty, y v m n. m.) */
   terrain?: readonly { id: string; runs: readonly (readonly Vec2[])[] }[];
   /** priečny rez ako výkres (terén, podpery; ADR 0012); NK s výberom a kótami kreslí pohľad sám */
   drawing?: Drawing | undefined;
-  onExport: (format: ExportFormat) => void;
-  onOpenLibrary: () => void;
+  /** Prispôsobiť z ribbonu */
+  fitRequest: FitRequest;
 }
 
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['deck', 'deckVoid', 'roadAxis']);
@@ -54,12 +52,10 @@ export function SectionView({
   onSelect,
   emptyActions,
   canInsert,
-  onAddDeck,
   supports,
   terrain = [],
   drawing,
-  onExport,
-  onOpenLibrary,
+  fitRequest,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
 
@@ -83,11 +79,12 @@ export function SectionView({
     const b = boundsOf([...pts, ...ground]);
     return { minX: b.minX, maxX: b.maxX, minY: b.minY - 1.2, maxY: b.maxY + 1.5 };
   }, [layoutKey, size.width > 0]);
-  const fit =
-    size.width > 0 && sections.length > 0
-      ? fitView(bounds, { width: size.width, height: size.height - 48 }, 40)
-      : undefined;
+  const fit = size.width > 0 && sections.length > 0 ? fitView(bounds, size, 40) : undefined;
   const { view, handlers, dragMove, reset } = usePanZoom(ref, size, fit);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa len pri novej žiadosti z ribbonu
+  useEffect(() => {
+    if (fitRequest.nonce > 0) reset();
+  }, [fitRequest.nonce]);
 
   const toScreen = (p: Vec2) => (view ? worldToScreen(view, size, p) : p);
   const path = (pts: readonly Vec2[]) =>
@@ -95,22 +92,6 @@ export function SectionView({
 
   return (
     <div className="section-view">
-      <div className="section-toolbar">
-        <StationControl station={station} range={range} onStation={onStation} />
-        <button type="button" className="button" onClick={reset}>
-          {sk.viewport.fit}
-        </button>
-        {sections.length > 0 && (
-          <button type="button" className="button" disabled={!canInsert} onClick={onAddDeck}>
-            {sk.section.addDeck}
-          </button>
-        )}
-        <button type="button" className="button" onClick={onOpenLibrary}>
-          {sk.library.open}
-        </button>
-        <ExportMenu onExport={(format) => onExport(format)} disabled={sections.length === 0} />
-        <span className="hint">{sk.section.elapsed(formatNumber(elapsed, 1))}</span>
-      </div>
       <div
         ref={ref}
         className="drawing section-drawing"
@@ -204,6 +185,10 @@ export function SectionView({
             })}
           </svg>
         )}
+      </div>
+      <div className="view-bar">
+        <StationControl station={station} range={range} onStation={onStation} />
+        <span className="hint">{sk.section.elapsed(formatNumber(elapsed, 1))}</span>
       </div>
     </div>
   );

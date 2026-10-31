@@ -5,9 +5,9 @@ import type { PlanLine } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
-import { type ExportCoordinates, type ExportFormat, ExportMenu } from './ExportMenu.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
+import type { FitRequest, ViewTool } from './viewState.ts';
 import {
   boundsOf,
   fitView,
@@ -34,11 +34,13 @@ interface Props {
   drawing: Drawing | undefined;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
-  onExport: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
   onAddSupport: (s: number, offset: number) => void;
-  /** zmena hodnoty zapne nástroj „Pridať podperu“ (z postupu); 0 = bez žiadosti */
-  supportToolRequest?: number;
+  /** aktívny nástroj (ribbon); pôdorys reaguje na „Podpera“ a „Čiara“ */
+  tool: ViewTool;
+  onTool: (tool: ViewTool) => void;
+  /** Prispôsobiť / Celá os z ribbonu */
+  fitRequest: FitRequest;
   /** oblasť mosta na tejto osi (zvýraznený úsek osi, Fáza 10a) */
   studyArea?: SRange | undefined;
   /** úsek, na ktorý sa pohľad prispôsobí (oblasť mosta, inak NK); bez neho celá os */
@@ -53,8 +55,6 @@ interface Props {
   onAddPlanLine: (points: Vec2[]) => void;
   onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
 }
-
-type Tool = 'none' | 'support' | 'line';
 
 /** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
 const MERGE_PX = 3;
@@ -71,9 +71,10 @@ export function PlanView({
   onCursor,
   drawing,
   selected,
-  onExport,
   onAddSupport,
-  supportToolRequest = 0,
+  tool,
+  onTool,
+  fitRequest,
   studyArea,
   focus,
   goTo,
@@ -82,17 +83,16 @@ export function PlanView({
   onAddPlanLine,
   onMovePlanLineVertex,
 }: Props) {
-  const [tool, setTool] = useState<Tool>('none');
   /** vrcholy rozkreslenej čiary */
   const [sketch, setSketch] = useState<Vec2[]>([]);
   const [hover, setHover] = useState<Vec2>();
   /** ťahaný vrchol vybranej čiary */
   const [vertexDrag, setVertexDrag] = useState<{ id: string; index: number; point: Vec2 }>();
-  const addMode = tool === 'support';
+  /** nástroje pôdorysu (oblasť mosta patrí profilu) */
+  const planTool = tool === 'support' || tool === 'line' ? tool : undefined;
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
-  /** „Celá os“ ukáže celú os aj vtedy, keď je oblasť mosta alebo NK */
-  const [whole, setWhole] = useState(false);
+  const whole = fitRequest.whole;
   const bounds = useMemo(() => {
     if (!focus || whole) return boundsOf(samples);
     const r = focusRange({ from: focus.sFrom, to: focus.sTo }, 0, alignment.length);
@@ -102,6 +102,10 @@ export function PlanView({
   }, [samples, focus, whole, alignment]);
   const fit = size.width > 0 ? fitView(bounds, size, 56) : undefined;
   const { view, handlers, dragMove, wasDrag, reset, centerOn } = usePanZoom(ref, size, fit);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa len pri novej žiadosti z ribbonu
+  useEffect(() => {
+    if (fitRequest.nonce > 0) reset();
+  }, [fitRequest.nonce]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: vycentruje sa len pri novej žiadosti (nonce), nie pri zmene pohľadu
   useEffect(() => {
     if (!goTo) return;
@@ -114,14 +118,15 @@ export function PlanView({
   );
   const selectedLine = planLines.find((l) => l.id === selected);
 
+  // zmena nástroja zahodí rozkreslenú čiaru
   useEffect(() => {
-    if (supportToolRequest > 0) setTool('support');
-  }, [supportToolRequest]);
+    if (tool !== 'line') setSketch([]);
+  }, [tool]);
 
   function finishSketch() {
     if (sketch.length >= 2) onAddPlanLine(sketch);
     setSketch([]);
-    setTool('none');
+    onTool('none');
   }
   // Enter ukončí kreslenie čiary, Esc ho zruší
   // biome-ignore lint/correctness/useExhaustiveDependencies: finishSketch sa mení s každým vrcholom; poslucháč stačí podľa nástroja a náčrtu
@@ -131,7 +136,7 @@ export function PlanView({
       if (e.key === 'Enter') finishSketch();
       if (e.key === 'Escape') {
         setSketch([]);
-        setTool('none');
+        onTool('none');
       }
     };
     window.addEventListener('keydown', onKey);
@@ -219,7 +224,7 @@ export function PlanView({
       }}
       onDoubleClick={() => (tool === 'line' ? finishSketch() : reset())}
       onClick={(e) => {
-        if (tool === 'none' || wasDrag() || !view) return;
+        if (!planTool || wasDrag() || !view) return;
         if (e.target instanceof Element && e.target.closest('button, summary, details')) return;
         const point = worldAt(e);
         if (!point) return;
@@ -232,53 +237,12 @@ export function PlanView({
         const projection = alignment.project(point);
         if (!projection) return;
         onAddSupport(projection.s, projection.offset);
-        setTool('none');
+        onTool('none');
       }}
-      data-add-mode={tool !== 'none' || undefined}
+      data-add-mode={planTool !== undefined || undefined}
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
-        <button
-          type="button"
-          title={sk.viewport.fitTitle}
-          onClick={() => {
-            setWhole(false);
-            reset();
-          }}
-        >
-          {sk.viewport.fit}
-        </button>
-        {focus && (
-          <button
-            type="button"
-            onClick={() => {
-              setWhole(true);
-              reset();
-            }}
-          >
-            {sk.viewport.wholeAxis}
-          </button>
-        )}
-        <button
-          type="button"
-          aria-pressed={addMode}
-          onClick={() => setTool((t) => (t === 'support' ? 'none' : 'support'))}
-        >
-          {sk.supports.add}
-        </button>
-        <button
-          type="button"
-          aria-pressed={tool === 'line'}
-          onClick={() => {
-            setSketch([]);
-            setTool((t) => (t === 'line' ? 'none' : 'line'));
-          }}
-        >
-          {sk.planLines.draw}
-        </button>
-        <ExportMenu onExport={onExport} coordinates />
-        {addMode && <span className="drawing-note">{sk.supports.addHint}</span>}
-        {tool === 'line' && <span className="drawing-note">{sk.planLines.drawHint}</span>}
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.plan}>

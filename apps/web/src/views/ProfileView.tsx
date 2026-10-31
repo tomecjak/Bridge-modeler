@@ -11,10 +11,9 @@ import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
-import { type ExportFormat, ExportMenu } from './ExportMenu.tsx';
-import { GoToStation } from './GoToStation.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
+import type { FitRequest, ViewTool } from './viewState.ts';
 import {
   fitView,
   focusRange,
@@ -30,33 +29,25 @@ interface Props {
   onCursor: (s: number | undefined) => void;
   /** rozvinutý pozdĺžny rez v osi vybranej NK 1 : 1 (NK, podpery, terén; ADR 0012) */
   drawing: Drawing | undefined;
-  /** NK na tejto osi cesty; pri viacerých sa volí, v osi ktorej je rez */
-  decks: readonly { id: string; name: string }[];
-  deckId: string | undefined;
-  onDeck: (id: string) => void;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
-  onExport: (format: ExportFormat) => void;
+  /** prevýšenie výšok (ribbon); export je vždy 1 : 1 */
+  exaggeration: number;
+  /** aktívny nástroj (ribbon); profil reaguje na „Oblasť mosta“ */
+  tool: ViewTool;
+  onTool: (tool: ViewTool) => void;
+  /** Prispôsobiť / Celá os z ribbonu */
+  fitRequest: FitRequest;
   /** oblasť mosta na tejto osi (Fáza 10a) */
   studyArea?: SRange | undefined;
   /** úsek, na ktorý sa pohľad prispôsobí (oblasť mosta, inak NK); bez neho celá os */
   focus?: SRange | undefined;
   /** vyznačená oblasť mosta (ťahom v nástroji „Oblasť mosta“) */
   onStudyArea?: (range: SRange) => void;
-  /** zmena hodnoty zapne nástroj „Oblasť mosta“ (z postupu); 0 = bez žiadosti */
-  areaToolRequest?: number;
   /** prejsť na staničenie: nová hodnota `nonce` vycentruje pohľad na spojité staničenie `s` */
   goTo?: { s: number; nonce: number } | undefined;
-  /** zadané „Prejsť na“ (spojité staničenie) */
-  onGoTo?: (s: number) => void;
-  /** projekt nemá terén → „Stiahnuť DMR 5.0“ s priebehom a zrušením */
-  terrainDownload?:
-    | { progress: number | undefined; onDownload: () => void; onCancel: () => void }
-    | undefined;
 }
 
-/** Ponúkané prevýšenia (výšky : dĺžky); export je vždy 1 : 1. */
-const EXAGGERATIONS = [1, 2, 5, 10];
 /** niveletu kreslí pohľad sám (s polygónom PVI) */
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['grade']);
 const STATION_LABEL_PX = 110;
@@ -66,8 +57,6 @@ const BAND_LABELS_INSIDE_PX = 160;
 /** najkratšia oblasť mosta [m]; kratší ťah sa berie ako klik */
 const MIN_AREA = 1;
 const CONTROLS = 'button, input, select, textarea, label';
-
-type Tool = 'none' | 'area';
 
 /** Výškový rozsah bodov výkresu, ktoré ležia v rozsahu staničení (prázdny výkres → undefined). */
 function elevationsIn(drawing: Drawing | undefined, from: number, to: number): number[] {
@@ -85,26 +74,20 @@ export function ProfileView({
   cursorS,
   onCursor,
   drawing,
-  decks,
-  deckId,
-  onDeck,
   selected,
-  onExport,
+  exaggeration,
+  tool,
+  onTool,
+  fitRequest,
   studyArea,
   focus,
   onStudyArea,
-  areaToolRequest = 0,
   goTo,
-  onGoTo,
-  terrainDownload,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
-  const [exaggeration, setExaggeration] = useState(10);
-  const [tool, setTool] = useState<Tool>('none');
   /** rozťahovaná oblasť mosta (spojité staničenie začiatku a kurzora) */
   const [areaDraft, setAreaDraft] = useState<{ s0: number; s1: number }>();
-  /** „Celá os“ ukáže celú os aj vtedy, keď je oblasť mosta alebo NK */
-  const [whole, setWhole] = useState(false);
+  const whole = fitRequest.whole;
   const samples = useMemo(() => sampleProfile(alignment, 1), [alignment]);
   const profile = alignment.profile;
   const range = useMemo(() => {
@@ -135,7 +118,11 @@ export function ProfileView({
   }, [samples, drawing, range, focus, whole]);
   const fit =
     size.width > 0 && samples.length > 0 ? fitView(bounds, size, 48, exaggeration) : undefined;
-  const { view, handlers, dragMove, reset, centerOn } = usePanZoom(ref, size, fit, tool === 'none');
+  const { view, handlers, dragMove, reset, centerOn } = usePanZoom(ref, size, fit, tool !== 'area');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa pri novej žiadosti z ribbonu a pri zmene prevýšenia
+  useEffect(() => {
+    if (fitRequest.nonce > 0) reset();
+  }, [fitRequest.nonce, exaggeration]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: vycentruje sa len pri novej žiadosti (nonce), nie pri zmene pohľadu
   useEffect(() => {
@@ -144,19 +131,9 @@ export function ProfileView({
     centerOn({ x: s, y: alignment.elevation(s).z + alignment.origin.z });
   }, [goTo?.nonce]);
 
+  // zrušený nástroj (Esc v App) zahodí rozťahovanú oblasť
   useEffect(() => {
-    if (areaToolRequest > 0) setTool('area');
-  }, [areaToolRequest]);
-  // Esc zruší vyznačovanie oblasti
-  useEffect(() => {
-    if (tool !== 'area') return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      setAreaDraft(undefined);
-      setTool('none');
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    if (tool !== 'area') setAreaDraft(undefined);
   }, [tool]);
 
   const stationStep = view ? niceStep(STATION_LABEL_PX / view.sx) : 0;
@@ -237,7 +214,7 @@ export function ProfileView({
     const sTo = Math.max(areaDraft.s0, areaDraft.s1);
     if (sTo - sFrom >= MIN_AREA) onStudyArea?.({ sFrom, sTo });
     setAreaDraft(undefined);
-    setTool('none');
+    onTool('none');
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
@@ -280,95 +257,6 @@ export function ProfileView({
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.profile}</span>
-        {decks.length > 1 && (
-          <label className="drawing-note">
-            {sk.viewport.profileDeck}{' '}
-            <select value={deckId} onChange={(e) => onDeck(e.target.value)}>
-              {decks.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="drawing-note" title={sk.viewport.exaggerationTitle}>
-          {sk.viewport.exaggeration}{' '}
-          <select
-            value={exaggeration}
-            onChange={(e) => {
-              setExaggeration(Number(e.target.value));
-              reset();
-            }}
-          >
-            {EXAGGERATIONS.map((k) => (
-              <option key={k} value={k}>
-                {k}×
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          title={sk.viewport.fitTitle}
-          onClick={() => {
-            setWhole(false);
-            reset();
-          }}
-        >
-          {sk.viewport.fit}
-        </button>
-        {focus && (
-          <button
-            type="button"
-            onClick={() => {
-              setWhole(true);
-              reset();
-            }}
-          >
-            {sk.viewport.wholeAxis}
-          </button>
-        )}
-        {onStudyArea && (
-          <button
-            type="button"
-            title={sk.studyArea.toolTitle}
-            aria-pressed={tool === 'area'}
-            onClick={() => {
-              setAreaDraft(undefined);
-              setTool((t) => (t === 'area' ? 'none' : 'area'));
-            }}
-          >
-            {sk.studyArea.tool}
-          </button>
-        )}
-        <ExportMenu onExport={(format) => onExport(format)} disabled={!drawing} />
-        {onGoTo && (
-          <GoToStation
-            onStation={(station) => {
-              const s = alignment.stationing.fromDisplay(station);
-              if (s !== undefined) onGoTo(s);
-            }}
-          />
-        )}
-        {terrainDownload && terrainDownload.progress === undefined && (
-          <button
-            type="button"
-            title={sk.viewer3d.terrainDownloadTitle}
-            onClick={terrainDownload.onDownload}
-          >
-            {sk.terrain.download}
-          </button>
-        )}
-        {terrainDownload && terrainDownload.progress !== undefined && (
-          <>
-            <span className="drawing-note">{sk.terrain.downloading(terrainDownload.progress)}</span>
-            <button type="button" onClick={terrainDownload.onCancel}>
-              {sk.terrain.cancelDownload}
-            </button>
-          </>
-        )}
-        {tool === 'area' && <span className="drawing-note">{sk.studyArea.toolHint}</span>}
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.profile}>

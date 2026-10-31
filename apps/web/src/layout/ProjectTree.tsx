@@ -57,7 +57,7 @@ export function ProjectTree({
   return (
     // strom prvkov je pod panelom Postup (Fáza 10a), dá sa zbaliť
     <details className="project-tree" open>
-      <summary className="panel-title">{sk.workflow.elements}</summary>
+      <summary className="panel-title">{sk.projectTree.browser}</summary>
       <p className="file-name">{projectName}</p>
       {alignments.length === 0 && <p className="panel-empty">{sk.projectTree.empty}</p>}
       {alignments.length > 0 && (
