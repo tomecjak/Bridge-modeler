@@ -236,14 +236,22 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** most dĺžky 200 m sa regeneruje do 1 s, pri priblížení nič netrasie a rez 3D siete na ľubovoľnom staničení sa zhoduje s 2D prierezom z fázy 3 (test).
 
 ### Fáza 5b — Terén
-- [ ] `packages/terrain`: TIN (body, trojuholníky) v lokálnych súradniciach, priestorový index, `elevationAt(x, y)` (mimo povrchu → typovaná chyba / `undefined`)
-- [ ] import LandXML `Surfaces/Surface/Definition` (`Pnts`, `Faces`), poradie bodov N E Z; viac povrchov v súbore → výber
-- [ ] import DMR 5.0 z ÚGKK (formát podľa vzorky, pravdepodobne GeoTIFF raster) → rovnaké rozhranie ako TIN (`elevationAt`, rezy); ADR k knižnici na čítanie rastra
-- [ ] orezanie povrchu na koridor okolo osi mosta (šírka ako parameter), aby sa veľké DMR dali používať v prehliadači
-- [ ] rez terénom: pozdĺž osi (pre pozdĺžny rez) a pozdĺž priečnej čiary na staničení (pre priečny rez) → polyline so zlomami na hranách TIN
-- [ ] ADR: kde je terén uložený (v projektovom JSON vs. samostatný súbor/asset) a ako sa udržiava determinizmus
-- [ ] viewer: terén ako polopriehľadná sieť, zapínanie/vypínanie
+- [x] `packages/terrain`: TIN (body, trojuholníky) v lokálnych súradniciach, priestorový index, `elevationAt(x, y)` (mimo povrchu → typovaná chyba / `undefined`)
+  - `createTin` s pravidelnou mriežkou buniek, mimo povrchu `undefined`; mriežka rastra sa prevádza na TIN (`gridToTin`), 100 tis. trojuholníkov + 10 tis. dotazov < 1 s (test).
+- [x] import LandXML `Surfaces/Surface/Definition` (`Pnts`, `Faces`), poradie bodov N E Z; viac povrchov v súbore → výber
+  - `parseSurfaces` s typovanými chybami (jednotky, EPSG:5514, neznáme body, typ povrchu); plochy `i="1"` sa vynechajú; dialóg importu so zaškrtnutím povrchov.
+- [x] import DMR 5.0 z ÚGKK (formát podľa vzorky, pravdepodobne GeoTIFF raster) → rovnaké rozhranie ako TIN (`elevationAt`, rezy); ADR k knižnici na čítanie rastra
+  - geotiff.js (ADR 0011), číta sa len okno koridoru, lenivý chunk; JTSK03 = JTSK; overené na GeoTIFF vygenerovanom v teste — **vzorka DMR od ÚGKK ešte chýba**.
+- [x] orezanie povrchu na koridor okolo osi mosta (šírka ako parameter), aby sa veľké DMR dali používať v prehliadači
+  - pás `halfWidth` (60 m) v rozsahu NK ± `margin` (50 m), bez NK celá os; TIN aj mriežka (úseky riadkov) v lokálnych súradniciach na mm.
+- [x] rez terénom: pozdĺž osi (pre pozdĺžny rez) a pozdĺž priečnej čiary na staničení (pre priečny rez) → polyline so zlomami na hranách TIN
+  - `cutPolyline`, `profileAlong` (os nahradená tetivami ≤ 1 m), `crossSection`; čiara sa mimo povrchu preruší; terénna čiara v pozdĺžnom profile a v priereze.
+- [x] ADR: kde je terén uložený (v projektovom JSON vs. samostatný súbor/asset) a ako sa udržiava determinizmus
+  - ADR 0011: v projekte (schéma v5), orezaný na koridor, zaokrúhlený na mm, stabilné poradie.
+- [x] viewer: terén ako polopriehľadná sieť, zapínanie/vypínanie
+  - prepínač „Terén“, sieť relatívne k stredu, reže ju aj rezová rovina; worker 3D terén nedostáva.
 - [ ] golden test: výška v kontrolných bodoch voči Civil 3D ≤ 1 mm
+  - `packages/terrain/src/golden.test.ts` ako `it.todo` — treba LandXML povrchu, výkaz profilu terénu po osi a vzorku DMR 5.0 (2026-10-31).
 
 **Hotové, keď:** povrch z Civil 3D aj DMR 5.0 sa načítajú, v 3D lícuje s mostom a rez terénom sa zhoduje s pozdĺžnym profilom terénu z Civil 3D ≤ 1 mm (test).
 
@@ -303,7 +311,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 
 ## 7. Otvorené otázky
 
-- DMR 5.0 z ÚGKK: v akom formáte ho sťahuješ (GeoTIFF raster? rozlíšenie? dlaždice?) a je v EPSG:5514 / Bpv? Treba vzorku v `fixtures/inbox/`. Čítanie rastra si pravdepodobne vyžiada knižnicu (napr. geotiff.js) → ADR.
+- Terén (Fáza 5b) čaká na podklady: LandXML povrchu z Civil 3D, výkaz pozdĺžneho profilu terénu po osi a vzorka DMR 5.0 (GeoTIFF). Dovtedy sú golden testy `it.todo` a import je overený len na syntetických súboroch. *Predpoklady:* GeoTIFF má výšky v prvom kanáli v m Bpv; `PixelIsArea` (pôvod v rohu bunky), ak súbor neuvádza inak.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
 - Sklon stien trámu a vodorovná dĺžka nábehu nie sú na výkrese okótované. *Predpoklad:* steny 5 : 1 (zvislo : vodorovne), výška steny `hW` = 300 mm, vodorovná dĺžka nábehu `bN` = 1 450 mm, nábeh priamkový; sú to parametre šablóny, ktoré projektant upraví.
@@ -382,3 +390,5 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 | Koniec NK | rovnobežný s osou krajnej opory, staničenie „od/do“ v osi NK; prierez sa za koncovú rovinu predlžuje pozdĺž dotyčnice (2026-10-30, potvrdené 2026-10-31) |
 | Opora | úložný prah, voliteľný driek a základ (hrúbka 0 = bez základu), záverný múrik po horný povrch NK, krídla s uhlom od osi mosta, zavesené alebo založené (2026-10-31, ADR 0010) |
 | Jednotka uhla kríženia | ostávajú stupne; gony z výkresov prepočíta projektant (2026-10-31) |
+| DMR 5.0 | GeoTIFF raster; JTSK03 (EPSG:8353) sa považuje za totožné s EPSG:5514 (2026-10-31, ADR 0011) |
+| Uloženie terénu | v projekte, orezaný na koridor okolo osi mosta (2026-10-31, ADR 0011) |

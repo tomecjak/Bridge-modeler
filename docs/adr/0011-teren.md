@@ -32,7 +32,7 @@ by bolo prácne a krehké; geotiff.js je štandard v prehliadači aj v Node a č
 
 | Balík | Kde | Dôvod | Licencia | Veľkosť |
 |---|---|---|---|---|
-| `geotiff` 3.0.5 | packages/terrain, v aplikácii lenivo pri importe GeoTIFF | čítanie GeoTIFF (okno, nodata, GeoKeys) | MIT | doplní sa po buildu (lenivý chunk) |
+| `geotiff` 3.0.5 | packages/terrain, v aplikácii lenivo pri importe GeoTIFF | čítanie GeoTIFF (okno, nodata, GeoKeys) | MIT | jadro ≈ 43 kB / 14 kB gzip; dekodéry (Deflate 47 kB, ZSTD 81 kB, LERC 97 kB, JPEG 11 kB) sa načítajú len podľa kompresie súboru |
 
 **Súradnicové systémy.** DMR 5.0 je v S-JTSK (JTSK03, EPSG:8353), podklady z Civil 3D v S-JTSK (JTSK, EPSG:5514).
 Rozdiel sa zanedbáva a oba sa berú ako EPSG:5514. Import prijme kód 5514, 8353 alebo raster bez kódu so zápornými
