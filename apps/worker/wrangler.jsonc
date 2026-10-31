@@ -1,0 +1,29 @@
+// Cloudflare Worker modelára mostov (ADR 0015). Postup nastavenia účtu: docs/nasadenie.md.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "modeler-mostov",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-15",
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Worker beží len pre API; statické súbory obslúži Cloudflare priamo (Access chráni oboje)
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "modeler-mostov",
+      // doplní sa po `wrangler d1 create modeler-mostov` (docs/nasadenie.md); lokálny vývoj funguje aj bez neho
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // tím Cloudflare Access (napr. "firma.cloudflareaccess.com") a AUD aplikácie Access; prázdne = lokálny vývoj
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  },
+  "observability": { "enabled": true }
+}

@@ -15,3 +15,6 @@ fixtures/inbox/*
 
 # Golden dáta odvodené z podkladov (pnpm fixtures:convert), neverzujú sa
 fixtures/local/
+
+# lokálny stav wrangler dev (D1, cache)
+.wrangler/
