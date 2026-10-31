@@ -35,6 +35,7 @@ interface Props {
   /** priečny rez ako výkres (terén, podpery; ADR 0012); NK s výberom a kótami kreslí pohľad sám */
   drawing?: Drawing | undefined;
   onExport: (format: ExportFormat) => void;
+  onOpenLibrary: () => void;
 }
 
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['deck', 'deckVoid', 'roadAxis']);
@@ -57,6 +58,7 @@ export function SectionView({
   terrain = [],
   drawing,
   onExport,
+  onOpenLibrary,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
 
@@ -107,6 +109,9 @@ export function SectionView({
             {sk.section.addDeck}
           </button>
         )}
+        <button type="button" className="button" onClick={onOpenLibrary}>
+          {sk.library.open}
+        </button>
         <ExportMenu onExport={(format) => onExport(format)} disabled={sections.length === 0} />
         <span className="hint">{sk.section.elapsed(formatNumber(elapsed, 1))}</span>
       </div>

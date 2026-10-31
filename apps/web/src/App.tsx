@@ -37,6 +37,7 @@ import {
 } from './import/importTerrain.ts';
 import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
+import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectTree } from './layout/ProjectTree.tsx';
 import { PropertiesPanel } from './layout/PropertiesPanel.tsx';
 import { SectionPanel } from './layout/SectionPanel.tsx';
@@ -94,6 +95,7 @@ export function App() {
   /** NK, v osi ktorej je pozdĺžny rez (výber v profile); inak vybraná alebo prvá NK */
   const [profileDeckId, setProfileDeckId] = useState<string>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [terrainBusy, setTerrainBusy] = useState(false);
   /** priebeh sťahovania DMR 5.0 zo ZBGIS [%]; undefined = nesťahuje sa */
   const [dmrProgress, setDmrProgress] = useState<number>();
@@ -858,6 +860,7 @@ export function App() {
               )
             }
             onInsert={insertExample}
+            onOpenLibrary={() => setLibraryOpen(true)}
             emptyActions={
               <div className="toolbar">
                 <button type="button" className="button" onClick={() => insertExample('twin')}>
@@ -902,6 +905,16 @@ export function App() {
       )}
       <footer className="app-status">{statusText()}</footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
+      {libraryOpen && (
+        <ProfileLibraryDialog
+          onClose={() => setLibraryOpen(false)}
+          onMessage={setMessage}
+          onInserted={(id, name) => {
+            setSelectedElement({ collection: 'profiles', id });
+            setMessage(sk.library.inserted(name));
+          }}
+        />
+      )}
       {terrainFile && (
         <TerrainImportDialog
           file={terrainFile}

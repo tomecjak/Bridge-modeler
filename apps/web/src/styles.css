@@ -1027,6 +1027,47 @@ text.dw-stationing {
   background: color-mix(in srgb, var(--bg) 60%, transparent);
 }
 
+.modal.modal-wide {
+  width: min(860px, 100%);
+}
+
+.library-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.library-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.library-name {
+  flex: 1;
+}
+
+.profile-thumb {
+  flex: none;
+  background: var(--canvas);
+  border-radius: 4px;
+}
+
+.profile-thumb path {
+  fill: color-mix(in srgb, var(--series) 30%, transparent);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
 .modal {
   display: flex;
   flex-direction: column;
