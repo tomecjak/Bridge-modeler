@@ -38,6 +38,15 @@ by bolo prácne a krehké; geotiff.js je štandard v prehliadači aj v Node a č
 Rozdiel sa zanedbáva a oba sa berú ako EPSG:5514. Import prijme kód 5514, 8353 alebo raster bez kódu so zápornými
 súradnicami; kladné súradnice (klasické S-JTSK) sú typovaná chyba ako pri osi.
 
+**Doplnok 2026-10-31 — DMR 5.0 automaticky zo ZBGIS.** Projektant chce, aby si aplikácia terén stiahla sama.
+ÚGKK nemá WCS ani výrez rastra (celý DMR je jeden 184 GB ZIP bez CORS, export v MAPKE s captchou); výšky však vracia
+ArcGIS služba `https://zbgis.skgeodesy.sk/zbgis/rest/services/LLS_DMR5/MapServer` cez `identify` (vrstva 3,
+multipoint) a pre stránky na http(s) posiela CORS. Postup je prevzatý z nástroja projektanta Mini-IFC-tools:
+mriežka v stredoch 1 m buniek DMR v koridore a v pokrytí LLS (vrstva 0), dávky po 2 000 bodov, 4 súbežne;
+služba pri bode bez dát dávku ukončí, pokračuje sa za ním. Nad 120 tis. bodov sa krok mriežky zväčší.
+`fetch` sa do `packages/terrain` vstrekuje (balíky sú bez DOM, testy majú falošný server). Terén má zdroj `zbgis`
+a atribúciu „DMR 5.0 © ÚGKK SR, CC BY 4.0“. Služba nie je zmluvne garantovaná — pri výpadku ostáva import súboru.
+
 ## Dôsledky
 
 - Projekt s terénom je väčší; worker 3D sietí terén nedostáva (kopírovanie pri každej zmene by bolo drahé),

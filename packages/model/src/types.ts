@@ -218,7 +218,10 @@ export type TerrainData = z.infer<typeof TerrainDataSchema>;
 export const TerrainSurfaceSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
-  source: z.enum(['landxml', 'geotiff']),
+  /** súbor z Civil 3D, súbor DMR alebo DMR 5.0 stiahnutý zo služby ZBGIS (ÚGKK) */
+  source: z.enum(['landxml', 'geotiff', 'zbgis']),
+  /** povinné uvedenie zdroja (napr. „DMR 5.0 © ÚGKK SR, CC BY 4.0“) */
+  attribution: z.string().optional(),
   /** koridor použitý pri orezaní: pol šírky okolo osi cesty a presah za NK [m] */
   corridor: z.object({ halfWidth: z.number(), margin: z.number() }),
   data: TerrainDataSchema,

@@ -1248,8 +1248,12 @@
             "type": "string",
             "enum": [
               "landxml",
-              "geotiff"
+              "geotiff",
+              "zbgis"
             ]
+          },
+          "attribution": {
+            "type": "string"
           },
           "corridor": {
             "type": "object",

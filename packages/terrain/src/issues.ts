@@ -14,6 +14,10 @@ export type TerrainIssue = { severity: 'error' | 'warning'; surface?: string } &
   | { code: 'InvalidGeoTiff'; detail: string }
   | { code: 'UnsupportedCrs'; epsg: number }
   | { code: 'OutsideCorridor' }
+  | { code: 'ServiceUnavailable'; detail: string }
+  | { code: 'OutsideCoverage' }
+  | { code: 'NoData' }
+  | { code: 'Cancelled' }
 );
 
 export type TerrainIssueCode = TerrainIssue['code'];

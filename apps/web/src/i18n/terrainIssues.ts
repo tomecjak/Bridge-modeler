@@ -27,5 +27,13 @@ export function formatTerrainIssue(issue: TerrainIssue): string {
       return `Raster je v súradnicovom systéme EPSG:${issue.epsg}; podporovaný je S-JTSK (EPSG:5514 alebo 8353).`;
     case 'OutsideCorridor':
       return 'Raster nepokrýva koridor okolo osi.';
+    case 'ServiceUnavailable':
+      return `Služba DMR 5.0 ZBGIS (ÚGKK) neodpovedá (${issue.detail}). Terén môžete importovať zo súboru (GeoTIFF z MAPKY alebo LandXML).`;
+    case 'OutsideCoverage':
+      return 'Koridor okolo osi leží mimo pokrytia DMR 5.0 (leteckého laserového skenovania ÚGKK).';
+    case 'NoData':
+      return 'Služba DMR 5.0 v koridore nevrátila žiadne výšky.';
+    case 'Cancelled':
+      return 'Sťahovanie terénu bolo zrušené.';
   }
 }
