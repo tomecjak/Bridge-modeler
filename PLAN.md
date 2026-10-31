@@ -326,11 +326,24 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 
 **Hotové, keď:** presný model sa zobrazí v 3D, objemy sedia so sieťou ± 0,5 % a STEP sa otvorí vo FreeCADe / Civil 3D. — *2026-10-31:* objemy a STEP overené testami (spätné načítanie, súradnice v S-JTSK v m); **otvorenie STEP vo FreeCADe / Civil 3D overí projektant**.
 
+### Fáza 9 — Nasadenie na Cloudflare
+Rozhodnutie 2026-10-31: jeden Cloudflare Worker so statickými súbormi aplikácie a API; v databáze (D1) len firemná
+knižnica prierezov, projekty ostávajú ako súbory; prístup cez Cloudflare Access; nasadenie automaticky z GitHubu;
+adresa `*.workers.dev` (ADR 0015).
+- [ ] `apps/worker`: statické súbory (jednostránková aplikácia) a API, `wrangler.jsonc`
+- [ ] D1: tabuľka knižnice prierezov, API (zoznam, uloženie s kontrolou verzie, odstránenie)
+- [ ] overenie identity z Cloudflare Access (JWT) vo Workeri, `/api/me`
+- [ ] „Firemná knižnica“ v dialógu Knižnica prierezov (vložiť, uložiť z projektu, odstrániť, konflikt verzií)
+- [ ] návod na nastavenie účtu (D1, napojenie GitHubu, Access) a nasadenie
+
+**Hotové, keď:** push do main nasadí aplikáciu na `*.workers.dev`, otvorí sa až po prihlásení cez Access a dvaja
+kolegovia vidia a upravujú tú istú knižnicu prierezov.
+
 ### Backlog
 - IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)
 - zakrivené a zalomené podpery, import okraja NK z DXF
 - výmery (objemy betónu, plochy) a export pre KUBATOR
-- nasadenie na Cloudflare s databázou (knižnica prierezov, projekty)
+- projekty v cloude (R2), vlastná doména
 
 ## 5. Referenčné dáta (dodá Jakub)
 
