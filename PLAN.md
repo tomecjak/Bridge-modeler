@@ -36,7 +36,7 @@ výmery, viac osí, detaily oceľových a spriahnutých NK, výstuž, predpätie
 | Výpočty mimo UI | Web Worker + Comlink | transferable buffers |
 | LandXML | fast-xml-parser | beží aj v Node (testy) |
 | Výrazy | vlastný parser (podmnožina syntaxe vzorcov Revitu) | čísla v SI, goniometria v stupňoch |
-| DXF | rozhodne ADR vo fáze 6 | knižnica vs. vlastný ASCII zapisovač |
+| DXF | vlastný zapisovač DXF R2000 | ADR 0012 |
 | IFC | rozhodne ADR vo fáze 7 (kandidát web-ifc, schéma IFC4X3) | validácia IfcOpenShell (Python) v `tools/` |
 | Testy | Vitest; neskôr Playwright pre e2e | |
 | Lint / format | ESLint + Prettier alebo Biome | ADR 0001 |
@@ -258,14 +258,18 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 **Hotové, keď:** povrch z Civil 3D aj DMR 5.0 sa načítajú, v 3D lícuje s mostom a rez terénom sa zhoduje s pozdĺžnym profilom terénu z Civil 3D ≤ 1 mm (test).
 
 ### Fáza 6 — 2D výkresy
-- [ ] výkresový model: čiara, polyline, šrafa, text, kóta, značka staničenia; hladiny, typy čiar, mierka
-- [ ] firemný štandard hladín ako konfigurácia (JSON)
-- [ ] priečny rez na zvolených staničeniach (NK a podpera, ak na staničení leží)
-- [ ] rozvinutý pozdĺžny rez: horný a spodný povrch NK, podpery, niveleta, terén, staničenia, výšky
-- [ ] terénna čiara v priečnom reze
-- [ ] pôdorys: obrysy NK, os so staničením, podpery so šikmosťou
-- [ ] export SVG (náhľad v aplikácii) a DXF (mm, hladiny, mierka; lokálne alebo S-JTSK súradnice)
-- [ ] ADR: knižnica pre DXF vs. vlastný zapisovač
+Rozhodnutie 2026-10-31: výkresy sa v nástroji nevytvárajú (bez listov, rámikov a kót). Obsah je dynamicky v pohľadoch
+Pôdorys, Pozdĺžny profil a Prierez a ich geometria sa exportuje do DXF / SVG, kde sa výkres dokončí v AutoCADe (ADR 0012).
+- [x] rozvinutý pozdĺžny rez: horný a spodný povrch NK, podpery, niveleta, terén, staničenia, výšky
+  - `deckLongitudinal` (rez obrysom aj dutinami v osi mosta) a `cutAlongAxis` (prah, múrik, driek, stena, stĺpy, základ) z parametrov; vzorky NK spoločné s 3D (`sampleSuperstructure`). V profile výber NK a prevýšenia 1–10×; terén po osi mosta; nad podperou zvislý popis s názvom a staničením. Kóty a výškové popisy sa nerobia (rozhodnutie 2026-10-31).
+- [x] terénna čiara v priečnom reze
+  - už z Fázy 5b; je v exporte priečneho rezu (hladina `TEREN`).
+- [x] pôdorys: obrysy NK, os so staničením, podpery so šikmosťou
+  - `deckOutline` s koncami rovnobežnými s oporou (zhoda s 3D sieťou ± 2 mm), os mosta, podpery, základy, ložiská, os podpery s názvom; v exporte staničenie každých 20 m, popis každých 100 m.
+- [x] export SVG (náhľad v aplikácii) a DXF (mm, hladiny, mierka; lokálne alebo S-JTSK súradnice)
+  - „Export“ v každom pohľade; DXF R2000 **v metroch** (rozhodnutie 2026-10-31), pôdorys v S-JTSK alebo lokálne, pozdĺžny rez 1 : 1 (x = staničenie, y = m n. m.), priečny rez x = odsadenie od osi cesty; texty 2,5 mm pre mierku 1 : 200 / 1 : 100. Vzory mosta 212-00 (`pnpm drawings:samples`) prechádzajú kontrolou ezdxf (`tools/validate_dxf.py`) bez chýb. **Otvorenie v AutoCADe a lícovanie s Civil 3D treba overiť** (projektant).
+- [x] ADR: knižnica pre DXF vs. vlastný zapisovač
+  - ADR 0012: vlastný zapisovač (LWPOLYLINE, TEXT, hladiny, typy čiar), bez runtime závislosti.
 
 **Hotové, keď:** DXF sa otvorí v AutoCADe so správnymi hladinami a jednotkami, rozmery v reze sedia s modelom a pôdorys v S-JTSK lícuje s podkladom z Civil 3D.
 
@@ -287,8 +291,6 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - IfcSectionedSolidHorizontal a IfcLinearPlacement
 - rozšírenia definované v pôdoryse (okraj NK ako krivka), viac NK, zakrivené podpery
 - výmery (objemy betónu, plochy) a export pre KUBATOR
-- PDF výkresy s rámikom a pečiatkou
-- desktopový balík (Tauri), ak bude prehliadač obmedzovať
 - plnohodnotný editor priečneho rezu (grafické kreslenie, väzby, knižnica prierezov)
 
 ## 5. Referenčné dáta (dodá Jakub)
@@ -324,6 +326,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Opora (ADR 0010), *predpoklady:* bočné líca opory sú rovnobežné s osou mosta a prechádzajú koncami opory na osi ložísk (`length` sa meria pozdĺž osi podpery); krídla začínajú na zadnej líci opory (ďalej od poľa z prahu a múrika); predná líca drieku = predná líca prahu; základ opory leží pod stredom prahu. Pri krídle s uhlom ≠ 0 je bočná líca opory stále rovnobežná s osou mosta.
 - Referenčný most 212-00: test používa šikmosť 68,71 g pre všetky podpery (výkres má 68,40 – 68,94 g), preto kolmé rozpätia sedia na ± 2 cm; prierez je šablóna jednotrámu (šírka 16,50 m, h = 1,20 m), výšky sa overujú len v osi podpery (horná hrana prahu opôr ± 5 mm). Os I/68 je syntetická priamka −0,64 %; ak bude LandXML osi, test sa doplní o polohu.
 - Rez v 3D vyplní len prierezy NK; prerezané podpery sú zobrazené otvorené (bez výplne). Výplň podpier sa doplní s výkresmi (Fáza 6), ak bude treba.
+- Hladiny DXF (ADR 0012) sú predpoklad, kým nebude firemný štandard: `OS_CESTY`, `OS_MOSTA`, `OS_PODPERY`, `STANICENIE`, `NK`, `NK_DUTINY`, `PODPERY`, `ZAKLADY`, `LOZISKA`, `TEREN`, `NIVELETA`, `POPIS` (farby ACI, typy čiar CONTINUOUS / DASHED / CENTER). Výška textu 2,5 mm v mierke 1 : 200 (pôdorys, pozdĺžny rez) a 1 : 100 (priečny rez). Pošli štandard alebo iné názvy, ak treba.
+- Pozdĺžny rez sa exportuje 1 : 1 a reže sa len v osi mosta (bez pohľadu na časti za rezom, napr. krídla). Ak treba prevýšenie alebo pohľad, doplní sa.
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 
 ### Zistené z podkladov
@@ -336,6 +340,8 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 - Niveleta: 2× PVI a 6× ParaCurve (parabolické výškové oblúky).
 - Súbor obsahuje aj `CrossSects` (359) a `Superelevation` (14). V MVP sa ignorujú, prečítajú sa len os a niveleta.
 - Kontrolné body k osi 101-00 zatiaľ nie sú; golden testy používajú os SO 171-11-01 (nižšie).
+
+`fixtures/inbox/125-00_C3D.xml` (Civil 3D, export 2026-10-23, dodané 2026-10-31): osi `125-00` (557,37 m), `125_R`, `125_L` a povrchy `125-00_Povrch` a `125-00_HTU`; hlavička opäť `epsgCode="2065"`. Môže slúžiť na golden test terénu, chýba k nemu výkaz profilu terénu po osi.
 
 `fixtures/inbox/SO 171-11-01.xml` + `CivilReport*.html` (Civil 3D 2023 export osi, výkazy z českej lokalizácie Civil 3D, 2026-10-29) — **hlavný podklad pre golden testy Fázy 1**:
 - Os „Trasa 171-11-01“, dĺžka 723,35 m, staničenie od 0. Prvky: 4× Line (jedna len 0,042 m medzi dvoma prechodnicami), 6× Spiral (`clothoid`, aj nesymetrické dĺžky 89,998 / 69,939 m), 4× Curve (R 65,14 – 290 m). Súradnice EPSG:5514, záporné, poradie N E, hlavička opäť `epsgCode="2065"`.
@@ -395,3 +401,5 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 | Jednotka uhla kríženia | ostávajú stupne; gony z výkresov prepočíta projektant (2026-10-31) |
 | DMR 5.0 | GeoTIFF raster; JTSK03 (EPSG:8353) sa považuje za totožné s EPSG:5514 (2026-10-31, ADR 0011) |
 | Uloženie terénu | v projekte, orezaný na koridor okolo osi mosta (2026-10-31, ADR 0011) |
+| 2D výstupy | bez výkresov a kót v nástroji; obsah v pohľadoch, export pôdorysu, pozdĺžneho a priečneho rezu do DXF / SVG (2026-10-31, ADR 0012) |
+| Jednotky DXF | metre vo všetkých výkresoch; pôdorys lokálne alebo v S-JTSK (2026-10-31) |
