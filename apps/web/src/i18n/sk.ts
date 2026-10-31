@@ -36,6 +36,22 @@ export const sk = {
     parameters: 'Parametre',
     fileIssues: 'Problémy súboru',
   },
+  export: {
+    button: 'Export',
+    title:
+      'Geometria pohľadu do DXF (metre, hladiny) alebo SVG; kóty a rámik sa dopĺňajú v AutoCADe',
+    dxf: 'DXF',
+    svg: 'SVG',
+    coordinates: 'súradnice',
+    sjtsk: 'S-JTSK',
+    local: 'lokálne',
+    names: {
+      plan: 'pôdorys',
+      profile: (deck: string) => `pozdĺžny rez ${deck}`,
+      section: (station: string) => `priečny rez ${station}`,
+    },
+    done: (file: string) => `Exportované: ${file}`,
+  },
   viewport: {
     tabs: {
       view3d: '3D',

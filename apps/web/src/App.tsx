@@ -1,5 +1,14 @@
-import type { AlignmentIssue } from '@bridge/alignment';
-import { planDrawing, profileDrawing, projectSupport, sectionDrawing } from '@bridge/drawing';
+import { type AlignmentIssue, formatStation } from '@bridge/alignment';
+import {
+  type Drawing,
+  planDrawing,
+  profileDrawing,
+  projectSupport,
+  sectionDrawing,
+  toDxf,
+  toSvg,
+  translate,
+} from '@bridge/drawing';
 import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
   bridgeAxisPlan,
@@ -33,7 +42,8 @@ import { SectionPanel } from './layout/SectionPanel.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
-import { downloadProject } from './persistence/fileIO.ts';
+import { downloadProject, downloadText } from './persistence/fileIO.ts';
+import { drawingFileName } from './persistence/fileName.ts';
 import type { ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
@@ -48,6 +58,7 @@ import {
   useTerrainTins,
 } from './store/terrain.ts';
 import type { Cut } from './viewer/sceneView.ts';
+import type { ExportFormat } from './views/ExportMenu.tsx';
 import { ParameterTable } from './views/ParameterTable.tsx';
 import { SectionView } from './views/SectionView.tsx';
 
@@ -207,6 +218,15 @@ export function App() {
     supports: sectionSupports,
     terrain: sectionTerrain.flatMap((t) => t.runs),
   });
+
+  /** Stiahne pohľad ako DXF alebo SVG (ADR 0012). */
+  function exportDrawing(drawing: Drawing | undefined, view: string, format: ExportFormat) {
+    if (!drawing) return;
+    const file = drawingFileName(project.name, view, format);
+    if (format === 'dxf') downloadText(toDxf(drawing), file, 'application/dxf');
+    else downloadText(toSvg(drawing), file, 'image/svg+xml');
+    setMessage(sk.export.done(file));
+  }
 
   /** Klik v pôdoryse: podpera pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie ku kliknutiu. */
   function addSupportAt(s: number, offset: number) {
@@ -687,6 +707,23 @@ export function App() {
           decks: roadDecks,
           deckId: profileDeck?.id,
           onDeck: setProfileDeckId,
+          onExport: (format) =>
+            exportDrawing(profileView, sk.export.names.profile(profileDeck?.name ?? ''), format),
+        }}
+        onExportPlan={(format, coordinates) => {
+          if (!road) return;
+          const drawing = planDrawing({
+            alignment: road,
+            decks: roadDecks,
+            supports: roadSupports,
+            stationing: { step: 20, labelStep: 100 },
+          });
+          const origin = project.crs.origin;
+          exportDrawing(
+            coordinates === 'sjtsk' && origin ? translate(drawing, origin.x, origin.y) : drawing,
+            sk.export.names.plan,
+            format,
+          );
         }}
         selectedId={selectedElement?.id}
         view3d={
@@ -737,6 +774,13 @@ export function App() {
             supports={sectionSupports}
             terrain={sectionTerrain}
             drawing={sectionView}
+            onExport={(format) =>
+              exportDrawing(
+                sectionView,
+                sk.export.names.section(formatStation(sectionAt, 3)),
+                format,
+              )
+            }
             onInsert={insertExample}
             emptyActions={
               <div className="toolbar">

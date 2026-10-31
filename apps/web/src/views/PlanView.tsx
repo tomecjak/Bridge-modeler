@@ -4,6 +4,7 @@ import type { Vec2 } from '@bridge/geom';
 import { type PointerEvent, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { type ExportCoordinates, type ExportFormat, ExportMenu } from './ExportMenu.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { boundsOf, fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';
@@ -24,6 +25,7 @@ interface Props {
   drawing: Drawing | undefined;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
+  onExport: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
   onAddSupport: (s: number, offset: number) => void;
 }
@@ -34,7 +36,15 @@ const MAX_TICKS = 4000;
 /** os cesty (farby podľa prvkov) a staničenie podľa priblíženia kreslí pohľad sám */
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['roadAxis', 'stationing']);
 
-export function PlanView({ alignment, cursorS, onCursor, drawing, selected, onAddSupport }: Props) {
+export function PlanView({
+  alignment,
+  cursorS,
+  onCursor,
+  drawing,
+  selected,
+  onExport,
+  onAddSupport,
+}: Props) {
   const [addMode, setAddMode] = useState(false);
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
@@ -114,6 +124,7 @@ export function PlanView({ alignment, cursorS, onCursor, drawing, selected, onAd
         <button type="button" aria-pressed={addMode} onClick={() => setAddMode((m) => !m)}>
           {sk.supports.add}
         </button>
+        <ExportMenu onExport={onExport} coordinates />
         {addMode && <span className="drawing-note">{sk.supports.addHint}</span>}
       </div>
       {view && (

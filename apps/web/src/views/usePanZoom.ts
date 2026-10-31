@@ -2,7 +2,7 @@ import { type PointerEvent, type RefObject, useEffect, useRef, useState } from '
 import { pan, type Size, type View, zoomAt } from './viewTransform.ts';
 
 const ZOOM_PER_WHEEL_STEP = 1.15;
-const INTERACTIVE = 'button, input, select, textarea, a, label, [role="button"]';
+const INTERACTIVE = 'button, input, select, textarea, a, label, summary, details, [role="button"]';
 
 /**
  * Pohľad s posunom ťahaním a priblížením kolieskom. `fit` je predvolený pohľad (aj po „Prispôsobiť“).

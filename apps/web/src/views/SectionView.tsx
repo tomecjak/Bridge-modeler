@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { type ExportFormat, ExportMenu } from './ExportMenu.tsx';
 import { StationControl } from './StationControl.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
@@ -33,6 +34,7 @@ interface Props {
   terrain?: readonly { id: string; runs: readonly (readonly Vec2[])[] }[];
   /** priečny rez ako výkres (terén, podpery; ADR 0012); NK s výberom a kótami kreslí pohľad sám */
   drawing?: Drawing | undefined;
+  onExport: (format: ExportFormat) => void;
 }
 
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['deck', 'deckVoid', 'roadAxis']);
@@ -54,6 +56,7 @@ export function SectionView({
   supports,
   terrain = [],
   drawing,
+  onExport,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
 
@@ -104,6 +107,7 @@ export function SectionView({
             {sk.section.addDeck}
           </button>
         )}
+        <ExportMenu onExport={(format) => onExport(format)} disabled={sections.length === 0} />
         <span className="hint">{sk.section.elapsed(formatNumber(elapsed, 1))}</span>
       </div>
       <div

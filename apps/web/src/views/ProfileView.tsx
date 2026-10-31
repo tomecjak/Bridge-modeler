@@ -11,6 +11,7 @@ import { type PointerEvent, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { type ExportFormat, ExportMenu } from './ExportMenu.tsx';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';
@@ -27,6 +28,7 @@ interface Props {
   onDeck: (id: string) => void;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
+  onExport: (format: ExportFormat) => void;
 }
 
 /** Ponúkané prevýšenia (výšky : dĺžky); export je vždy 1 : 1. */
@@ -45,6 +47,7 @@ export function ProfileView({
   deckId,
   onDeck,
   selected,
+  onExport,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   const [exaggeration, setExaggeration] = useState(10);
@@ -173,6 +176,7 @@ export function ProfileView({
         <button type="button" onClick={reset}>
           {sk.viewport.fit}
         </button>
+        <ExportMenu onExport={(format) => onExport(format)} disabled={!drawing} />
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.profile}>

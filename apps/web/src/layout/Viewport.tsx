@@ -2,6 +2,7 @@ import type { Alignment } from '@bridge/alignment';
 import type { Drawing } from '@bridge/drawing';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
+import type { ExportCoordinates, ExportFormat } from '../views/ExportMenu.tsx';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { ProfileView } from '../views/ProfileView.tsx';
 
@@ -17,6 +18,7 @@ interface Props {
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
+  onExportPlan: (format: ExportFormat, coordinates: ExportCoordinates) => void;
   onAddSupport: (s: number, offset: number) => void;
   sectionView: ReactNode;
   view3d: ReactNode;
@@ -26,6 +28,7 @@ interface Props {
     decks: readonly { id: string; name: string }[];
     deckId: string | undefined;
     onDeck: (id: string) => void;
+    onExport: (format: ExportFormat) => void;
   };
   selectedId: string | undefined;
 }
@@ -47,6 +50,7 @@ export function Viewport({
   parametersView,
   sectionView,
   plan,
+  onExportPlan,
   onAddSupport,
   view3d,
   profile,
@@ -90,6 +94,7 @@ export function Viewport({
               onCursor={onPlanCursor}
               drawing={plan}
               selected={selectedId}
+              onExport={onExportPlan}
               onAddSupport={onAddSupport}
             />
             <ProfileView
