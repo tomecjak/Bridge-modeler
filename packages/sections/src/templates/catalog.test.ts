@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateProfileDefinition, profileParameterValues } from '../profile.ts';
 import { ECONOMIC_SPANS } from '../spans.ts';
-import { PROFILE_TEMPLATES, profileTemplate } from './catalog.ts';
+import { builtinProfileLibrary, PROFILE_TEMPLATES, profileTemplate } from './catalog.ts';
 
 const globals = () => undefined;
 
@@ -102,6 +102,14 @@ describe('profile templates', () => {
     const v = haunched.loops.find((l) => l.role === 'void');
     expect(v?.polygon).toHaveLength(8);
     expect(plain.loops.find((l) => l.role === 'void')?.polygon).toHaveLength(4);
+  });
+
+  it('serves the templates as a read-only library', async () => {
+    const lib = builtinProfileLibrary();
+    expect(lib.readOnly).toBe(true);
+    const entries = await lib.list();
+    expect(entries.map((e) => e.typology)).toEqual(PROFILE_TEMPLATES.map((t) => t.typology));
+    expect((await lib.get('sablona:box'))?.profile.typology).toBe('box');
   });
 
   it('returns undefined for an unknown typology', () => {

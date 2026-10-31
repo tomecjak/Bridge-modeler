@@ -84,6 +84,8 @@ export type ModelIssue = {
   | { code: 'MissingSupports' }
   | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
+  /** súbor nie je knižnica prierezov (chýba značka formátu) */
+  | { code: 'NotAProfileLibrary' }
   | { code: 'UnsupportedSchemaVersion'; version: string }
   | { code: 'SchemaViolation'; path: string; message: string }
 );

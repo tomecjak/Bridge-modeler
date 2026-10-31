@@ -161,6 +161,8 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}NK nemá aspoň dve podpery — polia sa nedajú určiť.`;
     case 'InvalidJson':
       return `Súbor nie je platný JSON (${issue.detail}).`;
+    case 'NotAProfileLibrary':
+      return 'Súbor nie je knižnica prierezov (napr. projektový súbor).';
     case 'UnsupportedSchemaVersion':
       return `Nepodporovaná verzia projektového súboru „${issue.version}“.`;
     case 'SchemaViolation':

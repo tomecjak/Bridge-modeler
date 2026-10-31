@@ -1,4 +1,10 @@
-import type { ProfileDefinition, ProfileParameter, ProfilePoint } from '@bridge/model';
+import {
+  memoryLibrary,
+  type ProfileDefinition,
+  type ProfileLibrary,
+  type ProfileParameter,
+  type ProfilePoint,
+} from '@bridge/model';
 import { singleBeamHaunched } from './singleBeamHaunched.ts';
 
 /**
@@ -332,4 +338,18 @@ export const PROFILE_TEMPLATES: readonly ProfileTemplate[] = [
 /** Šablóna podľa typológie s daným id; neznáma typológia → undefined. */
 export function profileTemplate(typology: string, id: string): ProfileDefinition | undefined {
   return PROFILE_TEMPLATES.find((t) => t.typology === typology)?.create(id);
+}
+
+/** Zabudované šablóny ako knižnica len na čítanie (id položky `sablona:<typológia>`). */
+export function builtinProfileLibrary(name = 'Šablóny'): ProfileLibrary {
+  return memoryLibrary(
+    name,
+    PROFILE_TEMPLATES.map((t) => ({
+      id: `sablona:${t.typology}`,
+      name: t.name,
+      typology: t.typology,
+      profile: t.create(`sablona-${t.typology}`),
+    })),
+    { readOnly: true },
+  );
 }
