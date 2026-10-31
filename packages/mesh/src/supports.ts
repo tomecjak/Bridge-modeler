@@ -1,10 +1,12 @@
 import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
-import { type SupportResult, supportParts, transverseOffset } from '@bridge/sections';
+import {
+  BEARING_PLAN_SIZE,
+  type SupportResult,
+  supportParts,
+  transverseOffset,
+} from '@bridge/sections';
 import type { GeometryKernel } from './kernel.ts';
 import { mergeMeshes, type TriangleMesh } from './mesh.ts';
-
-/** Pôdorysný rozmer ložiska v 3D náhľade [m] (len zobrazenie; výška = výška uloženia). */
-export const BEARING_PLAN_SIZE = 0.6;
 
 /**
  * Teleso podpery (Fáza 5, ADR 0010): hranoly z `supportParts` (základ, driek / stĺpy alebo časti opory) a ložiská

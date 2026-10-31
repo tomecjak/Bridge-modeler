@@ -2,6 +2,9 @@ import { centroid, type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
 import { abutmentParts, type SolidPart, transverseOffset } from './abutment.ts';
 import { type SupportResult, seatAt } from './supports.ts';
 
+/** Pôdorysný rozmer ložiska v 3D a v pôdoryse [m] (len zobrazenie; výška = výška uloženia). */
+export const BEARING_PLAN_SIZE = 0.6;
+
 /** Počet strán mnohouholníka, ktorým sa v pôdoryse nahradí kruhový stĺp. */
 const CIRCLE_SEGMENTS = 32;
 

@@ -1,10 +1,10 @@
 import type { Alignment } from '@bridge/alignment';
+import { sampleHorizontal } from '@bridge/drawing';
 import type { ProjectFile } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import type { TerrainTin } from '../store/terrain.ts';
 import { StationControl } from '../views/StationControl.tsx';
-import { sampleHorizontal } from '../views/sampling.ts';
 import { BASEMAPS, type BasemapKind, loadBasemap } from './basemap.ts';
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
 import { terrainBuffers } from './terrainMesh.ts';

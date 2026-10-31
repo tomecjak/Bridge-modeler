@@ -53,6 +53,12 @@ export function bridgeAxisPlan(
   });
 }
 
+/** Rez časťou podpery v osi mosta: obrys v rovine rezu (x = staničenie s, y = lokálne z). */
+export interface AxisCut {
+  part: SolidPart['name'];
+  outline: Polygon2D;
+}
+
 /**
  * Rozvinutý rez častí podpery zvislou plochou cez os mosta (Fáza 6, z parametrov, nie z 3D siete): úseky osi vnútri
  * pôdorysu časti → obrys v rovine rezu (x = staničenie s, y = lokálne z) z hornej a spodnej plochy časti. Plochy sa
@@ -62,7 +68,7 @@ export function cutAlongAxis(
   parts: readonly SolidPart[],
   line: readonly AxisLinePoint[],
   maxStep = 0.5,
-): Polygon2D[] {
+): AxisCut[] {
   if (line.length < 2) return [];
   const cum = [0];
   for (let i = 1; i < line.length; i++) {
@@ -84,7 +90,7 @@ export function cutAlongAxis(
     };
   };
 
-  const out: Polygon2D[] = [];
+  const out: AxisCut[] = [];
   for (const part of parts) {
     for (const [d0, d1] of insideIntervals(part.plan, line, cum)) {
       const ds = [d0, ...cum.filter((d) => d > d0 && d < d1), d1];
@@ -97,10 +103,13 @@ export function cutAlongAxis(
       }
       fine.push(d1);
       const pts = fine.map(at);
-      out.push([
-        ...pts.map((p) => vec2(p.s, part.top(p.point))),
-        ...[...pts].reverse().map((p) => vec2(p.s, part.bottom(p.point))),
-      ]);
+      out.push({
+        part: part.name,
+        outline: [
+          ...pts.map((p) => vec2(p.s, part.top(p.point))),
+          ...[...pts].reverse().map((p) => vec2(p.s, part.bottom(p.point))),
+        ],
+      });
     }
   }
   return out;

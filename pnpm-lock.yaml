@@ -184,6 +184,9 @@ importers:
       '@bridge/alignment':
         specifier: workspace:*
         version: link:../../packages/alignment
+      '@bridge/drawing':
+        specifier: workspace:*
+        version: link:../../packages/drawing
       '@bridge/expr':
         specifier: workspace:*
         version: link:../../packages/expr
@@ -250,7 +253,21 @@ importers:
         specifier: ^26.6.6
         version: 26.6.6
 
-  packages/drawing: {}
+  packages/drawing:
+    dependencies:
+      '@bridge/alignment':
+        specifier: workspace:*
+        version: link:../alignment
+      '@bridge/geom':
+        specifier: workspace:*
+        version: link:../geom
+      '@bridge/sections':
+        specifier: workspace:*
+        version: link:../sections
+    devDependencies:
+      '@bridge/model':
+        specifier: workspace:*
+        version: link:../model
 
   packages/expr: {}
 

@@ -83,7 +83,7 @@ describe('cutAlongAxis', () => {
   const abutments = [ref.results[0], ref.results[3]] as (typeof ref.results)[number][];
 
   it('cuts a skewed pier wall and its footing over thickness / sin α', () => {
-    const cut = cutAlongAxis(supportParts(pier), line);
+    const cut = cutAlongAxis(supportParts(pier), line).map((c) => c.outline);
     expect(cut).toHaveLength(2);
     const [footing, wall] = [...cut].sort((a, b) => length(b) - length(a)) as [
       Polygon2D,
@@ -100,7 +100,7 @@ describe('cutAlongAxis', () => {
   it('reaches the seat elevations of the drawing on the abutments within 5 mm', () => {
     [316.772, 316.417].forEach((seat, i) => {
       const r = abutments[i] as (typeof ref.results)[number];
-      const cut = cutAlongAxis(supportParts(r), line);
+      const cut = cutAlongAxis(supportParts(r), line).map((c) => c.outline);
       // prah, múrik a krídla neležia v osi (krídla sú pod okrajmi NK)
       expect(cut.length).toBeGreaterThanOrEqual(2);
       const atAxis = cut.map((poly) => verticalAt(poly, r.s)).filter((v) => Number.isFinite(v.top));

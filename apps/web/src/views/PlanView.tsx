@@ -1,9 +1,9 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
+import { sampleHorizontal, stationTicks } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
 import { type SupportResult, supportPlan } from '@bridge/sections';
 import { type PointerEvent, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
-import { sampleHorizontal, stationTicks } from './sampling.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { boundsOf, fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';

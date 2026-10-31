@@ -1,10 +1,10 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
+import { sampleProfile, stationTicks } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
 import type { SupportResult } from '@bridge/sections';
 import { type PointerEvent, useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
-import { sampleProfile, stationTicks } from './sampling.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import { fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';

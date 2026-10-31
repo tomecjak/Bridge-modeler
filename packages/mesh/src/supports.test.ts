@@ -9,6 +9,7 @@ import {
 } from '@bridge/model';
 import {
   abutmentParts,
+  BEARING_PLAN_SIZE,
   evaluateSupport,
   type SupportContext,
   type SupportResult,
@@ -19,7 +20,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { MeshKernel } from './kernel.ts';
 import { meshBounds, meshVolume } from './mesh.ts';
-import { BEARING_PLAN_SIZE, supportMesh } from './supports.ts';
+import { supportMesh } from './supports.ts';
 
 const kernel = new MeshKernel();
 const data = syntheticAlignmentData(undefined, 1000);
