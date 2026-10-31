@@ -25,6 +25,7 @@ import {
 } from '../store/profileSketch.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
+import type { FitRequest } from './viewState.ts';
 import { boundsOf, fitView, niceStep, screenToWorld, worldToScreen } from './viewTransform.ts';
 
 interface Props {
@@ -40,10 +41,15 @@ interface Props {
   onSelectPoint: (name: string | undefined) => void;
   onChange: (def: ProfileDefinition) => void;
   onMessage: (text: string | undefined) => void;
+  /** nástroj a druh nového obrysu z kontextovej karty ribbonu (ADR 0016) */
+  tool: ProfileTool;
+  loopRole: ProfileLoop['role'];
+  /** Prispôsobiť z ribbonu */
+  fitRequest: FitRequest;
 }
 
-type Tool = 'select' | 'point' | 'loop' | 'delete';
-const TOOLS: Tool[] = ['select', 'point', 'loop', 'delete'];
+/** Nástroj editora prierezu (kontextová karta „Upraviť | Prierez“). */
+export type ProfileTool = 'select' | 'point' | 'loop' | 'delete';
 /** Vzdialenosť, do ktorej klik zasiahne bod [px]. */
 const HIT_PX = 8;
 
@@ -65,12 +71,16 @@ export function ProfileEditorView({
   onSelectPoint,
   onChange,
   onMessage,
+  tool,
+  loopRole,
+  fitRequest,
 }: Props) {
   const t = sk.profileEditor;
   const [ref, size] = useElementSize<HTMLDivElement>();
-  const [tool, setTool] = useState<Tool>('select');
   const [loopDraft, setLoopDraft] = useState<string[]>([]);
-  const [loopRole, setLoopRole] = useState<ProfileLoop['role']>('void');
+  // zmena nástroja zahodí rozkreslený obrys
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reaguje len na zmenu nástroja
+  useEffect(() => setLoopDraft([]), [tool]);
   const [second, setSecond] = useState<string>();
   const [drag, setDrag] = useState<{
     name: string;
@@ -93,11 +103,12 @@ export function ProfileEditorView({
     const b = boundsOf([...evaluated.points.values()]);
     return { minX: b.minX - 0.5, maxX: b.maxX + 0.5, minY: b.minY - 0.5, maxY: b.maxY + 0.5 };
   }, [profile.id, size.width > 0]);
-  const fit =
-    size.width > 0 && points.size > 0
-      ? fitView(bounds, { width: size.width, height: size.height - 48 }, 48)
-      : undefined;
+  const fit = size.width > 0 && points.size > 0 ? fitView(bounds, size, 48) : undefined;
   const { view, handlers, dragMove, wasDrag, reset } = usePanZoom(ref, size, fit);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa len pri novej žiadosti z ribbonu
+  useEffect(() => {
+    if (fitRequest.nonce > 0) reset();
+  }, [fitRequest.nonce]);
   const toScreen = (p: Vec2) => (view ? worldToScreen(view, size, p) : p);
 
   const worldAt = (e: { clientX: number; clientY: number }): Vec2 | undefined => {
@@ -257,37 +268,6 @@ export function ProfileEditorView({
 
   return (
     <div className="section-view">
-      <div className="section-toolbar">
-        {stationControl}
-        {TOOLS.map((k) => (
-          <button
-            key={k}
-            type="button"
-            className="button"
-            aria-pressed={tool === k}
-            onClick={() => {
-              setTool(k);
-              setLoopDraft([]);
-            }}
-          >
-            {t.tools[k]}
-          </button>
-        ))}
-        {tool === 'loop' && (
-          <select
-            value={loopRole}
-            aria-label={sk.elements.role}
-            onChange={(e) => setLoopRole(e.target.value as ProfileLoop['role'])}
-          >
-            <option value="outer">{sk.elements.roles.outer}</option>
-            <option value="void">{sk.elements.roles.void}</option>
-          </select>
-        )}
-        <button type="button" className="button" onClick={reset}>
-          {sk.viewport.fit}
-        </button>
-        <span className="hint">{t.hints[tool]}</span>
-      </div>
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: kreslenie myšou; body sa dajú upraviť aj v tabuľke v pravom paneli */}
       <div
         ref={ref}
@@ -464,6 +444,7 @@ export function ProfileEditorView({
           )}
         </div>
       </div>
+      <div className="view-bar">{stationControl}</div>
     </div>
   );
 }

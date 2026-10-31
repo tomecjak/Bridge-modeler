@@ -3,7 +3,7 @@ import { profileTemplate } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../../store/commands.ts';
 import type { DeckSpans } from '../../store/supports.ts';
-import { deckSheet, profileLawSummary, supportSheet } from './elementSheets.tsx';
+import { deckSheet, profileLawSummary, profileSheet, supportSheet } from './elementSheets.tsx';
 import type { PropertyRow, PropertySheet } from './PropertyGrid.tsx';
 
 const pier: Support = {
@@ -183,5 +183,39 @@ describe('deckSheet', () => {
       ),
     ).toBe('okraj podľa 125_L (vľavo od osi mosta)');
     expect(profileLawSummary(undefined, '6', () => '')).toBe('predvolená 6');
+  });
+});
+
+describe('profileSheet', () => {
+  it('edits parameter defaults and opens the tables for points and loops', () => {
+    const profile = profileTemplate('box', 'pr');
+    if (!profile) throw new Error('chýba šablóna');
+    const commands: Command[] = [];
+    let tables = 0;
+    const sheet = profileSheet({
+      profile,
+      onTables: () => tables++,
+      onEditGraphically: () => {},
+      onDelete: () => {},
+      dispatch: (c) => commands.push(c),
+    });
+    const defaults = sheet.groups.find((g) => g.id === 'profile-defaults')?.rows ?? [];
+    expect(defaults).toHaveLength(profile.parameters.length);
+    const first = defaults[0];
+    if (first?.kind === 'expression') first.onCommit('3.8');
+    const change = commands[0];
+    expect(change?.type === 'updateElement' && change.collection).toBe('profiles');
+    const parameters =
+      change?.type === 'updateElement' && 'parameters' in change.changes
+        ? change.changes.parameters
+        : undefined;
+    expect(parameters?.map((p) => p.default)).toEqual([
+      '3.8',
+      ...profile.parameters.slice(1).map((p) => p.default),
+    ]);
+    const geometry = sheet.groups.find((g) => g.id === 'profile-geometry')?.rows ?? [];
+    const edit = geometry.find((r) => r.kind === 'edit');
+    if (edit?.kind === 'edit') edit.onEdit();
+    expect(tables).toBe(1);
   });
 });

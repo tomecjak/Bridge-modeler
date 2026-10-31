@@ -464,6 +464,17 @@ export const sk = {
     bearingsTitle: (name: string) => `Ložiská podpery ${name}`,
     lawTitle: (deck: string, parameter: string) => `${deck}: priebeh parametra ${parameter}`,
     sectionAt: (station: string) => `Prierez na ${station}`,
+    profileKind: 'Prierez',
+    typology: 'Typológia',
+    defaults: 'Parametre (predvolené hodnoty)',
+    geometryCount: (points: number, loops: number) =>
+      `${points} ${points === 1 ? 'bod' : points < 5 ? 'body' : 'bodov'}, ${loops} ${loops === 1 ? 'obrys' : loops < 5 ? 'obrysy' : 'obrysov'}`,
+    pointsAndLoops: 'Body a obrysy',
+    tables: 'Tabuľky prierezu',
+    profileTablesTitle: (name: string) => `Prierez ${name}: parametre, body a obrysy`,
+    editGraphically: 'Upraviť graficky',
+    graphicalHint:
+      'Graficky sa prierez upravuje v záložke Prierez nástrojmi karty „Upraviť | Prierez“.',
   },
   statusBar: {
     ready: 'Pripravené',
@@ -534,6 +545,7 @@ export const sk = {
     problems: 'Problémy',
   },
   ribbon: {
+    contextual: (kind: string) => `Upraviť | ${kind}`,
     title: 'Nástroje',
     file: 'Súbor',
     quickAccess: 'Panel rýchleho prístupu',
@@ -546,6 +558,8 @@ export const sk = {
       manage: 'Správa',
     },
     groups: {
+      tools: 'Nástroje',
+      loopRole: 'Nový obrys',
       bridge: 'Most',
       area: 'Oblasť',
       draw: 'Kreslenie',

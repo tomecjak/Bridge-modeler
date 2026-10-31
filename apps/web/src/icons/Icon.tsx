@@ -102,6 +102,7 @@ const PATHS = {
     </>
   ),
   folder: <path d="M3 6h6l2 2h10v11H3z" />,
+  pointer: <path d="m5 3 13 8-6 1.5L9 19z" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,
   chevronRight: <path d="m9 6 6 6-6 6" />,

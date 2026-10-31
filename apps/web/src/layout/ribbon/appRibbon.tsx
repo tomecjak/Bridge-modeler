@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { sk } from '../../i18n/sk.ts';
 import type { BasemapKind } from '../../viewer/basemap.ts';
+import type { ProfileTool } from '../../views/ProfileEditorView.tsx';
 import type { ViewTool } from '../../views/viewState.ts';
 import { VIEW_TABS, type ViewMode } from '../Viewport.tsx';
 import type { RibbonButton, RibbonTab } from './Ribbon.tsx';
@@ -384,4 +385,91 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
       ],
     },
   ];
+}
+
+/** Druh vybraného prvku pre kontextovú kartu „Upraviť | …“. */
+export type ContextualKind = 'profile' | 'support' | 'deck' | 'planLine' | 'terrain' | 'bridgeAxis';
+
+export interface ContextualContext {
+  kind: ContextualKind;
+  /** názov druhu v karte (napr. „Prierez“) */
+  label: string;
+  onDelete: () => void;
+  /** editor prierezu (Fáza 8b) */
+  profileTool: ProfileTool;
+  setProfileTool: (tool: ProfileTool) => void;
+  loopRole: 'outer' | 'void';
+  setLoopRole: (role: 'outer' | 'void') => void;
+  onProfileTables: () => void;
+}
+
+const PROFILE_TOOL_ICONS: Record<ProfileTool, RibbonButton['icon']> = {
+  select: 'pointer',
+  point: 'goTo',
+  loop: 'line',
+  delete: 'trash',
+};
+
+/** Kontextová karta pri výbere prvku (ako „Modify | …“ v Revite). */
+export function contextualTab(c: ContextualContext): RibbonTab {
+  const element = {
+    label: sk.ribbon.groups.element,
+    items: [
+      {
+        kind: 'button' as const,
+        id: 'ctx-delete',
+        label: sk.ribbon.delete,
+        icon: 'trash' as const,
+        title: sk.ribbon.deleteTitle,
+        onClick: c.onDelete,
+      },
+    ],
+  };
+  const groups: RibbonTab['groups'] =
+    c.kind === 'profile'
+      ? [
+          {
+            label: sk.ribbon.groups.tools,
+            items: (['select', 'point', 'loop', 'delete'] as const).map((tool) => ({
+              kind: 'button' as const,
+              id: `profile-${tool}`,
+              label: sk.profileEditor.tools[tool],
+              icon: PROFILE_TOOL_ICONS[tool],
+              title: sk.profileEditor.hints[tool],
+              pressed: c.profileTool === tool,
+              onClick: () => c.setProfileTool(tool),
+            })),
+          },
+          {
+            label: sk.ribbon.groups.loopRole,
+            items: [
+              {
+                kind: 'select',
+                id: 'loop-role',
+                label: sk.elements.role,
+                value: c.loopRole,
+                options: (['outer', 'void'] as const).map((r) => ({
+                  value: r,
+                  label: sk.elements.roles[r],
+                })),
+                onChange: (v) => c.setLoopRole(v as 'outer' | 'void'),
+              },
+            ],
+          },
+          {
+            label: sk.ribbon.groups.profile,
+            items: [
+              {
+                kind: 'button',
+                id: 'profile-tables',
+                label: sk.properties.tables,
+                icon: 'parameters',
+                onClick: c.onProfileTables,
+              },
+            ],
+          },
+          element,
+        ]
+      : [element];
+  return { id: 'contextual', label: sk.ribbon.contextual(c.label), contextual: true, groups };
 }

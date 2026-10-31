@@ -1,66 +1,43 @@
 import type { ParameterUnit, ProfileDefinition } from '@bridge/model';
-import { sk } from '../i18n/sk.ts';
-import type { ElementCollection, ElementCollections } from '../store/commands.ts';
+import { sk } from '../../i18n/sk.ts';
 import {
   parsePointList,
   renameProfileParameter,
   renameProfilePoint,
-} from '../store/profileEdit.ts';
-import { projectStore, useProject } from '../store/projectStore.ts';
-import { ExpressionInput } from '../views/ExpressionInput.tsx';
-import { Field } from '../views/Field.tsx';
-import { TextField } from '../views/TextField.tsx';
-
-interface Props {
-  collection: ElementCollection;
-  id: string;
-  onRemoved: () => void;
-  /** vybraný bod prierezu (zvýraznenie v tabuľke, výber v editore) */
-  selectedPoint: string | undefined;
-  onSelectPoint: (name: string | undefined) => void;
-}
+} from '../../store/profileEdit.ts';
+import { projectStore, useProject } from '../../store/projectStore.ts';
+import { ExpressionInput } from '../../views/ExpressionInput.tsx';
+import { Field } from '../../views/Field.tsx';
+import { TextField } from '../../views/TextField.tsx';
+import { Dialog } from './Dialog.tsx';
 
 const UNITS: ParameterUnit[] = ['length', 'angle', 'slope', 'none'];
 
-function update<K extends ElementCollection>(
-  collection: K,
-  id: string,
-  changes: Partial<Omit<ElementCollections[K], 'id'>>,
-) {
-  projectStore.getState().dispatch({ type: 'updateElement', collection, id, changes } as never);
+function update(id: string, changes: Partial<Omit<ProfileDefinition, 'id'>>) {
+  projectStore.getState().dispatch({ type: 'updateElement', collection: 'profiles', id, changes });
 }
 
-/** Editor prierezu v pravom paneli (do mriežky vlastností prejde v kroku 6 podfázy 10a2). */
-export function ElementPanel({ collection, id, onRemoved, selectedPoint, onSelectPoint }: Props) {
-  const project = useProject((s) => s.project);
-  const element = (project[collection] as { id: string; name: string }[]).find((e) => e.id === id);
+/**
+ * Tabuľky prierezu (Fáza 3, 8b): parametre s jednotkami a predvolenými hodnotami, body s výrazmi, obrysy a dutiny,
+ * referenčný bod. Graficky sa prierez upravuje v záložke Prierez; vybraný bod sa zvýrazní aj tu.
+ */
+export function ProfileTablesDialog({
+  profileId,
+  selectedPoint,
+  onSelectPoint,
+  onClose,
+}: {
+  profileId: string;
+  selectedPoint: string | undefined;
+  onSelectPoint: (name: string | undefined) => void;
+  onClose: () => void;
+}) {
+  const def = useProject((s) => s.project.profiles.find((p) => p.id === profileId));
+  if (!def) return null;
   return (
-    <aside className="panel panel-right panel-wide" aria-labelledby="element-panel-title">
-      <h2 id="element-panel-title" className="panel-title">
-        {sk.elements.titles[collection]}
-        {element ? `: ${element.name}` : ''}
-      </h2>
-      {!element && <p className="panel-empty">{sk.properties.nothingSelected}</p>}
-      {element && collection === 'profiles' && (
-        <ProfileEditor
-          def={element as ProfileDefinition}
-          selectedPoint={selectedPoint}
-          onSelectPoint={onSelectPoint}
-        />
-      )}
-      {element && (
-        <button
-          type="button"
-          className="button danger"
-          onClick={() => {
-            projectStore.getState().dispatch({ type: 'removeElement', collection, id });
-            onRemoved();
-          }}
-        >
-          {sk.elements.remove}
-        </button>
-      )}
-    </aside>
+    <Dialog title={sk.properties.profileTablesTitle(def.name)} onClose={onClose} wide>
+      <ProfileEditor def={def} selectedPoint={selectedPoint} onSelectPoint={onSelectPoint} />
+    </Dialog>
   );
 }
 
@@ -75,7 +52,7 @@ function ProfileEditor({
 }) {
   const set = (next: ProfileDefinition) => {
     const { id: _id, ...changes } = next;
-    update('profiles', def.id, changes);
+    update(def.id, changes);
   };
   const setParam = (i: number, changes: Partial<ProfileDefinition['parameters'][number]>) =>
     set({ ...def, parameters: def.parameters.map((p, j) => (j === i ? { ...p, ...changes } : p)) });

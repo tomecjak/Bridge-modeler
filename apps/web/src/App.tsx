@@ -42,15 +42,15 @@ import {
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
 import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
-import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
 import { AxisOffsetDialog } from './layout/properties/AxisOffsetDialog.tsx';
 import { BearingsDialog } from './layout/properties/BearingsDialog.tsx';
-import { deckSheet, supportSheet } from './layout/properties/elementSheets.tsx';
+import { deckSheet, profileSheet, supportSheet } from './layout/properties/elementSheets.tsx';
 import { PlanLineVerticesDialog } from './layout/properties/PlanLineVerticesDialog.tsx';
 import { ProfileLawDialog } from './layout/properties/ProfileLawDialog.tsx';
+import { ProfileTablesDialog } from './layout/properties/ProfileTablesDialog.tsx';
 import { ProjectInfoDialog } from './layout/properties/ProjectInfoDialog.tsx';
 import { PropertiesPalette } from './layout/properties/PropertyGrid.tsx';
 import {
@@ -62,7 +62,12 @@ import {
   viewSheet,
 } from './layout/properties/simpleSheets.tsx';
 import { AppMenu, type MenuSection } from './layout/ribbon/AppMenu.tsx';
-import { ribbonTabs, type View3dState } from './layout/ribbon/appRibbon.tsx';
+import {
+  type ContextualKind,
+  contextualTab,
+  ribbonTabs,
+  type View3dState,
+} from './layout/ribbon/appRibbon.tsx';
 import { Ribbon } from './layout/ribbon/Ribbon.tsx';
 import { TitleBar } from './layout/ribbon/TitleBar.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
@@ -87,7 +92,7 @@ import {
 import type { Cut } from './viewer/sceneView.ts';
 import { GoToStation } from './views/GoToStation.tsx';
 import { ParameterTable } from './views/ParameterTable.tsx';
-import { ProfileEditorView } from './views/ProfileEditorView.tsx';
+import { ProfileEditorView, type ProfileTool } from './views/ProfileEditorView.tsx';
 import { SectionView } from './views/SectionView.tsx';
 import { StationControl } from './views/StationControl.tsx';
 import type { FitRequest, ViewTool } from './views/viewState.ts';
@@ -142,6 +147,10 @@ export function App() {
   const [planLineVertices, setPlanLineVertices] = useState<string>();
   const [bearingsOf, setBearingsOf] = useState<string>();
   const [lawDialog, setLawDialog] = useState<{ deckId: string; parameter: string }>();
+  const [profileTables, setProfileTables] = useState<string>();
+  /** nástroj a druh nového obrysu v editore prierezu (kontextová karta) */
+  const [profileTool, setProfileTool] = useState<ProfileTool>('select');
+  const [loopRole, setLoopRole] = useState<'outer' | 'void'>('void');
   /** stav pohľadov ovládaný ribbonom (ADR 0016) */
   const [ribbonTab, setRibbonTab] = useState('home');
   const [tool, setTool] = useState<ViewTool>('none');
@@ -636,6 +645,7 @@ export function App() {
     switch (target.collection) {
       case 'profiles':
         setMode('section');
+        setRibbonTab('contextual');
         return;
       case 'terrains':
         setMode('3d');
@@ -755,6 +765,31 @@ export function App() {
     },
   ];
 
+  const contextualKinds: Record<ElementCollection, ContextualKind> = {
+    profiles: 'profile',
+    supports: 'support',
+    superstructures: 'deck',
+    planLines: 'planLine',
+    terrains: 'terrain',
+    bridgeAxes: 'bridgeAxis',
+  };
+  const contextual =
+    selectedElement &&
+    contextualTab({
+      kind: contextualKinds[selectedElement.collection],
+      label: sk.elements.titles[selectedElement.collection],
+      onDelete: deleteSelected,
+      profileTool,
+      setProfileTool: (next) => {
+        setMode('section');
+        setProfileTool(next);
+        setMessage(undefined);
+      },
+      loopRole,
+      setLoopRole,
+      onProfileTables: () => setProfileTables(selectedElement.id),
+    });
+
   const tabs = ribbonTabs({
     mode,
     setMode,
@@ -803,7 +838,7 @@ export function App() {
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
-  });
+  }).concat(contextual ? [contextual] : []);
 
   // Esc zruší aktívny nástroj (rozkreslené čiary a oblasti zahodia pohľady)
   useEffect(() => {
@@ -831,12 +866,17 @@ export function App() {
       )
         return;
       if (document.querySelector('[role="dialog"]')) return;
+      // ako v Revite: prvé Esc ukončí nástroj editora prierezu, ďalšie zruší výber
+      if (profileTool !== 'select') {
+        setProfileTool('select');
+        return;
+      }
       setSelectedElement(undefined);
       setPanelTarget(undefined);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [tool]);
+  }, [tool, profileTool]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1121,16 +1161,24 @@ export function App() {
           />
         );
     }
-    if (el && mode !== 'parameters')
-      return (
-        <ElementPanel
-          collection={el.collection}
-          id={el.id}
-          onRemoved={() => setSelectedElement(undefined)}
-          selectedPoint={profilePoint}
-          onSelectPoint={setProfilePoint}
-        />
-      );
+    if (el?.collection === 'profiles') {
+      const profile = project.profiles.find((x) => x.id === el.id);
+      if (profile)
+        return (
+          <PropertiesPalette
+            sheet={profileSheet({
+              profile,
+              onTables: () => setProfileTables(profile.id),
+              onEditGraphically: () => {
+                setMode('section');
+                setRibbonTab('contextual');
+              },
+              onDelete: deleteSelected,
+              dispatch,
+            })}
+          />
+        );
+    }
     if (panelTarget === 'studyArea')
       return (
         <PropertiesPalette
@@ -1196,6 +1244,7 @@ export function App() {
   function statusText(): string {
     if (message) return message;
     if (tool !== 'none') return sk.ribbon.toolHints[tool];
+    if (mode === 'section' && editedProfile) return sk.profileEditor.hints[profileTool];
     if (cursor && item && project.crs.origin)
       return formatCursor(cursor, item.alignment, project.crs.origin);
     return sk.statusBar.ready;
@@ -1382,6 +1431,9 @@ export function App() {
                   .getState()
                   .dispatch({ type: 'updateElement', collection: 'profiles', id, changes });
               }}
+              tool={profileTool}
+              loopRole={loopRole}
+              fitRequest={fitRequest}
             />
           ) : (
             <SectionView
@@ -1436,6 +1488,14 @@ export function App() {
           which={axisOffset.which}
           range={sectionRange ?? { from: 0, to: 100 }}
           onClose={() => setAxisOffset(undefined)}
+        />
+      )}
+      {profileTables && (
+        <ProfileTablesDialog
+          profileId={profileTables}
+          selectedPoint={profilePoint}
+          onSelectPoint={setProfilePoint}
+          onClose={() => setProfileTables(undefined)}
         />
       )}
       {bearingsOf && (

@@ -429,3 +429,74 @@ export function deckSheet(input: {
     ],
   };
 }
+
+/**
+ * Prierez v mriežke vlastností (ADR 0007, 0013): identita, referenčný bod, predvolené hodnoty parametrov a počet
+ * bodov a obrysov („…“ = tabuľky); graficky sa upravuje v záložke Prierez.
+ */
+export function profileSheet(input: {
+  profile: ProfileDefinition;
+  onTables: () => void;
+  onEditGraphically: () => void;
+  onDelete: () => void;
+  dispatch: Dispatch;
+}): PropertySheet {
+  const { profile } = input;
+  const p = sk.properties;
+  const set = (changes: Partial<ProfileDefinition>) =>
+    input.dispatch({ type: 'updateElement', collection: 'profiles', id: profile.id, changes });
+  return {
+    heading: { icon: 'section', label: p.profileKind },
+    groups: [
+      {
+        id: 'profile-identity',
+        title: p.identity,
+        rows: [
+          { kind: 'text', label: p.name, value: profile.name, onCommit: (name) => set({ name }) },
+          { kind: 'readonly', label: p.typology, value: profile.typology ?? '—' },
+          {
+            kind: 'select',
+            label: sk.elements.referencePoint,
+            value: profile.referencePoint,
+            options: profile.points.map((pt) => ({ value: pt.name, label: pt.name })),
+            onChange: (referencePoint) => set({ referencePoint }),
+          },
+        ],
+      },
+      {
+        id: 'profile-defaults',
+        title: p.defaults,
+        rows: profile.parameters.map(
+          (par, i): PropertyRow => ({
+            kind: 'expression',
+            label: par.description ? `${par.name} — ${par.description}` : par.name,
+            value: par.default,
+            onCommit: (value) =>
+              set({
+                parameters: profile.parameters.map((x, j) =>
+                  j === i ? { ...x, default: value } : x,
+                ),
+              }),
+          }),
+        ),
+      },
+      {
+        id: 'profile-geometry',
+        title: p.pointsAndLoops,
+        rows: [
+          {
+            kind: 'edit',
+            label: p.tables,
+            value: p.geometryCount(profile.points.length, profile.loops.length),
+            onEdit: input.onTables,
+          },
+          { kind: 'note', text: p.graphicalHint },
+        ],
+      },
+    ],
+    actions: [
+      { label: p.editGraphically, icon: 'section', onClick: input.onEditGraphically },
+      { label: p.remove, icon: 'trash', danger: true, onClick: input.onDelete },
+    ],
+  };
+}
