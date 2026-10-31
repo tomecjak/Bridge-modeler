@@ -242,6 +242,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
   - `parseSurfaces` s typovanými chybami (jednotky, EPSG:5514, neznáme body, typ povrchu); plochy `i="1"` sa vynechajú; dialóg importu so zaškrtnutím povrchov.
 - [x] import DMR 5.0 z ÚGKK (formát podľa vzorky, pravdepodobne GeoTIFF raster) → rovnaké rozhranie ako TIN (`elevationAt`, rezy); ADR k knižnici na čítanie rastra
   - geotiff.js (ADR 0011), číta sa len okno koridoru, lenivý chunk; JTSK03 = JTSK; overené na GeoTIFF vygenerovanom v teste — **vzorka DMR od ÚGKK ešte chýba**.
+  - 2026-10-31: **DMR 5.0 sa stiahne automaticky** zo služby ZBGIS (`LLS_DMR5/MapServer`, `identify` po dávkach 2 000 bodov, postup z Mini-IFC-tools) po zapnutí „Terén“ v 3D, keď projekt terén nemá; priebeh, zrušenie, „Stiahnuť znova“, atribúcia © ÚGKK SR CC BY 4.0. Overené na reálnej službe (koridor 212-00 presunutý do pokrytia LLS: 18 724 bodov za ~20 s).
 - [x] orezanie povrchu na koridor okolo osi mosta (šírka ako parameter), aby sa veľké DMR dali používať v prehliadači
   - pás `halfWidth` (60 m) v rozsahu NK ± `margin` (50 m), bez NK celá os; TIN aj mriežka (úseky riadkov) v lokálnych súradniciach na mm.
 - [x] rez terénom: pozdĺž osi (pre pozdĺžny rez) a pozdĺž priečnej čiary na staničení (pre priečny rez) → polyline so zlomami na hranách TIN
@@ -311,6 +312,7 @@ Fázy 6 a 7 sú na sebe nezávislé, poradie sa dá vymeniť. Fáza 5b (terén) 
 
 ## 7. Otvorené otázky
 
+- Služba ZBGIS `LLS_DMR5` nie je zmluvne garantovaná (firewall, limity); pri výpadku ostáva import súboru. Body mimo pokrytia LLS sa neposielajú a ostanú bez terénu.
 - Terén (Fáza 5b) čaká na podklady: LandXML povrchu z Civil 3D, výkaz pozdĺžneho profilu terénu po osi a vzorka DMR 5.0 (GeoTIFF). Dovtedy sú golden testy `it.todo` a import je overený len na syntetických súboroch. *Predpoklady:* GeoTIFF má výšky v prvom kanáli v m Bpv; `PixelIsArea` (pôvod v rohu bunky), ak súbor neuvádza inak.
 - `CircCurve` (kružnicový výškový oblúk): znamená atribút `length` dĺžku oblúka, alebo jeho vodorovný priemet? *Predpoklad:* oblúk sa počíta presne z polomeru a sklonov tangent, `length` sa ignoruje. Overiť na podklade s kružnicovým výškovým oblúkom.
 - Staničenia PVI pri osi so skokmi v staničení: *predpoklad:* LandXML ich uvádza v spojitom (internom) staničení `staStart + s`. Overiť na podklade so skokom.
