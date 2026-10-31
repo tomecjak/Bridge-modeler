@@ -315,7 +315,8 @@ plnohodnotný editor prierezu s knižnicou a OpenCascade; poradie 8a → 8b → 
 **Hotové, keď:** prierez sa dá vložiť z knižnice, upraviť ťahaním a väzbami so späť / znova a exportovať do knižnice.
 
 #### 8c — OpenCascade (WASM)
-- [ ] prieskum knižníc (veľkosť, rýchlosť, licencia LGPL-2.1) → ADR na schválenie
+- [x] prieskum knižníc (veľkosť, rýchlosť, licencia LGPL-2.1) → ADR na schválenie
+  - ADR 0014 (schválené 2026-10-31): `occt-wasm` 5.11.0; na NK 212-00 loft 137 ms, objem zhodný so sieťou, rezy koncov 426 ms, STEP s menami 122 ms; 4,6 MB brotli.
 - [ ] `GeometryKernel` s booleovskými operáciami a exportom STEP; balík `packages/occt`
 - [ ] presná scéna: konce NK orezané rovinou opory, opora zjednotená s krídlami, vrch piliera po podhľad NK
 - [ ] 3D prepínač „Presný model“ a export STEP (deterministický)

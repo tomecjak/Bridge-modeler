@@ -19,7 +19,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0011](0011-teren.md) | Terén: uloženie, zdroje a súradnice | Prijaté |
 | [0012](0012-2d-vystupy-dxf.md) | 2D pohľady a export SVG / DXF | Prijaté |
 | [0013](0013-kniznica-prierezov-a-vazby.md) | Knižnica prierezov, šablóny a väzby bodov | Prijaté |
-| [0014](0014-opencascade.md) | OpenCascade (WASM) ako druhé geometrické jadro | Návrh |
+| [0014](0014-opencascade.md) | OpenCascade (WASM) ako druhé geometrické jadro | Prijaté |
 
 ## Šablóna
 

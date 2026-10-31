@@ -1,6 +1,6 @@
 # 0014 — OpenCascade (WASM) ako druhé geometrické jadro
 
-- Stav: **Návrh** (čaká na schválenie projektantom)
+- Stav: Prijaté (schválil projektant 2026-10-31)
 - Dátum: 2026-10-31
 
 ## Kontext
@@ -32,7 +32,7 @@ Výsledky s `occt-wasm` na NK 212-00 (vzorky z `sampleSuperstructure`, priamkov�
 - tesselácia 39 ms;
 - STEP AP214 s menami telies (XCAF) 122 ms, 1,1 MB.
 
-## Rozhodnutie (návrh)
+## Rozhodnutie
 
 **`occt-wasm` 5.11.0** (presná verzia) ako druhé jadro v novom balíku `packages/occt`:
 
