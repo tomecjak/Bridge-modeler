@@ -7,6 +7,8 @@ export interface TerrainBuffers {
   positions: Float32Array;
   normals: Float32Array;
   indices: Uint32Array;
+  /** súradnice textúry mapy: u = (x − minX) / Δx, v = (y − minY) / Δy v obálke terénu */
+  uv: Float32Array;
 }
 
 /**
@@ -59,6 +61,13 @@ export function terrainBuffers(tin: Tin): TerrainBuffers {
       acc[3 * v + 2] = (acc[3 * v + 2] as number) + nz;
     }
   }
+  const uv = new Float32Array(2 * n);
+  const dx = b.maxX - b.minX || 1;
+  const dy = b.maxY - b.minY || 1;
+  for (let i = 0; i < n; i++) {
+    uv[2 * i] = ((p[3 * i] as number) - b.minX) / dx;
+    uv[2 * i + 1] = ((p[3 * i + 1] as number) - b.minY) / dy;
+  }
   const normals = new Float32Array(p.length);
   for (let i = 0; i < n; i++) {
     const x = acc[3 * i] as number;
@@ -69,5 +78,5 @@ export function terrainBuffers(tin: Tin): TerrainBuffers {
     normals[3 * i + 1] = y / len;
     normals[3 * i + 2] = len === 1 && z === 0 ? 1 : z / len;
   }
-  return { center, positions, normals, indices };
+  return { center, positions, normals, indices, uv };
 }

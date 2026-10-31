@@ -14,12 +14,15 @@ import {
   LineSegments,
   Mesh,
   MeshBasicMaterial,
+  MeshLambertMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
   Plane,
   Raycaster,
   Scene,
   Sphere,
+  SRGBColorSpace,
+  Texture,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -96,6 +99,8 @@ export class SceneView {
     side: DoubleSide,
   });
   private terrainMeshes: Mesh[] = [];
+  /** materiály s mapou (jeden na terén); nepriehľadné, aby bola mapa čitateľná */
+  private terrainMapMaterials: MeshLambertMaterial[] = [];
   private caps: Mesh[] = [];
   private axisLine: Line | undefined;
   private selectedKey: string | undefined;
@@ -211,7 +216,12 @@ export class SceneView {
     const n = cut && new Vector3(cut.normal.x, cut.normal.y, cut.normal.z);
     this.clipping =
       cut && n ? [new Plane(n, -n.dot(new Vector3(cut.origin.x, cut.origin.y, cut.origin.z)))] : [];
-    for (const m of [...Object.values(this.materials), this.edgeMaterial, this.terrainMaterial]) {
+    for (const m of [
+      ...Object.values(this.materials),
+      this.edgeMaterial,
+      this.terrainMaterial,
+      ...this.terrainMapMaterials,
+    ]) {
       m.clippingPlanes = this.clipping;
       m.needsUpdate = true;
     }
@@ -224,19 +234,49 @@ export class SceneView {
     this.requestRender();
   }
 
-  /** Siete terénu (nahradia predchádzajúce); prázdne = terén skrytý. */
-  setTerrain(terrains: readonly TerrainBuffers[]): void {
+  /**
+   * Siete terénu (nahradia predchádzajúce); prázdne = terén skrytý. `maps[i]` = obrázok mapy pre i-tý terén
+   * (ortofoto / mapa ZBGIS cez jeho obálku); bez mapy je terén polopriehľadný.
+   */
+  setTerrain(
+    terrains: readonly TerrainBuffers[],
+    maps: readonly (TexImageSource | undefined)[] = [],
+  ): void {
     for (const m of this.terrainMeshes) {
       this.scene.remove(m);
       m.geometry.dispose();
     }
-    this.terrainMeshes = terrains.map((t) => {
+    for (const m of this.terrainMapMaterials) {
+      m.map?.dispose();
+      m.dispose();
+    }
+    this.terrainMapMaterials = [];
+    this.terrainMeshes = terrains.map((t, i) => {
       const g = new BufferGeometry();
       g.setAttribute('position', new BufferAttribute(t.positions, 3));
       g.setAttribute('normal', new BufferAttribute(t.normals, 3));
+      g.setAttribute('uv', new BufferAttribute(t.uv, 2));
       g.setIndex(new BufferAttribute(t.indices, 1));
       g.computeBoundingSphere();
-      const mesh = new Mesh(g, this.terrainMaterial);
+      const image = maps[i];
+      let material: MeshStandardMaterial | MeshLambertMaterial = this.terrainMaterial;
+      if (image) {
+        const map = new Texture(image);
+        map.colorSpace = SRGBColorSpace;
+        map.anisotropy = 4;
+        map.needsUpdate = true;
+        const m = new MeshLambertMaterial({
+          map,
+          side: DoubleSide,
+          polygonOffset: true,
+          polygonOffsetFactor: 3,
+          polygonOffsetUnits: 3,
+        });
+        m.clippingPlanes = this.clipping;
+        this.terrainMapMaterials.push(m);
+        material = m;
+      }
+      const mesh = new Mesh(g, material);
       mesh.position.set(t.center.x, t.center.y, t.center.z);
       mesh.renderOrder = 1; // priehľadný terén až po telesách mosta
       this.scene.add(mesh);

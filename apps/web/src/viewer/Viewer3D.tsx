@@ -5,6 +5,7 @@ import { sk } from '../i18n/sk.ts';
 import type { TerrainTin } from '../store/terrain.ts';
 import { StationControl } from '../views/StationControl.tsx';
 import { sampleHorizontal } from '../views/sampling.ts';
+import { BASEMAPS, type BasemapKind, loadBasemap } from './basemap.ts';
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
 import { terrainBuffers } from './terrainMesh.ts';
 import { useMeshWorker } from './useMeshWorker.ts';
@@ -77,6 +78,44 @@ export default function Viewer3D({
   const [cutOn, setCutOn] = useState(false);
   const [terrainOn, setTerrainOn] = useState(true);
   const terrainMeshes = useMemo(() => terrains.map((t) => terrainBuffers(t.tin)), [terrains]);
+  const [basemap, setBasemap] = useState<BasemapKind>('none');
+  const [maps, setMaps] = useState<(HTMLImageElement | undefined)[]>([]);
+  const [mapNote, setMapNote] = useState<string>();
+  const origin = project.crs.origin;
+
+  // obrázok mapy ZBGIS cez obálku každého terénu (EPSG:5514)
+  useEffect(() => {
+    if (basemap === 'none' || !origin || terrains.length === 0) {
+      setMaps([]);
+      setMapNote(undefined);
+      return;
+    }
+    const src = BASEMAPS[basemap];
+    let cancelled = false;
+    setMapNote(sk.viewer3d.mapLoading(src.label));
+    void Promise.all(
+      terrains.map((t) => {
+        const b = t.tin.bounds;
+        return loadBasemap(src, {
+          minX: b.minX + origin.x,
+          minY: b.minY + origin.y,
+          maxX: b.maxX + origin.x,
+          maxY: b.maxY + origin.y,
+        }).catch(() => undefined);
+      }),
+    ).then((images) => {
+      if (cancelled) return;
+      setMaps(images);
+      setMapNote(
+        images.some((i) => i)
+          ? sk.viewer3d.mapAttribution(src.label, src.attribution)
+          : sk.viewer3d.mapFailed(src.label),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [basemap, terrains, origin]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -126,8 +165,8 @@ export default function Viewer3D({
   }, [cutOn, cut]);
 
   useEffect(() => {
-    viewRef.current?.setTerrain(terrainOn ? terrainMeshes : []);
-  }, [terrainOn, terrainMeshes]);
+    viewRef.current?.setTerrain(terrainOn ? terrainMeshes : [], terrainOn ? maps : []);
+  }, [terrainOn, terrainMeshes, maps]);
 
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     const start = down.current;
@@ -175,6 +214,21 @@ export default function Viewer3D({
         >
           {sk.viewer3d.terrain}
         </button>
+        {terrains.length > 0 && terrainOn && (
+          <label className="station-input">
+            {sk.viewer3d.basemap}
+            <select
+              value={basemap}
+              aria-label={sk.viewer3d.basemap}
+              onChange={(e) => setBasemap(e.target.value as BasemapKind)}
+            >
+              <option value="none">{sk.viewer3d.basemaps.none}</option>
+              <option value="ortofoto">{sk.viewer3d.basemaps.ortofoto}</option>
+              <option value="mapa">{sk.viewer3d.basemaps.mapa}</option>
+            </select>
+          </label>
+        )}
+        {mapNote && terrainOn && <span className="hint">{mapNote}</span>}
         {terrainProgress !== undefined && (
           <>
             <span className="hint">{sk.terrain.downloading(terrainProgress)}</span>

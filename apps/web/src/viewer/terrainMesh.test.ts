@@ -14,5 +14,8 @@ describe('terrainBuffers', () => {
     expect([...b.positions.slice(0, 3)]).toEqual([-5, -5, -1]);
     expect([...b.indices]).toEqual([0, 1, 2, 0, 2, 3]);
     for (let i = 2; i < b.normals.length; i += 3) expect(b.normals[i]).toBeGreaterThan(0.99);
+    // rohy obálky → textúra 0 / 1 (juhozápad = 0, 0; severovýchod = 1, 1)
+    expect([...b.uv.slice(0, 2)]).toEqual([0, 0]);
+    expect([...b.uv.slice(4, 6)]).toEqual([1, 1]);
   });
 });

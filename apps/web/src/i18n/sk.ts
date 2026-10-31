@@ -54,6 +54,11 @@ export const sk = {
     fitTitle: 'Pohľad na vybraný objekt; bez výberu na celý model',
     cut: 'Rez',
     terrain: 'Terén',
+    basemap: 'Podklad',
+    basemaps: { none: 'bez mapy', ortofoto: 'ortofotomapa ZBGIS', mapa: 'mapa ZBGIS' },
+    mapLoading: (label: string) => `Načítavam ${label}…`,
+    mapAttribution: (label: string, attribution: string) => `mapa: ${label} ${attribution}`,
+    mapFailed: (label: string) => `${label} je nedostupná — terén bez mapy.`,
     terrainDownloadTitle:
       'Projekt nemá terén — stiahne sa DMR 5.0 zo služby ZBGIS (ÚGKK) v obdĺžniku okolo mosta',
     cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako v záložke Prierez)',
