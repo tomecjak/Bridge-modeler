@@ -25,7 +25,7 @@ interface Props {
     id: string;
     name: string;
     body: readonly (readonly Vec2[])[];
-    footing: readonly Vec2[];
+    footing: readonly Vec2[] | undefined;
   }[];
   onInsert: (template: 'twin' | 'single') => void;
 }
@@ -54,7 +54,7 @@ export function SectionView({
   const bounds = useMemo(() => {
     const pts = [
       ...sections.flatMap((s) => s.loops.flatMap((l) => l.points)),
-      ...supports.flatMap((s) => [...s.footing, ...s.body.flat()]),
+      ...supports.flatMap((s) => [...(s.footing ?? []), ...s.body.flat()]),
     ];
     const b = boundsOf(pts);
     return { minX: b.minX, maxX: b.maxX, minY: b.minY - 1.2, maxY: b.maxY + 1.5 };
@@ -115,7 +115,7 @@ export function SectionView({
             />
             {supports.map((s) => (
               <g key={s.id} className="support-elevation">
-                <path className="support-footing" d={path(s.footing)} />
+                {s.footing && <path className="support-footing" d={path(s.footing)} />}
                 {s.body.map((b, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: obrysy stĺpov sú určené poradím
                   <path key={i} className="support-body" d={path(b)} />

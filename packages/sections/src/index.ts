@@ -1,3 +1,4 @@
+export * from './abutment.ts';
 export * from './crossing.ts';
 export * from './expressions.ts';
 export * from './profile.ts';

@@ -156,7 +156,9 @@ export function PlanView({ alignment, cursorS, onCursor, supports, onAddSupport 
           {plans.map(({ r, plan }) =>
             plan ? (
               <g key={r.support.id} className="support-plan">
-                <polygon className="support-footing" points={polyline(plan.footing)} />
+                {plan.footing && (
+                  <polygon className="support-footing" points={polyline(plan.footing)} />
+                )}
                 {plan.body.map((b, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: obrysy stĺpov sú určené poradím
                   <polygon key={i} className="support-body" points={polyline(b)} />

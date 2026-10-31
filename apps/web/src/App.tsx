@@ -138,7 +138,7 @@ export function App() {
           id: r.support.id,
           name: r.support.name,
           body: el.body.map(move),
-          footing: move(el.footing),
+          footing: el.footing && move(el.footing),
         },
       ];
     });

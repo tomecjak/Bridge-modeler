@@ -1,13 +1,15 @@
-import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
-import type { SupportResult } from './supports.ts';
+import { centroid, type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
+import { abutmentParts } from './abutment.ts';
+import { type SupportResult, seatAt } from './supports.ts';
 
 /** Počet strán mnohouholníka, ktorým sa v pôdoryse nahradí kruhový stĺp. */
 const CIRCLE_SEGMENTS = 32;
 
 export interface SupportPlan {
-  /** obrysy drieku / stĺpov / opory v pôdoryse (lokálne súradnice) */
+  /** obrysy drieku / stĺpov / opory (prah, múrik, krídla) v pôdoryse (lokálne súradnice) */
   body: Polygon2D[];
-  footing: Polygon2D;
+  /** `undefined` = bez základu (hrúbka 0) */
+  footing: Polygon2D | undefined;
 }
 
 export interface SupportElevation {
@@ -16,7 +18,7 @@ export interface SupportElevation {
    * Y = výška (lokálne z). Horná hrana prechádza hornými hranami pri ložiskách.
    */
   body: Polygon2D[];
-  footing: Polygon2D;
+  footing: Polygon2D | undefined;
 }
 
 /** Obdĺžnik so stredom `c`, polovičnými rozmermi `a` pozdĺž `u` a `b` pozdĺž `v` (CCW). */
@@ -46,13 +48,20 @@ export function supportPlan(r: SupportResult): SupportPlan | undefined {
   const g = r.support.geometry;
   const dim = r.dimensions;
   const f = r.footing;
-  if (![f.length, f.width].every((v) => v > 0)) return undefined;
-  const footing = rectangle(c, d, n, f.length / 2, f.width / 2);
+  const parts = abutmentParts(r);
+  // základ opory leží pod úložným prahom, inak pod stredom podpery
+  const seat = parts?.find((p) => p.name === 'seat')?.plan;
+  const fc = seat ? centroid(seat) : c;
+  const footing = [f.length, f.width, f.thickness].every((v) => v > 0)
+    ? rectangle(fc, d, n, f.length / 2, f.width / 2)
+    : undefined;
   let body: Polygon2D[] = [];
   if (g.type === 'wall' && dim.length && dim.thickness) {
     body = [rectangle(c, d, n, dim.length / 2, dim.thickness / 2)];
-  } else if (g.type === 'abutment' && dim.length && dim.stemThickness && dim.seatLength) {
-    body = [rectangle(c, d, n, dim.length / 2, Math.max(dim.stemThickness, dim.seatLength) / 2)];
+  } else if (parts) {
+    body = parts.filter((p) => p.name !== 'stem').map((p) => p.plan);
+  } else if (g.type === 'abutment' && dim.length && dim.seatLength) {
+    body = [rectangle(c, d, n, dim.length / 2, dim.seatLength / 2)];
   } else if (g.type === 'columns' && dim.count && dim.spacing !== undefined) {
     body = columnOffsets(dim.count, dim.spacing).map((o) => {
       const p = vec2(c.x + o * d.x, c.y + o * d.y);
@@ -62,22 +71,6 @@ export function supportPlan(r: SupportResult): SupportPlan | undefined {
     });
   }
   return { body, footing };
-}
-
-/** Horná hrana podpery v mieste X (lineárne medzi ložiskami, mimo nich konštantne). */
-export function seatAt(r: SupportResult, x: number): number {
-  const b = [...r.bearings].sort((p, q) => p.x - q.x);
-  if (b.length === 0) return Number.NaN;
-  const first = b[0] as SupportResult['bearings'][number];
-  const last = b[b.length - 1] as SupportResult['bearings'][number];
-  if (x <= first.x) return first.seat;
-  if (x >= last.x) return last.seat;
-  for (let i = 1; i < b.length; i++) {
-    const p = b[i - 1] as SupportResult['bearings'][number];
-    const q = b[i] as SupportResult['bearings'][number];
-    if (x <= q.x) return p.seat + ((q.seat - p.seat) * (x - p.x)) / (q.x - p.x);
-  }
-  return last.seat;
 }
 
 /** Pohľad na podperu v rovine priečneho rezu NK (pre náhľad prierezu na staničení podpery). */
@@ -109,11 +102,14 @@ export function supportElevation(r: SupportResult): SupportElevation | undefined
     body = [block(offset - half * sin, offset + half * sin)];
   }
   const fl = (r.footing.length / 2) * sin;
-  const footing: Polygon2D = [
-    vec2(offset - fl, bottom - r.footing.thickness),
-    vec2(offset + fl, bottom - r.footing.thickness),
-    vec2(offset + fl, bottom),
-    vec2(offset - fl, bottom),
-  ];
+  const footing: Polygon2D | undefined =
+    r.footing.thickness > 0
+      ? [
+          vec2(offset - fl, bottom - r.footing.thickness),
+          vec2(offset + fl, bottom - r.footing.thickness),
+          vec2(offset + fl, bottom),
+          vec2(offset - fl, bottom),
+        ]
+      : undefined;
   return { body, footing };
 }

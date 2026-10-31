@@ -331,3 +331,19 @@ const DIMENSION_RULES: Record<string, (v: number) => boolean> = {
   wingLength: (v) => v >= 0,
   wingAngle: (v) => Math.abs(v) < 85,
 };
+
+/** Horná hrana podpery v mieste X (lineárne medzi ložiskami, mimo nich konštantne). */
+export function seatAt(r: SupportResult, x: number): number {
+  const b = [...r.bearings].sort((p, q) => p.x - q.x);
+  if (b.length === 0) return Number.NaN;
+  const first = b[0] as SupportResult['bearings'][number];
+  const last = b[b.length - 1] as SupportResult['bearings'][number];
+  if (x <= first.x) return first.seat;
+  if (x >= last.x) return last.seat;
+  for (let i = 1; i < b.length; i++) {
+    const p = b[i - 1] as SupportResult['bearings'][number];
+    const q = b[i] as SupportResult['bearings'][number];
+    if (x <= q.x) return p.seat + ((q.seat - p.seat) * (x - p.x)) / (q.x - p.x);
+  }
+  return last.seat;
+}

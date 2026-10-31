@@ -1,8 +1,8 @@
 import { signedArea, vec2 } from '@bridge/geom';
 import type { Support } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
-import { columnOffsets, seatAt, supportElevation, supportPlan } from './supportGeometry.ts';
-import type { SupportResult } from './supports.ts';
+import { columnOffsets, supportElevation, supportPlan } from './supportGeometry.ts';
+import { type SupportResult, seatAt } from './supports.ts';
 
 function result(
   geometry: Support['geometry'],
@@ -103,7 +103,7 @@ describe('supportElevation', () => {
     const wall = el?.body[0] ?? [];
     expect(wall.map((p) => p.y)).toEqual([0, 0, 8.0, 8.2]);
     expect(wall[1]?.x).toBeCloseTo(3, 12);
-    expect(el?.footing[0]?.y).toBeCloseTo(-1.2, 12);
+    expect(el?.footing?.[0]?.y).toBeCloseTo(-1.2, 12);
   });
 
   it('projects a skewed support width onto the deck cross-section (× sin α)', () => {

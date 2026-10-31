@@ -18,7 +18,7 @@ export function supportMesh<S>(kernel: GeometryKernel<S>, r: SupportResult): Tri
   if (!plan || !axis || !Number.isFinite(top) || r.bearings.length === 0) return mergeMeshes([]);
   const solids: S[] = [];
   const thickness = r.footing.thickness;
-  if (thickness > 0) {
+  if (plan.footing && thickness > 0) {
     solids.push(
       kernel.prism(
         plan.footing,
