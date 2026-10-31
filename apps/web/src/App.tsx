@@ -47,7 +47,10 @@ import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
 import { AxisOffsetDialog } from './layout/properties/AxisOffsetDialog.tsx';
+import { BearingsDialog } from './layout/properties/BearingsDialog.tsx';
+import { deckSheet, supportSheet } from './layout/properties/elementSheets.tsx';
 import { PlanLineVerticesDialog } from './layout/properties/PlanLineVerticesDialog.tsx';
+import { ProfileLawDialog } from './layout/properties/ProfileLawDialog.tsx';
 import { ProjectInfoDialog } from './layout/properties/ProjectInfoDialog.tsx';
 import { PropertiesPalette } from './layout/properties/PropertyGrid.tsx';
 import {
@@ -137,6 +140,8 @@ export function App() {
     which: 'horizontalOffset' | 'verticalOffset';
   }>();
   const [planLineVertices, setPlanLineVertices] = useState<string>();
+  const [bearingsOf, setBearingsOf] = useState<string>();
+  const [lawDialog, setLawDialog] = useState<{ deckId: string; parameter: string }>();
   /** stav pohľadov ovládaný ribbonom (ADR 0016) */
   const [ribbonTab, setRibbonTab] = useState('home');
   const [tool, setTool] = useState<ViewTool>('none');
@@ -1069,16 +1074,59 @@ export function App() {
           />
         );
     }
+    if (el?.collection === 'supports') {
+      const support = project.supports.find((x) => x.id === el.id);
+      if (support)
+        return (
+          <PropertiesPalette
+            wide
+            sheet={supportSheet({
+              support,
+              result: supportState.supports.find((r) => r.support.id === support.id),
+              decks: project.superstructures,
+              onBearings: () => setBearingsOf(support.id),
+              onDelete: deleteSelected,
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'superstructures') {
+      const deck = project.superstructures.find((x) => x.id === el.id);
+      if (deck)
+        return (
+          <PropertiesPalette
+            wide
+            sheet={deckSheet({
+              deck,
+              profiles: project.profiles,
+              axes: project.bridgeAxes,
+              curveName: (law) =>
+                law.curve.type === 'alignment'
+                  ? law.curve.name
+                  : (project.planLines.find(
+                      (l) => law.curve.type === 'planLine' && l.id === law.curve.id,
+                    )?.name ?? sk.edgeLaw.missing),
+              spans: supportState.spans.get(deck.id),
+              result: sections.results.find((r) => r.superstructure.id === deck.id),
+              station: sectionAt,
+              onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
+              onAddSupport: () => {
+                setMode('2d');
+                setTool('support');
+              },
+              onDelete: deleteSelected,
+              dispatch,
+            })}
+          />
+        );
+    }
     if (el && mode !== 'parameters')
       return (
         <ElementPanel
           collection={el.collection}
           id={el.id}
-          result={sections.results.find((r) => r.superstructure.id === el.id)}
-          supportResult={supportState.supports.find((r) => r.support.id === el.id)}
-          spans={supportState.spans.get(el.id)}
           onRemoved={() => setSelectedElement(undefined)}
-          sectionContext={sectionContext}
           selectedPoint={profilePoint}
           onSelectPoint={setProfilePoint}
         />
@@ -1388,6 +1436,21 @@ export function App() {
           which={axisOffset.which}
           range={sectionRange ?? { from: 0, to: 100 }}
           onClose={() => setAxisOffset(undefined)}
+        />
+      )}
+      {bearingsOf && (
+        <BearingsDialog
+          supportId={bearingsOf}
+          result={supportState.supports.find((r) => r.support.id === bearingsOf)}
+          onClose={() => setBearingsOf(undefined)}
+        />
+      )}
+      {lawDialog && (
+        <ProfileLawDialog
+          deckId={lawDialog.deckId}
+          parameter={lawDialog.parameter}
+          ctx={sectionContext}
+          onClose={() => setLawDialog(undefined)}
         />
       )}
       {planLineVertices && (
