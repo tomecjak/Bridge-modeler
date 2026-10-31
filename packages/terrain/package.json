@@ -1,0 +1,18 @@
+{
+  "name": "@bridge/terrain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Terén: TIN a mriežka z LandXML a GeoTIFF, výška v bode, rezy terénom.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@bridge/alignment": "workspace:*",
+    "@bridge/geom": "workspace:*",
+    "@bridge/model": "workspace:*"
+  }
+}

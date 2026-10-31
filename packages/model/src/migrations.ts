@@ -30,6 +30,8 @@ export const MIGRATIONS: Readonly<
       }),
     }),
   },
+  /** 4 → 5: terén (ADR 0011) */
+  '4': { to: '5', migrate: (raw) => ({ ...raw, terrains: [] }) },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

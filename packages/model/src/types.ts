@@ -189,3 +189,38 @@ export const SupportSchema = z.object({
   foundationTop: ExprSchema,
 });
 export type Support = z.infer<typeof SupportSchema>;
+
+/**
+ * Terén (ADR 0011): povrch orezaný na koridor okolo osi mosta, v lokálnych súradniciach projektu zaokrúhlených na mm.
+ * TIN (body x, y, z za sebou + trojice indexov) alebo mriežka rastra (stredy buniek, úseky riadkov vnútri koridoru).
+ */
+export const TerrainDataSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('tin'),
+    points: z.array(z.number()),
+    triangles: z.array(z.number().int().nonnegative()),
+  }),
+  z.object({
+    kind: z.literal('grid'),
+    /** stred bunky [0, 0] a krok mriežky v smere E (dx) a N (dy) [m] */
+    x0: z.number(),
+    y0: z.number(),
+    dx: z.number().positive(),
+    dy: z.number().positive(),
+    /** súvislé úseky riadku `row` od stĺpca `col` (bunka [row, col] má stred x0 + col·dx, y0 + row·dy) */
+    runs: z.array(
+      z.object({ row: z.number().int(), col: z.number().int(), z: z.array(z.number()) }),
+    ),
+  }),
+]);
+export type TerrainData = z.infer<typeof TerrainDataSchema>;
+
+export const TerrainSurfaceSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  source: z.enum(['landxml', 'geotiff']),
+  /** koridor použitý pri orezaní: pol šírky okolo osi cesty a presah za NK [m] */
+  corridor: z.object({ halfWidth: z.number(), margin: z.number() }),
+  data: TerrainDataSchema,
+});
+export type TerrainSurface = z.infer<typeof TerrainSurfaceSchema>;

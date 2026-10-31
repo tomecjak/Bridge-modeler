@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "4"
+      "const": "5"
     },
     "name": {
       "type": "string"
@@ -1231,6 +1231,147 @@
         ],
         "additionalProperties": false
       }
+    },
+    "terrains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "landxml",
+              "geotiff"
+            ]
+          },
+          "corridor": {
+            "type": "object",
+            "properties": {
+              "halfWidth": {
+                "type": "number"
+              },
+              "margin": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "halfWidth",
+              "margin"
+            ],
+            "additionalProperties": false
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "tin"
+                  },
+                  "points": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "triangles": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "points",
+                  "triangles"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "grid"
+                  },
+                  "x0": {
+                    "type": "number"
+                  },
+                  "y0": {
+                    "type": "number"
+                  },
+                  "dx": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "dy": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "runs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "row": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "col": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "z": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "required": [
+                        "row",
+                        "col",
+                        "z"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "x0",
+                  "y0",
+                  "dx",
+                  "dy",
+                  "runs"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "source",
+          "corridor",
+          "data"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -1242,9 +1383,10 @@
     "bridgeAxes",
     "profiles",
     "superstructures",
-    "supports"
+    "supports",
+    "terrains"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-4.json",
-  "title": "Projekt modelára mostov (schemaVersion 4)"
+  "$id": "https://bridge-modeler.local/schema/project-5.json",
+  "title": "Projekt modelára mostov (schemaVersion 5)"
 }

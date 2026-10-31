@@ -5,10 +5,11 @@ import {
   ProfileDefinitionSchema,
   SuperstructureSchema,
   SupportSchema,
+  TerrainSurfaceSchema,
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '4';
+export const SCHEMA_VERSION = '5';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -80,6 +81,7 @@ export const ProjectFileSchema = z.strictObject({
   profiles: z.array(ProfileDefinitionSchema),
   superstructures: z.array(SuperstructureSchema),
   supports: z.array(SupportSchema),
+  terrains: z.array(TerrainSurfaceSchema),
 });
 
 export type ProjectFile = z.infer<typeof ProjectFileSchema>;
@@ -95,5 +97,6 @@ export function createEmptyProject(name: string): ProjectFile {
     profiles: [],
     superstructures: [],
     supports: [],
+    terrains: [],
   };
 }

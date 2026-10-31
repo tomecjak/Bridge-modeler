@@ -16,6 +16,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0008](0008-podpery.md) | Podpery, uloženie a polia | Prijaté |
 | [0009](0009-3d-model.md) | 3D model a viewer | Prijaté |
 | [0010](0010-opora.md) | Opora s úložným prahom, záverným múrikom a krídlami | Prijaté |
+| [0011](0011-teren.md) | Terén: uloženie, zdroje a súradnice | Prijaté |
 
 ## Šablóna
 
