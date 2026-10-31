@@ -29,7 +29,8 @@ interface Props {
     body: readonly (readonly Vec2[])[];
     footing: readonly Vec2[] | undefined;
   }[];
-  onInsert: (template: 'twin' | 'single') => void;
+  /** otvorí vloženie NK výberom typológie */
+  onAddDeck: () => void;
   /** priečne terénne čiary (x od osi cesty, y v m n. m.) */
   terrain?: readonly { id: string; runs: readonly (readonly Vec2[])[] }[];
   /** priečny rez ako výkres (terén, podpery; ADR 0012); NK s výberom a kótami kreslí pohľad sám */
@@ -53,7 +54,7 @@ export function SectionView({
   onSelect,
   emptyActions,
   canInsert,
-  onInsert,
+  onAddDeck,
   supports,
   terrain = [],
   drawing,
@@ -100,12 +101,7 @@ export function SectionView({
           {sk.viewport.fit}
         </button>
         {sections.length > 0 && (
-          <button
-            type="button"
-            className="button"
-            disabled={!canInsert}
-            onClick={() => onInsert('single')}
-          >
+          <button type="button" className="button" disabled={!canInsert} onClick={onAddDeck}>
             {sk.section.addDeck}
           </button>
         )}

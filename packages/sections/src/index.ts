@@ -13,4 +13,5 @@ export * from './superstructure.ts';
 export * from './supportGeometry.ts';
 export * from './supports.ts';
 export * from './templates/catalog.ts';
+export * from './templates/deck.ts';
 export * from './templates/singleBeamHaunched.ts';

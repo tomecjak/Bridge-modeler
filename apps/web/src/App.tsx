@@ -16,8 +16,6 @@ import {
   evaluateSuperstructure,
   globalScope,
   profileParameterValues,
-  singleBeamHaunched,
-  singleDeckExample,
   twinDeckExample,
 } from '@bridge/sections';
 import {
@@ -44,6 +42,7 @@ import {
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
 import { BriefPanel } from './layout/BriefPanel.tsx';
+import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
 import { ElementPanel } from './layout/ElementPanel.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
@@ -110,6 +109,7 @@ export function App() {
   const [profileDeckId, setProfileDeckId] = useState<string>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [deckDialog, setDeckDialog] = useState(false);
   /** vybraný bod v editore prierezu (zvýraznený aj v tabuľke bodov) */
   const [profilePoint, setProfilePoint] = useState<string>();
   const [terrainBusy, setTerrainBusy] = useState(false);
@@ -432,36 +432,31 @@ export function App() {
     setMessage(undefined);
   }
 
-  function insertExample(template: 'twin' | 'single') {
-    const range = defaultDeckRange();
-    if (!range) {
-      // bez osi cesty aspoň vložíme prierez a otvoríme jeho editor
-      if (template === 'single') {
-        const id = newId('prof');
-        projectStore
-          .getState()
-          .dispatch({ type: 'addElements', profiles: [singleBeamHaunched(id)] });
-        setSelectedElement({ collection: 'profiles', id });
-      }
+  /** Otvorí vloženie NK výberom typológie; bez osi s niveletou len hláška. */
+  function openDeckDialog() {
+    if (!defaultDeckRange()) {
       setMessage(sk.section.needsAlignment);
       setMode('section');
       return;
     }
+    setDeckDialog(true);
+  }
+
+  /** Príklad dvojice NK z rezu E–E (Fáza 3) na predvolenom rozsahu. */
+  function insertTwinExample() {
+    const range = defaultDeckRange();
+    if (!range) {
+      setMessage(sk.section.needsAlignment);
+      return;
+    }
     const { road, from, to } = range;
-    const example =
-      template === 'twin'
-        ? twinDeckExample(road.name, from, to, {
-            left: newId('nk'),
-            right: newId('nk'),
-            profile: newId('prof'),
-            leftAxis: newId('axis'),
-            rightAxis: newId('axis'),
-          })
-        : singleDeckExample(road.name, from, to, {
-            deck: newId('nk'),
-            profile: newId('prof'),
-            axis: newId('axis'),
-          });
+    const example = twinDeckExample(road.name, from, to, {
+      left: newId('nk'),
+      right: newId('nk'),
+      profile: newId('prof'),
+      leftAxis: newId('axis'),
+      rightAxis: newId('axis'),
+    });
     projectStore.getState().dispatch({
       type: 'addElements',
       bridgeAxes: example.bridgeAxes,
@@ -549,7 +544,7 @@ export function App() {
     deck: [
       {
         label: sk.workflow.actions.insertDeck,
-        onClick: () => insertExample('single'),
+        onClick: openDeckDialog,
         disabled: !hasRoad,
       },
       { label: sk.library.open, onClick: () => setLibraryOpen(true) },
@@ -1119,15 +1114,20 @@ export function App() {
                   format,
                 )
               }
-              onInsert={insertExample}
+              onAddDeck={openDeckDialog}
               onOpenLibrary={() => setLibraryOpen(true)}
               emptyActions={
                 <div className="toolbar">
-                  <button type="button" className="button" onClick={() => insertExample('twin')}>
-                    {sk.section.insertExample}
+                  <button
+                    type="button"
+                    className="button primary"
+                    disabled={!defaultDeckRange()}
+                    onClick={openDeckDialog}
+                  >
+                    {sk.workflow.actions.insertDeck}
                   </button>
-                  <button type="button" className="button" onClick={() => insertExample('single')}>
-                    {sk.section.insertTemplate}
+                  <button type="button" className="button" onClick={insertTwinExample}>
+                    {sk.section.insertExample}
                   </button>
                 </div>
               }
@@ -1192,6 +1192,30 @@ export function App() {
           }}
         />
       )}
+      {deckDialog &&
+        (() => {
+          const range = defaultDeckRange();
+          return (
+            range && (
+              <DeckInsertDialog
+                alignment={range.road.name}
+                range={{ from: range.from, to: range.to }}
+                onClose={() => setDeckDialog(false)}
+                onExample={() => {
+                  setDeckDialog(false);
+                  insertTwinExample();
+                }}
+                onInserted={(id, name, r) => {
+                  setDeckDialog(false);
+                  setSelectedElement({ collection: 'superstructures', id });
+                  setSectionStation((r.from + r.to) / 2);
+                  setMode('section');
+                  setMessage(sk.deckInsert.inserted(name));
+                }}
+              />
+            )
+          );
+        })()}
       {terrainFile && (
         <TerrainImportDialog
           file={terrainFile}

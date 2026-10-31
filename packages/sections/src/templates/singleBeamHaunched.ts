@@ -1,4 +1,5 @@
 import type { BridgeAxis, ProfileDefinition, StationFunction, Superstructure } from '@bridge/model';
+import { deckFromProfile } from './deck.ts';
 
 /**
  * Šablóna „Jednotrám s nábehmi“ (typológia VŠB, PLAN.md §7). Rámec: x vpravo, y nahor [m],
@@ -125,28 +126,10 @@ export function singleDeckExample(
   to: number,
   ids: { deck: string; profile: string; axis: string },
 ): { bridgeAxes: BridgeAxis[]; profile: ProfileDefinition; superstructures: Superstructure[] } {
+  const { bridgeAxis, superstructure } = deckFromProfile(alignment, from, to, ids.profile, ids);
   return {
-    bridgeAxes: [
-      {
-        id: ids.axis,
-        name: 'Os mosta',
-        alignment,
-        horizontalOffset: constant('0'),
-        verticalOffset: constant('-0.09'),
-      },
-    ],
+    bridgeAxes: [bridgeAxis],
     profile: singleBeamHaunched(ids.profile),
-    superstructures: [
-      {
-        id: ids.deck,
-        name: 'NK',
-        bridgeAxis: ids.axis,
-        from,
-        to,
-        profile: ids.profile,
-        parameterLaws: {},
-        orientation: 'vertical',
-      },
-    ],
+    superstructures: [superstructure],
   };
 }

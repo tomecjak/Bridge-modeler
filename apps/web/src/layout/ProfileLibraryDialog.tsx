@@ -8,17 +8,15 @@ import {
   parseLibrary,
   serializeLibrary,
 } from '@bridge/model';
-import { builtinProfileLibrary } from '@bridge/sections';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { formatModelIssue } from '../i18n/modelIssues.ts';
 import { sk } from '../i18n/sk.ts';
-import { cloudProfileLibrary, detectCloud } from '../persistence/cloudLibrary.ts';
 import { downloadText } from '../persistence/fileIO.ts';
 import { drawingFileName } from '../persistence/fileName.ts';
 import { newId } from '../store/parameters.ts';
-import { projectProfileLibrary } from '../store/profileLibrary.ts';
 import { projectStore, useProject } from '../store/projectStore.ts';
 import { ProfileThumbnail } from '../views/ProfileThumbnail.tsx';
+import { type CloudLibrary, type SourceKey, useProfileSources } from './useProfileSources.ts';
 
 interface Props {
   onClose: () => void;
@@ -26,9 +24,6 @@ interface Props {
   onInserted: (id: string, name: string) => void;
   onMessage: (text: string) => void;
 }
-
-type SourceKey = 'builtin' | 'cloud' | 'project' | 'file';
-type CloudLibrary = ReturnType<typeof cloudProfileLibrary>;
 
 /** Dátum a čas zmeny položky v slovenskom formáte. */
 const formatDate = (iso: string | undefined) =>
@@ -41,56 +36,11 @@ const formatDate = (iso: string | undefined) =>
  */
 export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) {
   const t = sk.library;
-  const profiles = useProject((s) => s.project.profiles);
   const projectName = useProject((s) => s.project.name);
-  const builtin = useMemo(() => builtinProfileLibrary(sk.library.sources.builtin), []);
-  const project = useMemo(
-    () => projectProfileLibrary(projectStore, sk.library.sources.project),
-    [],
-  );
   const [file, setFile] = useState<{ name: string; library: ProfileLibrary }>();
   const [issues, setIssues] = useState<ModelIssue[]>([]);
-  const [entries, setEntries] = useState<Record<SourceKey, LibraryEntry[]>>({
-    builtin: [],
-    cloud: [],
-    project: [],
-    file: [],
-  });
-  /** firemná knižnica (ADR 0015), ak beží Worker s API; inak sa zdroj nezobrazí */
-  const [cloud, setCloud] = useState<{ email: string; library: CloudLibrary }>();
-  const [cloudError, setCloudError] = useState<string>();
-  const [cloudRevision, setCloudRevision] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    void detectCloud().then((who) => {
-      if (alive && who) setCloud({ email: who.email, library: cloudProfileLibrary() });
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { entries, sources, cloud, cloudError, setCloudError, refresh } = useProfileSources(file);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  // zdroje sú asynchrónne (rozhranie pre budúcu databázu) → načítajú sa pri zmene
-  // biome-ignore lint/correctness/useExhaustiveDependencies: prierezy projektu sa načítajú znova pri ich zmene
-  useEffect(() => {
-    let alive = true;
-    const cloudList = cloud
-      ? cloud.library.list().catch((e: unknown) => {
-          setCloudError(e instanceof Error ? e.message : String(e));
-          return [];
-        })
-      : [];
-    void Promise.all([builtin.list(), cloudList, project.list(), file?.library.list() ?? []]).then(
-      ([b, c, p, f]) => {
-        if (alive) setEntries({ builtin: b, cloud: c, project: p, file: f });
-      },
-    );
-    return () => {
-      alive = false;
-    };
-  }, [builtin, project, file, profiles, cloud, cloudRevision]);
 
   /** Zmena vo firemnej knižnici; pri konflikte verzie hláška a znova načítaný zoznam. */
   async function cloudChange(run: (lib: CloudLibrary) => Promise<void>, done: string) {
@@ -102,16 +52,10 @@ export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) 
     } catch (e) {
       setCloudError(e instanceof Error ? e.message : String(e));
     }
-    setCloudRevision((r) => r + 1);
+    refresh();
   }
 
   const key = (source: SourceKey, id: string) => `${source}:${id}`;
-  const sources: { key: SourceKey; title: string }[] = [
-    { key: 'builtin', title: t.sources.builtin },
-    ...(cloud ? [{ key: 'cloud' as const, title: t.sources.cloud(cloud.email) }] : []),
-    { key: 'project', title: t.sources.project },
-    ...(file ? [{ key: 'file' as const, title: t.sources.file(file.name) }] : []),
-  ];
   const chosen = sources.flatMap((s) =>
     entries[s.key].filter((e) => selected.has(key(s.key, e.id))),
   );
