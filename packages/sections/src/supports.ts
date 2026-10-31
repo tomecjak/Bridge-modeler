@@ -1,6 +1,6 @@
 import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
 import type { IssueOwner, ModelIssue, Superstructure, Support } from '@bridge/model';
-import { lowestCrossing } from './crossing.ts';
+import { highestCrossing, lowestCrossing } from './crossing.ts';
 import { evaluateNumber } from './expressions.ts';
 import {
   type BridgeAxisPoint,
@@ -29,6 +29,19 @@ export interface BearingResult {
   height: number;
 }
 
+/** Koniec NK pri opore (ADR 0010): horný povrch pre záverný múrik a krídla. */
+export interface DeckEnd {
+  side: 'start' | 'end';
+  /** spojité staničenie konca NK */
+  s: number;
+  /** bod osi mosta na konci (pôdorys), vodorovný jednotkový smer staničenia a sklon nivelety */
+  point: Vec2;
+  tangent: Vec2;
+  grade: number;
+  /** horný povrch NK na konci: priečna poloha x [m] → lokálne z, zoradené podľa x */
+  top: { x: number; z: number }[];
+}
+
 export interface SupportResult {
   support: Support;
   s: number;
@@ -47,6 +60,8 @@ export interface SupportResult {
   /** vyhodnotené rozmery geometrie a základu [m] (počet stĺpov ako číslo) */
   dimensions: Record<string, number>;
   footing: { length: number; width: number; thickness: number };
+  /** len opora s geometriou `abutment` */
+  deckEnd?: DeckEnd;
   issues: ModelIssue[];
 }
 
@@ -210,6 +225,11 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
     });
   });
 
+  if (support.geometry.type === 'abutment' && sFrom !== undefined && sTo !== undefined) {
+    const deckEnd = evaluateDeckEnd(ctx, sup, s0 - sFrom < sTo - s0 ? 'start' : 'end', sFrom, sTo);
+    if (deckEnd) result.deckEnd = deckEnd;
+  }
+
   if (result.bearings.length > 0) {
     const heights = result.bearings.map((b) => b.height);
     result.height = { min: Math.min(...heights), max: Math.max(...heights) };
@@ -217,6 +237,52 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
       issues.push({ code: 'NonPositiveSupportHeight', height: result.height.min });
   }
   return done();
+}
+
+/** Horný povrch NK na konci v priečnej polohe x (lineárne medzi bodmi, mimo šírky NK výška okraja). */
+export function deckTopAt(end: DeckEnd, x: number): number {
+  const top = end.top;
+  const first = top[0] as DeckEnd['top'][number];
+  const last = top[top.length - 1] as DeckEnd['top'][number];
+  if (x <= first.x) return first.z;
+  if (x >= last.x) return last.z;
+  for (let i = 1; i < top.length; i++) {
+    const a = top[i - 1] as DeckEnd['top'][number];
+    const b = top[i] as DeckEnd['top'][number];
+    if (x <= b.x) return a.z + ((b.z - a.z) * (x - a.x)) / (b.x - a.x);
+  }
+  return last.z;
+}
+
+/** Horný povrch NK na bližšom konci k opore (z prierezu na staničení konca). */
+function evaluateDeckEnd(
+  ctx: SupportContext,
+  sup: Superstructure,
+  side: DeckEnd['side'],
+  sFrom: number,
+  sTo: number,
+): DeckEnd | undefined {
+  const s = side === 'start' ? sFrom : sTo;
+  const section = evaluateSuperstructure(ctx, sup, s);
+  const axis = section.axis;
+  if (!axis) return undefined;
+  const outer = section.loops.filter((l) => l.role === 'outer').map((l) => l.polygon);
+  const xs = [...new Set(outer.flat().map((p) => p.x))].sort((a, b) => a - b);
+  const top = xs.flatMap((x) => {
+    const y = highestCrossing(outer, x);
+    return y === undefined ? [] : [{ x, z: section.toWorld({ x, y }).z }];
+  });
+  if (top.length === 0) return undefined;
+  const t = axis.frame.tangent;
+  const th = Math.hypot(t.x, t.y);
+  return {
+    side,
+    s,
+    point: vec2(axis.point.x, axis.point.y),
+    tangent: vec2(t.x / th, t.y / th),
+    grade: t.z / th,
+    top,
+  };
 }
 
 function evaluateDimensions(
@@ -230,17 +296,38 @@ function evaluateDimensions(
     g.type === 'wall'
       ? { thickness: g.thickness, length: g.length }
       : g.type === 'abutment'
-        ? { seatLength: g.seatLength, stemThickness: g.stemThickness, length: g.length }
+        ? {
+            length: g.length,
+            seatLength: g.seatLength,
+            seatHeight: g.seatHeight,
+            frontOffset: g.frontOffset,
+            stemThickness: g.stemThickness,
+            backwallThickness: g.backwallThickness,
+            gap: g.gap,
+            wingAngle: g.wings.angle,
+            wingLength: g.wings.length,
+            wingThickness: g.wings.thickness,
+            wingEndHeight: g.wings.endHeight,
+          }
         : g.shape === 'circle'
           ? { diameter: g.diameter, count: g.count, spacing: g.spacing }
           : { width: g.width, depth: g.depth, count: g.count, spacing: g.spacing };
   for (const [name, text] of Object.entries(fields)) {
     const v = num(text, 'dimension');
     if (v === undefined) continue;
-    const valid =
-      name === 'count' ? Number.isInteger(v) && v >= 1 : name === 'spacing' ? v >= 0 : v > 0;
+    const valid = DIMENSION_RULES[name]?.(v) ?? v > 0;
     if (!valid) issues.push({ code: 'InvalidDimension', name, value: v });
     out[name] = v;
   }
   return out;
 }
+
+/** Platné hodnoty rozmerov, ktoré nemusia byť kladné (ostatné > 0). */
+const DIMENSION_RULES: Record<string, (v: number) => boolean> = {
+  count: (v) => Number.isInteger(v) && v >= 1,
+  spacing: (v) => v >= 0,
+  frontOffset: () => true,
+  gap: (v) => v >= 0,
+  wingLength: (v) => v >= 0,
+  wingAngle: (v) => Math.abs(v) < 85,
+};

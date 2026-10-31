@@ -7,7 +7,7 @@ import {
   type Support,
 } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
-import { evaluateSupport, type SupportContext } from './supports.ts';
+import { deckTopAt, evaluateSupport, type SupportContext } from './supports.ts';
 import { singleDeckExample } from './templates/singleBeamHaunched.ts';
 
 const base = syntheticAlignmentData(undefined, 1000);
@@ -186,5 +186,53 @@ describe('evaluateSupport — bez základu', () => {
     expect(r.issues).toContainEqual(
       expect.objectContaining({ code: 'InvalidDimension', name: 'footing.thickness' }),
     );
+  });
+});
+
+describe('evaluateSupport — opora a koniec NK', () => {
+  const abutment = (changes: Partial<Support> = {}) =>
+    pier({ kind: 'abutment', station: 1021, geometry: defaultAbutmentGeometry(), ...changes });
+
+  it('records the nearer deck end with its top surface and grade', () => {
+    const ctx = context();
+    const r = evaluateSupport(ctx, abutment());
+    expect(r.issues).toEqual([]);
+    const end = r.deckEnd;
+    expect(end?.side).toBe('start');
+    const al = ctx.alignments.get(base.name);
+    expect(end?.s).toBeCloseTo(al?.stationing.fromDisplay(1020) ?? Number.NaN, 12);
+    // referenčný bod prierezu leží na hornom povrchu v osi
+    const axisZ = al?.evaluate(end?.s ?? 0).point.z ?? Number.NaN;
+    expect(end && deckTopAt(end, 0)).toBeCloseTo(axisZ - 0.09, 9);
+    // mimo šírky NK výška okraja
+    const left = end?.top[0];
+    expect(end && left && deckTopAt(end, left.x - 5)).toBe(left?.z);
+    const xs = end?.top.map((p) => p.x) ?? [];
+    expect(xs).toEqual([...xs].sort((a, b) => a - b));
+    expect(end?.grade).toBeCloseTo(al?.evaluate(end?.s ?? 0).grade ?? Number.NaN, 12);
+
+    const far = evaluateSupport(ctx, abutment({ station: 1399 }));
+    expect(far.deckEnd?.side).toBe('end');
+  });
+
+  it('evaluates and checks the backwall and wing dimensions', () => {
+    const r = evaluateSupport(context(), abutment());
+    expect(r.dimensions).toMatchObject({ seatHeight: 1.1, gap: 0.08, wingAngle: 0, wingLength: 4 });
+    const bad = evaluateSupport(
+      context(),
+      abutment({
+        geometry: {
+          ...defaultAbutmentGeometry(),
+          wings: { ...defaultAbutmentGeometry().wings, angle: '90' },
+        },
+      }),
+    );
+    expect(bad.issues).toContainEqual(
+      expect.objectContaining({ code: 'InvalidDimension', name: 'wingAngle' }),
+    );
+  });
+
+  it('has no deck end for a pier', () => {
+    expect(evaluateSupport(context(), pier()).deckEnd).toBeUndefined();
   });
 });
