@@ -12,6 +12,7 @@ import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { PlanDimensions } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
 import { drawingVertices, formatPlanMeasure, snapPoint, useMeasure } from './measure.ts';
 import { useElementSize } from './useElementSize.ts';
@@ -45,9 +46,9 @@ interface Props {
   drawing: Drawing | undefined;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
-  /** klik na os v režime pridávania podpery → staničenie s a odsadenie od osi cesty */
-  onAddSupport: (s: number, offset: number) => void;
-  /** aktívny nástroj (ribbon); pôdorys reaguje na „Podpera“ a „Čiara“ */
+  /** úpravy osí uloženia (nástroje Os uloženia a Podpera, ADR 0017) */
+  lineEditing?: LineEditing | undefined;
+  /** aktívny nástroj (ribbon); pôdorys reaguje na „Os uloženia“, „Podpera“, „Čiara“ a „Merať“ */
   tool: ViewTool;
   onTool: (tool: ViewTool) => void;
   /** Prispôsobiť / Celá os z ribbonu */
@@ -98,7 +99,7 @@ export function PlanView({
   onCursor,
   drawing,
   selected,
-  onAddSupport,
+  lineEditing,
   tool,
   onTool,
   fitRequest,
@@ -118,8 +119,9 @@ export function PlanView({
   const [hover, setHover] = useState<Vec2>();
   /** ťahaný vrchol vybranej čiary */
   const [vertexDrag, setVertexDrag] = useState<{ id: string; index: number; point: Vec2 }>();
-  /** nástroje pôdorysu (oblasť mosta patrí profilu) */
-  const planTool = tool === 'support' || tool === 'line' ? tool : undefined;
+  /** návrh osi uloženia pod kurzorom */
+  const [linePreview, setLinePreview] = useState<LinePreview>();
+  const lineTool = (tool === 'bearingLine' || tool === 'support') && lineEditing ? tool : undefined;
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
   const whole = fitRequest.whole;
@@ -164,9 +166,10 @@ export function PlanView({
     if (tool === 'measure') onMeasure?.(measureLabel);
   }, [measureLabel, tool]);
 
-  // zmena nástroja zahodí rozkreslenú čiaru
+  // zmena nástroja zahodí rozkreslenú čiaru a návrh osi
   useEffect(() => {
     if (tool !== 'line') setSketch([]);
+    setLinePreview(undefined);
   }, [tool]);
 
   function finishSketch() {
@@ -232,6 +235,21 @@ export function PlanView({
     }
     const projection = alignment.project(point);
     onCursor({ point, s: projection?.s, offset: projection?.offset });
+    if (lineTool && lineEditing && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const free =
+        lineTool === 'support'
+          ? handleAt(screen, lineEditing.handles, toScreen, 'plan', (h) => h.free)
+          : undefined;
+      setLinePreview(
+        free
+          ? previewOnHandle(free)
+          : projection
+            ? lineEditing.preview(projection.s, projection.offset, !e.shiftKey)
+            : undefined,
+      );
+    }
   }
 
   const toScreen = (p: Vec2) => (view ? worldToScreen(view, size, p) : p);
@@ -278,6 +296,7 @@ export function PlanView({
       onPointerLeave={() => {
         onCursor(undefined);
         setHover(undefined);
+        setLinePreview(undefined);
       }}
       onDoubleClick={() => (tool === 'line' ? finishSketch() : reset())}
       onClick={(e) => {
@@ -285,22 +304,21 @@ export function PlanView({
           measure.click(measure.hover.point);
           return;
         }
-        if (!planTool || wasDrag() || !view) return;
+        if (wasDrag() || !view) return;
         if (e.target instanceof Element && e.target.closest('button, summary, details')) return;
-        const point = worldAt(e);
-        if (!point) return;
-        if (tool === 'line') {
-          const last = sketch.at(-1);
-          const near = last && Math.hypot(point.x - last.x, point.y - last.y) * view.sx < MERGE_PX;
-          if (!near) setSketch([...sketch, point]);
+        if (lineTool && linePreview) {
+          lineEditing?.place(linePreview, lineTool);
+          setLinePreview(undefined);
           return;
         }
-        const projection = alignment.project(point);
-        if (!projection) return;
-        onAddSupport(projection.s, projection.offset);
-        onTool('none');
+        if (tool !== 'line') return;
+        const point = worldAt(e);
+        if (!point) return;
+        const last = sketch.at(-1);
+        const near = last && Math.hypot(point.x - last.x, point.y - last.y) * view.sx < MERGE_PX;
+        if (!near) setSketch([...sketch, point]);
       }}
-      data-add-mode={planTool !== undefined || tool === 'measure' || undefined}
+      data-add-mode={tool === 'line' || lineTool !== undefined || tool === 'measure' || undefined}
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
@@ -407,7 +425,12 @@ export function PlanView({
           {dimensions?.map((d) => (
             <PlanDimensions
               key={d.deckId}
-              chains={d.chains}
+              // pri návrhu osi sa rozpätia NK ukazujú živo (nižšie)
+              chains={
+                linePreview?.deckId === d.deckId
+                  ? d.chains.filter((c) => c.kind !== 'spans')
+                  : d.chains
+              }
               pointAt={d.pointAt}
               toScreen={toScreen}
               side={d.side}
@@ -415,6 +438,19 @@ export function PlanView({
               scale={view.sx}
             />
           ))}
+          {linePreview && linePreview.plan.length >= 2 && (
+            <polyline className="line-preview" points={polyline(linePreview.plan)} />
+          )}
+          {linePreview?.frame && linePreview.spans.length > 0 && (
+            <PlanDimensions
+              chains={[{ kind: 'spans', segments: linePreview.spans }]}
+              pointAt={linePreview.frame.pointAt}
+              toScreen={toScreen}
+              side={linePreview.frame.side}
+              reach={linePreview.frame.reach}
+              scale={view.sx}
+            />
+          )}
           {tool === 'measure' && (
             <MeasureOverlay
               a={measure.a}

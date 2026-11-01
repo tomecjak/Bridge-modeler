@@ -6,6 +6,7 @@ import type { ProfileLine } from '@bridge/sections';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import type { EdgeTerrain } from '../store/profile.ts';
+import type { LineEditing } from '../views/lineEdit.ts';
 import { type PlanCursor, type PlanDimensionSet, PlanView } from '../views/PlanView.tsx';
 import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
@@ -40,7 +41,8 @@ interface Props {
         edgeTerrain: EdgeTerrain | undefined;
       }
     | undefined;
-  onAddSupport: (s: number, offset: number) => void;
+  /** vkladanie a úpravy osí uloženia a podpier v pôdoryse a profile (ADR 0017) */
+  lineEditing: LineEditing | undefined;
   /** stav pohľadov z ribbonu (ADR 0016) */
   tool: ViewTool;
   onTool: (tool: ViewTool) => void;
@@ -85,7 +87,7 @@ export function Viewport({
   sectionView,
   plan,
   profile,
-  onAddSupport,
+  lineEditing,
   tool,
   onTool,
   fitRequest,
@@ -140,7 +142,7 @@ export function Viewport({
               onCursor={onPlanCursor}
               drawing={plan}
               selected={selectedId}
-              onAddSupport={onAddSupport}
+              lineEditing={lineEditing}
               tool={tool}
               onTool={onTool}
               fitRequest={fitRequest}
@@ -179,6 +181,7 @@ export function Viewport({
                 goTo={goTo}
                 onMeasure={onMeasure}
                 dimensions={profileDimensions}
+                lineEditing={lineEditing}
               />
             )}
           </div>

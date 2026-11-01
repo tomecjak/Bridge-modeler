@@ -4,7 +4,7 @@
  */
 
 /** Nástroj v pôdoryse a pozdĺžnom profile; Esc ho zruší. */
-export type ViewTool = 'none' | 'support' | 'line' | 'area' | 'measure';
+export type ViewTool = 'none' | 'bearingLine' | 'support' | 'line' | 'area' | 'measure';
 
 /** Prispôsobiť (na oblasť mosta, inak NK) alebo Celá os; nová hodnota `nonce` pohľad prispôsobí znova. */
 export interface FitRequest {

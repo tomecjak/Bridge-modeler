@@ -180,6 +180,33 @@ function readable(a: Vec2, b: Vec2): number {
 }
 
 /**
+ * Poloha kót NK v pôdoryse: bod v odsadení x od osi mosta na staničení s (kolmo na os cesty), strana mimo obrysu
+ * (vpravo, ak je os mosta vpravo od osi cesty v strede NK `sMid`) a vzdialenosť okraja NK na tej strane.
+ */
+export function planFrame(
+  road: {
+    evaluateHorizontal: (s: number) => { point: Vec2; azimuth: number };
+    length: number;
+    project: (p: Vec2) => { s: number; offset: number } | undefined;
+  },
+  outline: { left: readonly Vec2[]; right: readonly Vec2[] },
+  offsetAt: (s: number) => number,
+  sMid: number,
+): { pointAt: (s: number, x: number) => Vec2; side: 1 | -1; reach: number } {
+  const side: 1 | -1 = offsetAt(sMid) > 0.01 ? 1 : -1;
+  const reach = deckReach(outline, road, offsetAt);
+  return {
+    pointAt: (s, x) => {
+      const r = road.evaluateHorizontal(Math.min(road.length, Math.max(0, s)));
+      const h = offsetAt(s) + x;
+      return vec2(r.point.x + h * Math.cos(r.azimuth), r.point.y - h * Math.sin(r.azimuth));
+    },
+    side,
+    reach: side > 0 ? reach.right : reach.left,
+  };
+}
+
+/**
  * Najväčšia vzdialenosť okraja NK od osi mosta vľavo a vpravo [m] (pre polohu kót v pôdoryse): okraje obrysu NK
  * premietnuté na os cesty, odsadenie mínus posun osi mosta.
  */

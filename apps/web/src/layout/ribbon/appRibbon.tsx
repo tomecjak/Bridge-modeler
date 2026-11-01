@@ -121,6 +121,7 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               disabled: !c.hasRoad,
               onClick: c.onInsertDeck,
             },
+            toolButton('bearingLine', t.bearingLine, 'bearingLine', t.bearingLineTitle, !c.hasDeck),
             toolButton('support', t.support, 'pier', t.supportTitle, !c.hasDeck),
           ],
         },

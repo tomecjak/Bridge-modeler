@@ -2,6 +2,7 @@ import type { Alignment } from '@bridge/alignment';
 import {
   type DeckDrawingData,
   type Drawing,
+  type ProfileBearingLine,
   profileCuts,
   profileDrawing,
   profileEdgeLines,
@@ -110,6 +111,8 @@ export function useProfileView(input: {
   options: ProfileAxisOption[];
   axis: ProfileAxisKey;
   drawing: Drawing | undefined;
+  /** osi uloženia NK v čiare profilu (x = u) */
+  lines: ProfileBearingLine[];
   /** terén na ľavom a pravom okraji NK (u, výška v m n. m.); len v osi mosta, nejde do exportu */
   edgeTerrain: EdgeTerrain | undefined;
 } {
@@ -124,20 +127,21 @@ export function useProfileView(input: {
     () => (road ? buildProfileLine(axis, { road, deck, measure, others, planLines }) : undefined),
     [axis, road, deck, measure, others, planLines],
   );
-  const drawing = useMemo(() => {
+  const view = useMemo(() => {
     if (!line) return undefined;
     const cuts = deck ? profileCuts(deck, line, measure) : undefined;
     const path = line.points.map((p) => ({ s: p.u, point: p.point }));
     const terrain = terrainProfilesAlong(tins, path, line.road.origin.z).flatMap((t) =>
       t.runs.map((r) => r.map((p) => ({ u: p.s, z: p.z }))),
     );
-    return profileDrawing({
+    const drawing = profileDrawing({
       line,
       decks: cuts && deck ? [{ id: deck.id, cut: cuts.deck }] : [],
       supports: cuts?.supports ?? [],
       lines: cuts?.lines ?? [],
       terrain,
     });
+    return { drawing, lines: cuts?.lines ?? [] };
   }, [line, deck, measure, tins]);
   const showEdges = input.edgeTerrain;
   const edgeTerrain = useMemo(() => {
@@ -150,5 +154,12 @@ export function useProfileView(input: {
       );
     return { left: runs(left), right: runs(right) };
   }, [showEdges, line, deck, measure, tins]);
-  return { line, options, axis, drawing, edgeTerrain };
+  return {
+    line,
+    options,
+    axis,
+    drawing: view?.drawing,
+    lines: view?.lines ?? [],
+    edgeTerrain,
+  };
 }

@@ -17,6 +17,7 @@ import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { ProfileDimensions } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
 import { drawingVertices, formatProfileMeasure, snapPoint, useMeasure } from './measure.ts';
 import { useElementSize } from './useElementSize.ts';
@@ -72,6 +73,8 @@ interface Props {
   onMeasure?: (text: string | undefined) => void;
   /** kóty NK v reze (staničenie osi cesty); kreslia sa len v osi cesty a osi mosta */
   dimensions?: readonly DimensionChain[] | undefined;
+  /** úpravy osí uloženia (nástroje Os uloženia a Podpera; len v osi cesty a osi mosta, ADR 0017) */
+  lineEditing?: LineEditing | undefined;
 }
 
 /** niveletu kreslí pohľad sám (s polygónom PVI) */
@@ -130,8 +133,17 @@ export function ProfileView({
   goTo,
   onMeasure,
   dimensions,
+  lineEditing,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
+  /** návrh osi uloženia pod kurzorom */
+  const [linePreview, setLinePreview] = useState<LinePreview>();
+  const lineTool =
+    (tool === 'bearingLine' || tool === 'support') &&
+    lineEditing &&
+    (line.kind === 'road' || line.kind === 'bridgeAxis')
+      ? tool
+      : undefined;
   /** rozťahovaná oblasť mosta (u začiatku a kurzora) */
   const [areaDraft, setAreaDraft] = useState<{ u0: number; u1: number }>();
   const whole = fitRequest.whole;
@@ -203,9 +215,10 @@ export function ProfileView({
     if (z !== undefined) centerOn({ x: u, y: z });
   }, [goTo?.nonce]);
 
-  // zrušený nástroj (Esc v App) zahodí rozťahovanú oblasť
+  // zrušený nástroj (Esc v App) zahodí rozťahovanú oblasť a návrh osi
   useEffect(() => {
     if (tool !== 'area') setAreaDraft(undefined);
+    setLinePreview(undefined);
   }, [tool]);
 
   const stationStep = view ? niceStep(STATION_LABEL_PX / view.sx) : 0;
@@ -306,9 +319,23 @@ export function ProfileView({
     const u = world.x;
     if (u < line.uFrom || u > line.uTo) {
       onCursor(undefined);
+      setLinePreview(undefined);
       return;
     }
     const s = line.stationAt(u);
+    if (lineTool && lineEditing) {
+      const free =
+        lineTool === 'support'
+          ? handleAt(screen, lineEditing.handles, toScreen, 'profile', (h) => h.free)
+          : undefined;
+      setLinePreview(
+        free
+          ? previewOnHandle(free)
+          : s === undefined
+            ? undefined
+            : lineEditing.preview(s, undefined, !e.shiftKey),
+      );
+    }
     onCursor({
       s: s !== undefined && s >= 0 && s <= road.length ? s : undefined,
       point: line.pointAt(u),
@@ -324,7 +351,7 @@ export function ProfileView({
       : undefined;
   /** horný povrch a spodok NK na obrazovke (riadky kót nad a pod NK) */
   const dimensionFrame = (() => {
-    if (!dimensions || (line.kind !== 'road' && line.kind !== 'bridgeAxis')) return undefined;
+    if (line.kind !== 'road' && line.kind !== 'bridgeAxis') return undefined;
     const ys = (drawing?.entities ?? []).flatMap((e) =>
       e.kind === 'polyline' && e.layer === 'deck' ? e.points.map((p) => toScreen(p).y) : [],
     );
@@ -368,15 +395,22 @@ export function ProfileView({
       role="application"
       aria-label={sk.viewport.profile}
       data-area-mode={tool === 'area' ? '' : undefined}
-      data-add-mode={tool === 'measure' || undefined}
+      data-add-mode={tool === 'measure' || lineTool !== undefined || undefined}
       {...handlers}
       onClick={() => {
         if (tool === 'measure' && measure.hover && !wasDrag()) measure.click(measure.hover.point);
+        if (lineTool && linePreview && !wasDrag()) {
+          lineEditing?.place(linePreview, lineTool);
+          setLinePreview(undefined);
+        }
       }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerMove={onPointerMove}
-      onPointerLeave={() => onCursor(undefined)}
+      onPointerLeave={() => {
+        onCursor(undefined);
+        setLinePreview(undefined);
+      }}
       onDoubleClick={reset}
     >
       <div className="drawing-toolbar">
@@ -495,7 +529,29 @@ export function ProfileView({
           )}
           {dimensionFrame && dimensions && (
             <ProfileDimensions
-              chains={dimensions}
+              // pri návrhu osi sa rozpätia ukazujú živo (nižšie)
+              chains={linePreview ? dimensions.filter((c) => c.kind !== 'spans') : dimensions}
+              toX={(s) => {
+                const u = toU(s);
+                return u === undefined ? undefined : toScreen({ x: u, y: 0 }).x;
+              }}
+              top={dimensionFrame.top}
+              bottom={dimensionFrame.bottom}
+              height={size.height}
+            />
+          )}
+          {linePreview?.u !== undefined && (
+            <line
+              className="line-preview"
+              x1={toScreen({ x: linePreview.u, y: 0 }).x}
+              y1={0}
+              x2={toScreen({ x: linePreview.u, y: 0 }).x}
+              y2={size.height}
+            />
+          )}
+          {linePreview && dimensionFrame && linePreview.spans.length > 0 && (
+            <ProfileDimensions
+              chains={[{ kind: 'spans', segments: linePreview.spans }]}
               toX={(s) => {
                 const u = toU(s);
                 return u === undefined ? undefined : toScreen({ x: u, y: 0 }).x;

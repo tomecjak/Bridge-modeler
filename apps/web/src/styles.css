@@ -1018,6 +1018,15 @@ text.dw-stationing {
   pointer-events: none;
 }
 
+/* návrh osi uloženia pod kurzorom (ADR 0017) */
+.line-preview {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 10 3 2 3;
+  pointer-events: none;
+}
+
 /* terén na okrajoch NK v profile v osi mosta (Fáza 10b) */
 .edge-terrain {
   fill: none;

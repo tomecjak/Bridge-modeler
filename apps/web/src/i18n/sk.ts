@@ -618,8 +618,12 @@ export const sk = {
     },
     deck: 'Nosná konštrukcia',
     deckTitle: 'Vložiť NK výberom typológie prierezu na oblasť mosta',
+    bearingLine: 'Os uloženia',
+    bearingLineTitle:
+      'Rozmiestniť osi uloženia kliknutím v pôdoryse alebo pozdĺžnom profile (pole sa prichytáva po 0,5 m)',
     support: 'Podpera',
-    supportTitle: 'Pridať podperu kliknutím na os v pôdoryse (pri konci NK vznikne opora)',
+    supportTitle:
+      'Vložiť podperu na voľnú os uloženia alebo s novou osou kliknutím v pôdoryse či profile (pri konci NK vznikne opora)',
     editStudyArea: 'Upraviť oblasť',
     line: 'Čiara',
     lineTitle: 'Nakresliť čiaru v pôdoryse (napr. okraj NK)',
@@ -672,7 +676,10 @@ export const sk = {
     parameters: 'Parametre',
     libraryManage: 'Knižnica prierezov',
     toolHints: {
-      support: 'Podpera: kliknite na os v pôdoryse; Esc zruší.',
+      bearingLine:
+        'Os uloženia: kliknite v pôdoryse alebo profile; pole od predchádzajúcej osi sa prichytáva po 0,5 m (Shift bez prichytávania), Esc ukončí.',
+      support:
+        'Podpera: kliknite na voľnú os uloženia alebo na iné miesto NK (vznikne aj os); Shift bez prichytávania, Esc ukončí.',
       line: 'Čiara: klikajte vrcholy v pôdoryse, dvojklik alebo Enter ukončí, Esc zruší.',
       area: 'Oblasť mosta: ťahom v pozdĺžnom profile vyznačte úsek mosta; Esc zruší.',
       measure:
