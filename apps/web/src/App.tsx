@@ -83,7 +83,7 @@ import { duplicateElement } from './store/duplicate.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
-import { defaultSupport, useSupportState } from './store/supports.ts';
+import { defaultSupport, useAxisLengths, useSupportState } from './store/supports.ts';
 import {
   terrainCrossSections,
   terrainProfiles,
@@ -216,7 +216,8 @@ export function App() {
   const sectionAt =
     sectionStation ?? (sectionRange ? (sectionRange.from + sectionRange.to) / 2 : 0);
   const sections = useSectionResults(alignmentMap, parameterState.set, sectionAt);
-  const supportState = useSupportState(alignmentMap, parameterState.set);
+  const axisLengths = useAxisLengths(alignmentMap, parameterState.set);
+  const supportState = useSupportState(alignmentMap, parameterState.set, axisLengths);
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
 

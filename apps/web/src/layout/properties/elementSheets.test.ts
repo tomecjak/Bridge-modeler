@@ -145,8 +145,11 @@ describe('deckSheet', () => {
       },
     ],
     issues: [],
-    deckLength: 55,
-    overallLength: 64.84,
+    lengths: {
+      deck: { sFrom: 99.5, sTo: 154.5, lFrom: 99.5, lTo: 154.5, length: 55 },
+      bridged: { sFrom: 100.9, sTo: 153.1, lFrom: 100.9, lTo: 153.1, length: 52.2 },
+      overall: { sFrom: 94.58, sTo: 159.42, lFrom: 94.58, lTo: 159.42, length: 64.84 },
+    },
   } as DeckSpans;
 
   it('lists profile parameters with their laws and flags unknown ones', () => {
@@ -170,6 +173,7 @@ describe('deckSheet', () => {
     expect(labels(sheet, 'deck-spans')).toEqual([
       '1. pole (O1 – P1)',
       'Dĺžka NK',
+      'Dĺžka premostenia (líca úložných prahov)',
       'Celková dĺžka mosta (po konce krídel)',
     ]);
   });

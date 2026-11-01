@@ -257,6 +257,7 @@ export const sk = {
     spans: 'Polia',
     deckLength: 'Dĺžka NK',
     overallLength: 'Celková dĺžka mosta (po konce krídel)',
+    bridgedLength: 'Dĺžka premostenia (líca úložných prahov)',
     span: (n: number) => `${n}. pole`,
     noSupports: 'NK zatiaľ nemá podpery — pridajte ich v pôdoryse tlačidlom „Pridať podperu“.',
     add: 'Pridať podperu',

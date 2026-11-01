@@ -159,15 +159,20 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
   return parts;
 }
 
+/** Krajné body opôr pozdĺž osi mosta (staničenie konca NK + priemet na dotyčnicu), zvlášť vľavo a vpravo. */
+export interface OverallExtent {
+  from: { left: number; right: number };
+  to: { left: number; right: number };
+}
+
 /**
- * Celková dĺžka mosta (ADR 0010): vzdialenosť koncov krídel (bez krídel zadných líc opôr) meraná rovnobežne
- * s osou mosta, zvlášť na ľavej a pravej strane; výsledok je väčšia z nich. Bez opory na konci sa počíta od konca NK.
- * Lokálne priama os.
+ * Rozsah mosta po konce krídel (ADR 0010): krajné body opôr (bez krídel zadné líca) premietnuté na dotyčnicu osi
+ * mosta na konci NK, zvlášť na ľavej a pravej strane. Bez opory na konci je krajným bodom koniec NK.
  */
-export function overallLength(
+export function overallExtent(
   supports: readonly SupportResult[],
   deck: { sFrom: number; sTo: number },
-): number {
+): OverallExtent {
   const from = { left: deck.sFrom, right: deck.sFrom };
   const to = { left: deck.sTo, right: deck.sTo };
   for (const r of supports) {
@@ -181,5 +186,29 @@ export function overallLength(
       else to[side] = Math.max(to[side], s);
     }
   }
+  return { from, to };
+}
+
+/**
+ * Celková dĺžka mosta (ADR 0010): vzdialenosť koncov krídel (bez krídel zadných líc opôr) meraná rovnobežne
+ * s osou mosta, zvlášť na ľavej a pravej strane; výsledok je väčšia z nich. Bez opory na konci sa počíta od konca NK.
+ * Lokálne priama os.
+ */
+export function overallLength(
+  supports: readonly SupportResult[],
+  deck: { sFrom: number; sTo: number },
+): number {
+  const { from, to } = overallExtent(supports, deck);
   return Math.max(to.left - from.left, to.right - from.right);
+}
+
+/** Predná líca úložného prahu opory v pôdoryse: bod a smer (rovnobežne s osou podpery). */
+export function seatFrontLine(r: SupportResult): { point: Vec2; direction: Vec2 } | undefined {
+  const g = r.support.geometry;
+  const end = r.deckEnd;
+  const front = r.dimensions.frontOffset;
+  if (g.type !== 'abutment' || !end || !r.axis || front === undefined || !Number.isFinite(front))
+    return undefined;
+  const { d, f } = frame(r, end);
+  return { point: vec2(r.center.x + front * f.x, r.center.y + front * f.y), direction: d };
 }

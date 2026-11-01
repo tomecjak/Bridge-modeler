@@ -31,7 +31,7 @@ export interface Span {
   index: number;
   from: SpanSupport;
   to: SpanSupport;
-  /** dĺžka poľa = rozdiel spojitého staničenia [m] */
+  /** dĺžka poľa vodorovne po osi mosta [m] (bez prevodu rozdiel spojitého staničenia) */
   length: number;
 }
 
@@ -41,11 +41,18 @@ export interface SpanResult {
   issues: ModelIssue[];
 }
 
-/** Polia NK z jej podpier zoradených podľa staničenia s kontrolou poradia a dĺžok (ADR 0008). */
+/**
+ * Polia NK z jej podpier zoradených podľa staničenia s kontrolou poradia a dĺžok (ADR 0008). `measure` prevedie
+ * spojité staničenie na dĺžku po osi mosta (Fáza 10b); bez neho sa dĺžka poľa berie ako rozdiel staničení.
+ */
 export function evaluateSpans(
   sup: Pick<Superstructure, 'name'>,
   supports: readonly SpanSupport[],
-  options: { minSpan?: number; typology?: string | undefined } = {},
+  options: {
+    minSpan?: number;
+    typology?: string | undefined;
+    measure?: ((s: number) => number) | undefined;
+  } = {},
 ): SpanResult {
   const owner: IssueOwner = { kind: 'superstructure', name: sup.name };
   const issues: ModelIssue[] = [];
@@ -60,13 +67,14 @@ export function evaluateSpans(
       issues.push({ code: 'SupportOrder', support: x.support.name, expected });
   });
   const minSpan = options.minSpan ?? DEFAULT_MIN_SPAN;
+  const measure = options.measure ?? ((s: number) => s);
   const economic = options.typology ? ECONOMIC_SPANS[options.typology] : undefined;
   const spans: Span[] = [];
   for (let i = 1; i < sorted.length; i++) {
     const from = sorted[i - 1] as SpanSupport;
     const to = sorted[i] as SpanSupport;
-    const length = to.s - from.s;
-    if (length < 1e-6) {
+    const length = measure(to.s) - measure(from.s);
+    if (to.s - from.s < 1e-6) {
       issues.push({ code: 'DuplicateSupportStation', station: to.station });
       continue;
     }

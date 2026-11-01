@@ -1,17 +1,40 @@
 import type { Alignment } from '@bridge/alignment';
 import { defaultAbutmentGeometry, type ParameterSet, type Support } from '@bridge/model';
 import {
+  type AxisLength,
+  type BridgeLengths,
+  bridgeAxisLength,
+  bridgeAxisPlan,
+  bridgeLengths,
   evaluateSpans,
   evaluateSupport,
-  overallLength,
   type SpanResult,
   type SupportResult,
 } from '@bridge/sections';
 import { useMemo } from 'react';
 import { useProject } from './projectStore.ts';
 
-/** Polia NK, dĺžka NK a celková dĺžka mosta po konce krídel [m] (ADR 0010). */
-export type DeckSpans = SpanResult & { deckLength?: number; overallLength?: number };
+/** Polia NK a dĺžky mosta (NK, premostenie, celková) vodorovne po osi mosta [m] (ADR 0007, 0010). */
+export type DeckSpans = SpanResult & { lengths?: BridgeLengths };
+
+/** Presah osi mosta za konce NK pri hľadaní líc prahov [m]. */
+const AXIS_REACH = 30;
+
+/** Prevod staničenie ↔ dĺžka po osi mosta pre každú os mosta (podľa id); prepočíta sa pri zmene osí a parametrov. */
+export function useAxisLengths(
+  alignments: ReadonlyMap<string, Alignment>,
+  parameters: ParameterSet,
+): ReadonlyMap<string, AxisLength> {
+  const bridgeAxes = useProject((s) => s.project.bridgeAxes);
+  return useMemo(() => {
+    const map = new Map<string, AxisLength>();
+    for (const axis of bridgeAxes) {
+      const road = alignments.get(axis.alignment);
+      if (road) map.set(axis.id, bridgeAxisLength(axis, road, parameters));
+    }
+    return map;
+  }, [alignments, parameters, bridgeAxes]);
+}
 
 export interface SupportState {
   supports: SupportResult[];
@@ -23,6 +46,7 @@ export interface SupportState {
 export function useSupportState(
   alignments: ReadonlyMap<string, Alignment>,
   parameters: ParameterSet,
+  axisLengths: ReadonlyMap<string, AxisLength>,
 ): SupportState {
   const project = useProject((s) => s.project);
   const { bridgeAxes, profiles, superstructures, supports, planLines } = project;
@@ -35,21 +59,38 @@ export function useSupportState(
       if (own.length === 0) continue;
       const minSpan = parameters.evaluateAt(sup.from).values.get('minSpan');
       const typology = profiles.find((p) => p.id === sup.profile)?.typology;
+      const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
+      const measure = axisLengths.get(sup.bridgeAxis);
       const result: DeckSpans = evaluateSpans(sup, own, {
         ...(minSpan === undefined ? {} : { minSpan }),
         typology,
+        measure: measure?.lengthAt,
       });
-      const road = alignments.get(bridgeAxes.find((a) => a.id === sup.bridgeAxis)?.alignment ?? '');
+      const road = alignments.get(axis?.alignment ?? '');
       const sFrom = road?.stationing.fromDisplay(sup.from);
       const sTo = road?.stationing.fromDisplay(sup.to);
-      if (sFrom !== undefined && sTo !== undefined) {
-        result.deckLength = sTo - sFrom;
-        result.overallLength = overallLength(own, { sFrom, sTo });
+      if (axis && road && measure && sFrom !== undefined && sTo !== undefined) {
+        result.lengths = bridgeLengths({
+          measure,
+          supports: own,
+          sFrom,
+          sTo,
+          axisLine: bridgeAxisPlan(axis, road, parameters, sFrom - AXIS_REACH, sTo + AXIS_REACH),
+        });
       }
       spans.set(sup.id, result);
     }
     return { supports: results, spans };
-  }, [alignments, parameters, bridgeAxes, profiles, superstructures, supports, planLines]);
+  }, [
+    alignments,
+    parameters,
+    axisLengths,
+    bridgeAxes,
+    profiles,
+    superstructures,
+    supports,
+    planLines,
+  ]);
 }
 
 /**

@@ -336,23 +336,16 @@ export function deckSheet(input: {
             value: `${formatNumber(sp.length, 3)} m`,
           }),
         ),
-        ...(spans.deckLength !== undefined
+        ...(spans.lengths
           ? [
-              {
-                kind: 'readonly' as const,
-                label: sk.supports.deckLength,
-                value: `${formatNumber(spans.deckLength, 3)} m`,
-              },
-            ]
-          : []),
-        ...(spans.overallLength !== undefined
-          ? [
-              {
-                kind: 'readonly' as const,
-                label: sk.supports.overallLength,
-                value: `${formatNumber(spans.overallLength, 3)} m`,
-              },
-            ]
+              { label: sk.supports.deckLength, length: spans.lengths.deck.length },
+              { label: sk.supports.bridgedLength, length: spans.lengths.bridged?.length },
+              { label: sk.supports.overallLength, length: spans.lengths.overall.length },
+            ].flatMap(({ label, length }): PropertyRow[] =>
+              length === undefined
+                ? []
+                : [{ kind: 'readonly', label, value: `${formatNumber(length, 3)} m` }],
+            )
           : []),
         ...issueRows(spans.issues),
       ];

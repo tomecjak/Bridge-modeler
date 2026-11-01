@@ -2,7 +2,8 @@
  * Referenčný most 212-00 pre testy (prehľadný výkres `fixtures/inbox/Vzorový most.pdf`, neverzuje sa).
  * Os cesty je syntetická priamka so sklonom −0,64 % cez km 9,307 81 / 318,512 m n. m. (rozhodnutie 2026-10-31);
  * súradnice sú vymyslené. Rozmery z výkresu: polia 16,00 + 23,00 + 16,00 m (kolmo 14,10 / 20,26 / 14,10),
- * NK 56,00 m, celková dĺžka 65,84 m (krídla 4,00 m, opora 0,84 m, medzera 0,08 m v osi mosta), šikmosť 68,71 g,
+ * NK 56,00 m, premostenie 53,20 m (predsadenie prahu 0,90 m), celková dĺžka 65,84 m (krídla 4,00 m, opora 0,84 m,
+ * medzera 0,08 m v osi mosta), šikmosť 68,71 g,
  * NK h = 1,20 m + vozovka 0,09 m, výška uloženia 0,45 m, horná hrana prahu opôr 316,772 a 316,417 m n. m.
  */
 import type { AlignmentData } from '@bridge/alignment';
@@ -79,10 +80,11 @@ export function reference212Project(): ProjectFile {
       geometry: abutment
         ? {
             ...defaultAbutmentGeometry('20'),
-            seatLength: '2.05',
+            // dĺžka prahu 2,05, predsadenie 0,90 a 0,84 m od múrika po zadnú lícu sú kótované v osi mosta
+            // → rozmery kolmo na os opory (ADR 0010)
+            seatLength: String(2.05 * SIN),
             seatHeight: '1.1',
-            frontOffset: '0.9',
-            // 0,84 m od múrika po zadnú lícu je kótované v osi mosta → hrúbka kolmo na os opory
+            frontOffset: String(0.9 * SIN),
             backwallThickness: String(0.84 * SIN),
             gap: '0.08',
           }
