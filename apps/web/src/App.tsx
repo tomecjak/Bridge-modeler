@@ -16,6 +16,7 @@ import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
 import {
   type BearingLine,
   createEmptyProject,
+  type Obstacle,
   openProject,
   type Support,
   type SupportLibraryEntry,
@@ -29,6 +30,7 @@ import {
   type DeckRange,
   deckBearingsAt,
   deckEndSources,
+  evaluateObstacle,
   evaluateSuperstructure,
   globalScope,
   layoutStations,
@@ -63,6 +65,7 @@ import {
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
 import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
+import { type ObstacleForm, ObstacleInsertDialog } from './layout/ObstacleInsertDialog.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
@@ -74,6 +77,7 @@ import {
   profileSheet,
   supportSheet,
 } from './layout/properties/elementSheets.tsx';
+import { obstacleSheet } from './layout/properties/obstacleSheet.ts';
 import { PlanLineVerticesDialog } from './layout/properties/PlanLineVerticesDialog.tsx';
 import { ProfileLawDialog } from './layout/properties/ProfileLawDialog.tsx';
 import { ProfileTablesDialog } from './layout/properties/ProfileTablesDialog.tsx';
@@ -115,6 +119,7 @@ import type { Command, ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
 import { duplicateElement } from './store/duplicate.ts';
+import { newObstacle, obstacleName, useObstacleState } from './store/obstacles.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { type ProfileAxisKey, useProfileView } from './store/profile.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
@@ -192,6 +197,12 @@ export function App() {
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [supportLibraryOpen, setSupportLibraryOpen] = useState(false);
+  /** dialóg Vložiť prekážku s predvolenou osou (ADR 0020) */
+  const [obstacleDialog, setObstacleDialog] = useState<{
+    source: string;
+    road: string;
+    station: number;
+  }>();
   /** typ piliera a opory pre nástroj Podpera (kľúč typu, prázdny = predvolená podpera; ADR 0019) */
   const [supportTypeKeys, setSupportTypeKeys] = useState<Record<Support['kind'], string>>({
     pier: '',
@@ -292,6 +303,7 @@ export function App() {
     [project.supports, supportState.supports],
   );
   const supportLibrary = useSupportSources(projectSupportTypes);
+  const obstacleState = useObstacleState(alignmentMap, parameterState.set);
   const sections = useSectionResults(
     alignmentMap,
     parameterState.set,
@@ -584,6 +596,77 @@ export function App() {
       ...(at.width === undefined ? {} : { deckWidth: at.width }),
       level: base.foundation.level,
     });
+  }
+
+  /** Dialóg Vložiť prekážku (ADR 0020): predvolene vybraná os z LandXML okrem osi cesty, inak ručne na km. */
+  function openObstacleDialog(source?: string) {
+    const roadName = road?.name ?? project.alignments[0]?.name ?? '';
+    const other = project.alignments.find((a) => a.name !== roadName);
+    setObstacleDialog({
+      source: source ?? (other ? `alignment:${other.name}` : 'station'),
+      road: roadName,
+      station:
+        Math.round((referenceStation ?? sectionStation ?? displayRange?.from ?? 0) * 1e4) / 1e4,
+    });
+  }
+
+  /**
+   * Nová prekážka z dialógu (ADR 0020), jeden krok späť: os z LandXML s niveletou má úroveň podľa nivelety, ostatné
+   * kótu odhadnutú 6 m pod niveletou osi cesty v krížení (projektant ju prepíše).
+   */
+  function insertObstacle(form: ObstacleForm) {
+    const colon = form.source.indexOf(':');
+    const reference: Obstacle['reference'] =
+      form.source === 'station'
+        ? { type: 'station', alignment: form.road, station: form.station, angle: form.angle }
+        : form.source.startsWith('alignment:')
+          ? { type: 'curve', curve: { type: 'alignment', name: form.source.slice(colon + 1) } }
+          : { type: 'curve', curve: { type: 'planLine', id: form.source.slice(colon + 1) } };
+    const graded =
+      reference.type === 'curve' &&
+      reference.curve.type === 'alignment' &&
+      alignmentMap.get(reference.curve.name)?.profile !== undefined;
+    const draft = newObstacle({
+      id: newId('obst'),
+      name: form.name,
+      kind: form.kind,
+      reference,
+      graded,
+      level: 0,
+    });
+    const crossing = evaluateObstacle(
+      {
+        alignments: alignmentMap,
+        parameters: parameterState.set,
+        bridgeAxes: project.bridgeAxes,
+        superstructures: project.superstructures,
+        planLines: project.planLines,
+      },
+      draft,
+    ).crossings[0];
+    const roadAt = (alignment: string, station: number) => {
+      const a = alignmentMap.get(alignment);
+      const s = a?.stationing.fromDisplay(station);
+      try {
+        return a && s !== undefined && a.profile ? a.elevation(s).z + a.origin.z : undefined;
+      } catch {
+        return undefined;
+      }
+    };
+    const axisRoad = project.bridgeAxes.find((x) => x.id === crossing?.bridgeAxis)?.alignment;
+    const grade =
+      form.source === 'station'
+        ? roadAt(form.road, form.station)
+        : crossing && axisRoad
+          ? roadAt(axisRoad, crossing.station)
+          : undefined;
+    const obstacle = graded
+      ? draft
+      : newObstacle({ ...draft, reference, graded, level: (grade ?? 6) - 6 });
+    projectStore.getState().dispatch({ type: 'addElements', obstacles: [obstacle] });
+    setSelectedElement({ collection: 'obstacles', id: obstacle.id });
+    setObstacleDialog(undefined);
+    setMessage(sk.obstacles.inserted(obstacle.name));
   }
 
   /** Typ z knižnice na vybranú podperu (ADR 0019), jeden krok späť. */
@@ -1179,6 +1262,8 @@ export function App() {
       );
     for (const r of supportState.supports)
       elementIssues.set(r.support.id, r.issues.filter((i) => i.severity !== 'warning').length);
+    for (const r of obstacleState)
+      elementIssues.set(r.obstacle.id, r.issues.filter((i) => i.severity !== 'warning').length);
     const spans = new Map(
       [...supportState.spans].map(([id, s]) => [id, s.spans.map((x) => x.length)] as const),
     );
@@ -1198,6 +1283,7 @@ export function App() {
     project,
     sections.results,
     supportState,
+    obstacleState,
     lastImport.issues,
     alignments,
     parameterState.issues,
@@ -1258,6 +1344,8 @@ export function App() {
   /** Staničenie prvku na priblíženie (os uloženia, podpera, stred NK). */
   function targetStation(target: BrowserTarget): number | undefined {
     if (target.type !== 'element') return undefined;
+    const crossing = obstacleState.find((r) => r.obstacle.id === target.id)?.crossings[0];
+    if (crossing) return crossing.station;
     const station = lineStationOf(target.id);
     if (station !== undefined) return station;
     const deck = project.superstructures.find((x) => x.id === target.id);
@@ -1288,6 +1376,7 @@ export function App() {
         return;
       case 'planLines':
       case 'bridgeAxes':
+      case 'obstacles':
         setMode('2d');
         return;
     }
@@ -1408,6 +1497,7 @@ export function App() {
     superstructures: 'deck',
     planLines: 'planLine',
     terrains: 'terrain',
+    obstacles: 'obstacle',
     bridgeAxes: 'bridgeAxis',
   };
   const placing =
@@ -1465,6 +1555,7 @@ export function App() {
           setMode('section');
         },
         onVertices: () => setPlanLineVertices(selectedElement.id),
+        onObstacleFromLine: () => openObstacleDialog(`planLine:${selectedElement.id}`),
         onRedownload:
           project.terrains.find((t) => t.id === selectedElement.id)?.source === 'zbgis'
             ? () => void downloadDmrTerrain(selectedElement.id)
@@ -1514,6 +1605,7 @@ export function App() {
     },
     onImportLandXml: () => landXmlInput.current?.click(),
     onImportTerrain: () => terrainInput.current?.click(),
+    onInsertObstacle: () => openObstacleDialog(),
     onDownloadDmr: () => void downloadDmrTerrain(),
     onCancelDmr: () => {
       dmrCancel.current = true;
@@ -1812,6 +1904,23 @@ export function App() {
               terrain,
               busy: dmrProgress !== undefined,
               onRedownload: () => void downloadDmrTerrain(terrain.id),
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'obstacles') {
+      const obstacle = project.obstacles.find((o) => o.id === el.id);
+      if (obstacle)
+        return (
+          <PropertiesPalette
+            sheet={obstacleSheet({
+              obstacle,
+              result: obstacleState.find((r) => r.obstacle.id === obstacle.id),
+              alignments: project.alignments,
+              planLines: project.planLines,
+              bridgeAxes: project.bridgeAxes,
+              onDelete: deleteSelected,
               dispatch,
             })}
           />
@@ -2253,6 +2362,21 @@ export function App() {
         {message && <span className="status-message">{message}</span>}
       </footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
+      {obstacleDialog && (
+        <ObstacleInsertDialog
+          alignments={project.alignments.map((a) => a.name)}
+          planLines={project.planLines}
+          initial={obstacleDialog}
+          nameFor={(kind) =>
+            obstacleName(
+              sk.obstacles.defaultNames[kind],
+              project.obstacles.map((o) => o.name),
+            )
+          }
+          onInsert={insertObstacle}
+          onClose={() => setObstacleDialog(undefined)}
+        />
+      )}
       {supportLibraryOpen && (
         <SupportLibraryDialog
           projectName={project.name}

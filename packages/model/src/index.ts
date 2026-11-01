@@ -3,6 +3,7 @@ export * from './issues.ts';
 export * from './laws.ts';
 export * from './library.ts';
 export * from './migrations.ts';
+export * from './obstacles.ts';
 export * from './parameters.ts';
 export * from './project.ts';
 export * from './rename.ts';

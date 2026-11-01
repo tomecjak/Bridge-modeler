@@ -4,6 +4,7 @@ import {
   type BearingLine,
   type BridgeAxis,
   type Brief,
+  type Obstacle,
   type Parameter,
   type PlanLine,
   type ProfileDefinition,
@@ -24,6 +25,7 @@ export interface ElementCollections {
   supports: Support;
   terrains: TerrainSurface;
   planLines: PlanLine;
+  obstacles: Obstacle;
 }
 export type ElementCollection = keyof ElementCollections;
 
@@ -59,6 +61,7 @@ export type Command =
       supports?: Support[];
       terrains?: TerrainSurface[];
       planLines?: PlanLine[];
+      obstacles?: Obstacle[];
     }
   | ElementUpdate
   /** odstráni prvok; os uloženia aj s podperami na nej (ADR 0017) */
@@ -123,6 +126,7 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
         ),
       );
       draft.planLines.push(...(command.planLines ?? []));
+      draft.obstacles.push(...(command.obstacles ?? []));
       return;
     case 'updateElement': {
       const list = draft[command.collection] as { id: string }[];

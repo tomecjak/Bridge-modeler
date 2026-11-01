@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "11"
+      "const": "12"
     },
     "name": {
       "type": "string"
@@ -1713,6 +1713,201 @@
         ],
         "additionalProperties": false
       }
+    },
+    "obstacles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "road",
+              "railway",
+              "water",
+              "fieldRoad",
+              "footpath",
+              "other"
+            ]
+          },
+          "reference": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "curve"
+                  },
+                  "curve": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "alignment"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "planLine"
+                          },
+                          "id": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "id"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "curve"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "station"
+                  },
+                  "alignment": {
+                    "type": "string"
+                  },
+                  "station": {
+                    "type": "number"
+                  },
+                  "angle": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "alignment",
+                  "station",
+                  "angle"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "level": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "grade"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "line"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "constant"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "clearance": {
+            "type": "object",
+            "properties": {
+              "left": {
+                "type": "string"
+              },
+              "right": {
+                "type": "string"
+              },
+              "height": {
+                "type": "string"
+              },
+              "slopeLeft": {
+                "type": "string"
+              },
+              "slopeRight": {
+                "type": "string"
+              },
+              "chamfer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "left",
+              "right",
+              "height",
+              "slopeLeft",
+              "slopeRight",
+              "chamfer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "reference",
+          "level",
+          "clearance"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -1729,9 +1924,10 @@
     "bearingLines",
     "supports",
     "terrains",
-    "planLines"
+    "planLines",
+    "obstacles"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-11.json",
-  "title": "Projekt modelára mostov (schemaVersion 11)"
+  "$id": "https://bridge-modeler.local/schema/project-12.json",
+  "title": "Projekt modelára mostov (schemaVersion 12)"
 }

@@ -42,6 +42,7 @@ export interface BrowserInput {
     | 'profiles'
     | 'terrains'
     | 'planLines'
+    | 'obstacles'
     | 'parameters'
     | 'studyArea'
   >;
@@ -254,6 +255,23 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
         target: element('planLines', l.id),
         editable: true,
       })),
+    },
+    {
+      key: 'obstacles',
+      label: t.obstacles,
+      icon: 'folder',
+      children: project.obstacles.map((o) =>
+        withIssues(
+          {
+            key: `obstacles:${o.id}`,
+            label: o.name,
+            icon: 'obstacle',
+            target: element('obstacles', o.id),
+            editable: true,
+          },
+          issues.element(o.id),
+        ),
+      ),
     },
   ];
 

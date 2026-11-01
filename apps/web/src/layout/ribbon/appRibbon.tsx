@@ -33,6 +33,8 @@ export interface RibbonContext {
   onEditStudyArea: () => void;
   onImportLandXml: () => void;
   onImportTerrain: () => void;
+  /** prekážka pod mostom (ADR 0020) */
+  onInsertObstacle: () => void;
   onDownloadDmr: () => void;
   onCancelDmr: () => void;
   onOpenLibrary: () => void;
@@ -206,6 +208,20 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
                   disabled: !c.hasRoad,
                   onClick: c.onDownloadDmr,
                 },
+          ],
+        },
+        {
+          label: t.groups.obstacle,
+          items: [
+            {
+              kind: 'button',
+              id: 'obstacle',
+              label: sk.obstacles.insert,
+              icon: 'obstacle',
+              title: sk.obstacles.insertTitle,
+              disabled: !c.hasRoad,
+              onClick: c.onInsertObstacle,
+            },
           ],
         },
         {
@@ -532,7 +548,8 @@ export type ContextualKind =
   | 'deck'
   | 'planLine'
   | 'terrain'
-  | 'bridgeAxis';
+  | 'bridgeAxis'
+  | 'obstacle';
 
 export interface ContextualContext {
   kind: ContextualKind;
@@ -551,6 +568,8 @@ export interface ContextualContext {
   onEditProfile: () => void;
   /** čiara: tabuľka vrcholov; terén: stiahnuť znova (len DMR zo ZBGIS); os mosta: posuny */
   onVertices: () => void;
+  /** čiara: prekážka s osou v tejto čiare (ADR 0020) */
+  onObstacleFromLine: () => void;
   onRedownload: (() => void) | undefined;
   onAxisOffset: (which: 'horizontalOffset' | 'verticalOffset') => void;
   /** NK: profil v jej osi mosta; čiara: profil v čiare (Fáza 10b) */
@@ -668,6 +687,7 @@ export function contextualTab(c: ContextualContext): RibbonTab {
             items: [
               button('line-vertices', t.vertices, 'line', c.onVertices),
               button('line-profile', t.profileInLine, 'profile', c.onProfileHere),
+              button('line-obstacle', sk.obstacles.fromLine, 'obstacle', c.onObstacleFromLine),
             ],
           },
         ];
@@ -680,6 +700,8 @@ export function contextualTab(c: ContextualContext): RibbonTab {
               },
             ]
           : [];
+      case 'obstacle':
+        return [];
       case 'bridgeAxis':
         return [
           {

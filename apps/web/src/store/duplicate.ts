@@ -185,6 +185,22 @@ export function duplicateElement(
         selected: { collection, id: copy.id },
       };
     }
+    case 'obstacles': {
+      const o = project.obstacles.find((x) => x.id === id);
+      if (!o) return undefined;
+      const copy = {
+        ...clone(o),
+        id: newId('obst'),
+        name: copyName(
+          o.name,
+          project.obstacles.map((x) => x.name),
+        ),
+      };
+      return {
+        command: { type: 'addElements', obstacles: [copy] },
+        selected: { collection, id: copy.id },
+      };
+    }
     case 'terrains':
       return undefined;
   }

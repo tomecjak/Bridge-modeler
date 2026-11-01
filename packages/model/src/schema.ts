@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BriefSchema, emptyBrief, StudyAreaSchema } from './brief.ts';
+import { ObstacleSchema } from './obstacles.ts';
 import {
   BearingLineSchema,
   BridgeAxisSchema,
@@ -12,7 +13,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '11';
+export const SCHEMA_VERSION = '12';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -90,6 +91,8 @@ export const ProjectFileSchema = z.strictObject({
   supports: z.array(SupportSchema),
   terrains: z.array(TerrainSurfaceSchema),
   planLines: z.array(PlanLineSchema),
+  /** prekážky pod mostom (ADR 0020) */
+  obstacles: z.array(ObstacleSchema),
 });
 
 export type ProjectFile = z.infer<typeof ProjectFileSchema>;
@@ -110,5 +113,6 @@ export function createEmptyProject(name: string): ProjectFile {
     supports: [],
     terrains: [],
     planLines: [],
+    obstacles: [],
   };
 }

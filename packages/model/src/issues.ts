@@ -19,7 +19,7 @@ export type ExpressionField =
 
 /** Prvok modelu, ktorého sa problém týka (prierez, NK, os mosta). */
 export interface IssueOwner {
-  kind: 'profile' | 'superstructure' | 'bridgeAxis' | 'support' | 'bearingLine';
+  kind: 'profile' | 'superstructure' | 'bridgeAxis' | 'support' | 'bearingLine' | 'obstacle';
   name: string;
 }
 
@@ -87,6 +87,12 @@ export type ModelIssue = {
   /** pásy priečnikov susedných osí sa prekrývajú */
   | { code: 'CrossbeamOverlap'; lines: [string, string] }
   | { code: 'InvalidCrossingAngle'; angle: number }
+  /** os prekážky (krivka) v projekte nie je (ADR 0020) */
+  | { code: 'ObstacleCurveNotFound'; curve: string }
+  /** prekážka nekríži os mosta v okolí NK */
+  | { code: 'ObstacleWithoutCrossing' }
+  /** úroveň podľa nivelety potrebuje os z LandXML s niveletou, podľa čiary čiaru meračky */
+  | { code: 'ObstacleLevelUnavailable'; level: 'grade' | 'line' }
   | { code: 'BearingOutsideDeck'; index: number; x: number }
   | { code: 'NonPositiveSupportHeight'; height: number }
   /** založenie podľa terénu bez terénu v strede podpery — základ je odhadnutý pod spodkom NK (ADR 0019) */

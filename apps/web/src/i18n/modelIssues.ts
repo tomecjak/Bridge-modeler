@@ -28,6 +28,7 @@ const OWNER = {
   bridgeAxis: 'Os mosta',
   support: 'Podpera',
   bearingLine: 'Os uloženia',
+  obstacle: 'Prekážka',
 } as const;
 
 const TYPE = { number: 'číslo', boolean: 'logická hodnota' } as const;
@@ -156,6 +157,14 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}priečniky na osiach uloženia ${issue.lines[0]} a ${issue.lines[1]} sa prekrývajú.`;
     case 'BearingLineOccupied':
       return `${prefix}na osi uloženia ${issue.line} stojí viac podpier (${issue.supports.join(', ')}).`;
+    case 'ObstacleCurveNotFound':
+      return `${prefix}os prekážky „${issue.curve}“ v projekte nie je.`;
+    case 'ObstacleWithoutCrossing':
+      return `${prefix}nekríži os mosta v okolí NK.`;
+    case 'ObstacleLevelUnavailable':
+      return issue.level === 'grade'
+        ? `${prefix}úroveň podľa nivelety potrebuje os z LandXML s niveletou — zadajte kótu.`
+        : `${prefix}úroveň podľa výšky čiary potrebuje čiaru meračky s výškami — zadajte kótu.`;
     case 'InvalidCrossingAngle':
       return `${prefix}uhol kríženia ${formatNumber(issue.angle, 2)}° musí byť medzi 0° a 180° (90° = kolmá podpera).`;
     case 'BearingOutsideDeck':
