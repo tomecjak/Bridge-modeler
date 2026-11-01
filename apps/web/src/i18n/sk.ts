@@ -485,6 +485,12 @@ export const sk = {
     grade: 'sklon',
     bpv: 'm n. m.',
     outside: 'mimo osi',
+    gradeLine: 'niveleta',
+    deck: 'NK hore / spodok',
+    terrain: 'terén',
+    terrainLeft: 'terén vľavo',
+    terrainRight: 'terén vpravo',
+    clearance: 'spodok NK nad terénom',
   },
   elementKind: {
     line: 'priamka',

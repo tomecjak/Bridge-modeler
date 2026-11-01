@@ -3,8 +3,10 @@ import {
   type Drawing,
   drawingBounds,
   type LayerId,
+  type ProfileReadout,
   profileGrade,
   profilePvis,
+  profileReadout,
   profileTicks,
 } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
@@ -29,6 +31,8 @@ import {
 export interface ProfileCursor {
   s: number | undefined;
   point: Vec2;
+  /** hodnoty profilu pod kurzorom */
+  readout: ProfileReadout;
 }
 
 interface Props {
@@ -279,6 +283,7 @@ export function ProfileView({
     onCursor({
       s: s !== undefined && s >= 0 && s <= road.length ? s : undefined,
       point: line.pointAt(u),
+      readout: profileReadout(drawing, grade, edgeTerrain, u),
     });
   }
 
@@ -288,6 +293,16 @@ export function ProfileView({
     cursorU !== undefined && cursorZ !== undefined
       ? toScreen({ x: cursorU, y: cursorZ })
       : undefined;
+  /** body NK a terénu pod kurzorom (značky a výška spodku NK nad terénom) */
+  const readout =
+    cursorU === undefined ? undefined : profileReadout(drawing, grade, edgeTerrain, cursorU);
+  const mark = (z: number | undefined) =>
+    cursorU === undefined || z === undefined ? undefined : toScreen({ x: cursorU, y: z });
+  const clearanceLine = (() => {
+    const bottom = mark(readout?.deckBottom);
+    const ground = mark(readout?.terrain);
+    return bottom && ground && readout?.clearance !== undefined ? { bottom, ground } : undefined;
+  })();
 
   /** pás oblasti mosta v u (oblasť je v staničení osi cesty) */
   const band = (() => {
@@ -434,6 +449,34 @@ export function ProfileView({
             <g className="cursor">
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />
               <circle className="cursor-marker" cx={cursorPoint.x} cy={cursorPoint.y} r={5} />
+            </g>
+          )}
+          {readout && (
+            <g className="readout">
+              {clearanceLine && (
+                <line
+                  className="readout-clearance"
+                  x1={clearanceLine.bottom.x}
+                  y1={clearanceLine.bottom.y}
+                  x2={clearanceLine.ground.x}
+                  y2={clearanceLine.ground.y}
+                />
+              )}
+              {(
+                [
+                  ['deck', readout.deckTop],
+                  ['deck', readout.deckBottom],
+                  ['terrain', readout.terrain],
+                  ['terrain-left', readout.terrainLeft],
+                  ['terrain-right', readout.terrainRight],
+                ] as const
+              ).map(([kind, z], i) => {
+                const q = mark(z);
+                return q ? (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: pevné poradie značiek
+                  <circle key={i} className={`readout-${kind}`} cx={q.x} cy={q.y} r={3.5} />
+                ) : null;
+              })}
             </g>
           )}
         </svg>

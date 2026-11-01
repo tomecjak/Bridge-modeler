@@ -1316,13 +1316,13 @@ export function App() {
     );
   }
 
+  /** Ľavá časť stavového riadka: výzva nástroja alebo poloha kurzora (hlásenie je vpravo). */
   function statusText(): string {
-    if (message) return message;
     if (tool !== 'none') return sk.ribbon.toolHints[tool];
     if (mode === 'section' && editedProfile) return sk.profileEditor.hints[profileTool];
     if (cursor && item && project.crs.origin)
       return formatCursor(cursor, item.alignment, project.crs.origin);
-    return sk.statusBar.ready;
+    return message ? '' : sk.statusBar.ready;
   }
 
   function onDrop(e: DragEvent<HTMLDivElement>) {
@@ -1414,7 +1414,9 @@ export function App() {
         alignment={item?.alignment}
         cursorS={cursor?.s}
         onPlanCursor={(c) => setCursor(c && { source: 'plan', ...c })}
-        onProfileCursor={(c) => setCursor(c && { source: 'profile', s: c.s, point: c.point })}
+        onProfileCursor={(c) =>
+          setCursor(c && { source: 'profile', s: c.s, point: c.point, readout: c.readout })
+        }
         planCursorPoint={cursor?.source === 'profile' ? cursor.point : undefined}
         parametersView={
           <ParameterTable
@@ -1556,7 +1558,10 @@ export function App() {
         }
       />
       {rightPanel()}
-      <footer className="app-status">{statusText()}</footer>
+      <footer className="app-status">
+        <span className="status-main">{statusText()}</span>
+        {message && <span className="status-message">{message}</span>}
+      </footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
       {libraryOpen && (
         <ProfileLibraryDialog

@@ -28,6 +28,22 @@ describe('formatCursor', () => {
     );
   });
 
+  it('shows the readout of the profile under the cursor', () => {
+    const readout = {
+      u: 50,
+      grade: 301,
+      deckTop: 300.91,
+      deckBottom: 299.71,
+      terrain: 294.5,
+      terrainLeft: 295.25,
+      terrainRight: undefined,
+      clearance: 5.21,
+    };
+    expect(formatCursor({ source: 'profile', s: 50, readout }, alignment, origin)).toBe(
+      'km 1,050 000  ·  niveleta 301,000  ·  sklon 2,000 %  ·  NK hore / spodok 300,910 / 299,710  ·  terén 294,500  ·  terén vľavo 295,250  ·  spodok NK nad terénom 5,21 m',
+    );
+  });
+
   it('reports positions outside the alignment', () => {
     expect(
       formatCursor(

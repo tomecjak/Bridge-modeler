@@ -8,11 +8,13 @@ import {
   type DeckLongitudinal,
   deckCutAlong,
   deckLongitudinal,
+  highestCrossing,
+  lowestCrossing,
   type ProfileLine,
   supportParts,
 } from '@bridge/sections';
 import type { DeckDrawingData } from './deck.ts';
-import { type Drawing, type Entity, polyline, textHeight } from './model.ts';
+import { type Drawing, type Entity, type PolylineEntity, polyline, textHeight } from './model.ts';
 import { sampleProfile, stationTicks } from './sampling.ts';
 
 /** Rez podperou v pozdĺžnom profile (x = u čiary profilu, y = lokálne z). */
@@ -290,4 +292,66 @@ export function profileDrawing(input: ProfileInput): Drawing {
     });
   }
   return { entities, scale };
+}
+
+/** Hodnoty pozdĺžneho profilu pod kurzorom (výšky v m n. m.; Fáza 10b). */
+export interface ProfileReadout {
+  u: number;
+  /** niveleta */
+  grade: number | undefined;
+  /** horný povrch a spodok NK (zvislica cez obrysy rezu NK) */
+  deckTop: number | undefined;
+  deckBottom: number | undefined;
+  /** terén v čiare profilu a na okrajoch NK (pri viacerých povrchoch najvyšší) */
+  terrain: number | undefined;
+  terrainLeft: number | undefined;
+  terrainRight: number | undefined;
+  /** výška spodku NK nad terénom v čiare profilu */
+  clearance: number | undefined;
+}
+
+/** y lomenej čiary v bode x (body vzostupne podľa x); mimo rozsahu undefined. */
+function yOn(points: readonly Vec2[], x: number): number | undefined {
+  for (let i = 0; i + 1 < points.length; i++) {
+    const a = points[i] as Vec2;
+    const b = points[i + 1] as Vec2;
+    if ((a.x - x) * (b.x - x) > 0) continue;
+    return b.x !== a.x ? a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x) : Math.max(a.y, b.y);
+  }
+  return undefined;
+}
+
+const highest = (values: readonly (number | undefined)[]) => {
+  const defined = values.filter((v): v is number => v !== undefined);
+  return defined.length > 0 ? Math.max(...defined) : undefined;
+};
+
+/**
+ * Odčítanie pod kurzorom v pozdĺžnom profile (Fáza 10b): niveleta, horný povrch a spodok NK, terén v čiare
+ * a na okrajoch NK a výška spodku NK nad terénom v x = `u`.
+ */
+export function profileReadout(
+  drawing: Drawing | undefined,
+  grade: readonly Vec2[],
+  edges: { left: readonly (readonly Vec2[])[]; right: readonly (readonly Vec2[])[] } | undefined,
+  u: number,
+): ProfileReadout {
+  const lines = (layer: PolylineEntity['layer']) =>
+    (drawing?.entities ?? []).filter(
+      (e): e is PolylineEntity => e.kind === 'polyline' && e.layer === layer,
+    );
+  const deck = lines('deck').map((e) => e.points);
+  const deckTop = highestCrossing(deck, u);
+  const deckBottom = lowestCrossing(deck, u);
+  const terrain = highest(lines('terrain').map((e) => yOn(e.points, u)));
+  return {
+    u,
+    grade: yOn(grade, u),
+    deckTop,
+    deckBottom,
+    terrain,
+    terrainLeft: highest((edges?.left ?? []).map((r) => yOn(r, u))),
+    terrainRight: highest((edges?.right ?? []).map((r) => yOn(r, u))),
+    clearance: deckBottom !== undefined && terrain !== undefined ? deckBottom - terrain : undefined,
+  };
 }

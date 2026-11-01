@@ -441,8 +441,21 @@ body {
 }
 
 .app-status {
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
   font-variant-numeric: tabular-nums;
   white-space: pre;
+}
+
+.status-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-message {
+  flex-shrink: 0;
+  color: var(--text);
 }
 
 .toolbar {
@@ -1047,6 +1060,36 @@ text.dw-stationing {
 
 .drawing-legend .legend-terrain-right::before {
   border-top: 2px dashed var(--terrain-right);
+}
+
+/* odčítanie pod kurzorom v profile (Fáza 10b) */
+.readout circle {
+  stroke: var(--panel);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.readout-deck {
+  fill: var(--accent);
+}
+
+.readout-terrain {
+  fill: var(--terrain);
+}
+
+.readout-terrain-left {
+  fill: var(--terrain-left);
+}
+
+.readout-terrain-right {
+  fill: var(--terrain-right);
+}
+
+.readout-clearance {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+  pointer-events: none;
 }
 
 /* čiara pozdĺžneho profilu v pôdoryse (Fáza 10b) */

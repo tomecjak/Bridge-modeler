@@ -10,6 +10,7 @@ import {
   profileDrawing,
   profileEdgeLines,
   profileGrade,
+  profileReadout,
   profileTicks,
 } from './profile.ts';
 import { sectionDrawing } from './section.ts';
@@ -205,6 +206,48 @@ describe('profileDrawing', () => {
       '4  km 9,362 810',
     ]);
     for (const t of labels) expect(t.rotation).toBeCloseTo(Math.PI / 2, 12);
+  });
+});
+
+describe('profileReadout', () => {
+  const profile = profileDrawing({
+    line: axisLine,
+    decks: [{ id: data.id, cut: cuts.deck }],
+    supports: cuts.supports,
+    terrain: [
+      [
+        { u: 40, z: 310 },
+        { u: 140, z: 309 },
+      ],
+    ],
+  });
+  const grade = profileGrade(axisLine);
+
+  it('reads the grade, deck top and soffit, terrain and the soffit height above terrain', () => {
+    const u = measure.lengthAt((ref.sFrom + ref.sTo) / 2);
+    const r = profileReadout(
+      profile,
+      grade,
+      { left: [[vec2(40, 312), vec2(140, 312)]], right: [] },
+      u,
+    );
+    const z = ref.alignment.elevation((ref.sFrom + ref.sTo) / 2).z + ref.alignment.origin.z;
+    expect(r.grade).toBeCloseTo(z, 6);
+    // os mosta leží 0,09 m pod niveletou (vozovka), NK h = 1,20 m
+    expect(r.deckTop).toBeCloseTo(z - 0.09, 3);
+    expect((r.deckTop ?? 0) - (r.deckBottom ?? 0)).toBeCloseTo(1.2, 3);
+    expect(r.terrain).toBeCloseTo(310 - (u - 40) / 100, 9);
+    expect(r.clearance).toBeCloseTo((r.deckBottom ?? 0) - (r.terrain ?? 0), 9);
+    expect(r.terrainLeft).toBeCloseTo(312, 9);
+    expect(r.terrainRight).toBeUndefined();
+  });
+
+  it('leaves values outside the deck and terrain undefined', () => {
+    const r = profileReadout(profile, grade, undefined, 5);
+    expect(r.deckTop).toBeUndefined();
+    expect(r.terrain).toBeUndefined();
+    expect(r.clearance).toBeUndefined();
+    expect(r.grade).toBeDefined();
   });
 });
 
