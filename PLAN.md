@@ -478,7 +478,8 @@ Rozhodnutia 2026-11-01 (plan mode): hodnoty predvolieb voľných prierezov sú z
   - `clearanceShape`, `clearanceOutline`, `clearanceAt`, `clearanceAlong` (zahustenie v odsadeniach okrajov, skosení a osi → šírka (l + r) / sin α presne), `clearanceFootprint`, úseky ± 60 m od krížení; `profileDrawing` (obrys, prerušovaná zvislica s popisom „km · názov (druh) · Q100“), `sectionDrawing`, `planDrawing` (os a pás); hranol `clearanceMesh` (objekt scény `clearance`, priesvitný, výber klikom). Overené v prehliadači na syntetickom krížení 60°.
 - [x] kontroly `ClearanceViolated` (s hodnotou), `SupportInClearance`; kóta minimálnej voľnej výšky
   - `checkClearance` (`clearanceChecks.ts`): vzorky po osi prekážky s krokom 0,5 m v odsadeniach okrajov, polovíc, osi a skosení, spodok NK z rezu prierezu (premietnutie na os cesty, `lowestCrossing`), najmenšia rezerva; pôdorys podpery (drieky aj základ) voči pásu voľného prierezu. Vo vlastnostiach prekážky voľná výška min. s km, odznak chyby v prehliadači; kóta „v 6,66“ v profile v krížení (len na obrazovke, s kótami).
-- [ ] ukotvenie Rozloženia polí na kríženie s prekážkou (km a uhol, 10c)
+- [x] ukotvenie Rozloženia polí na kríženie s prekážkou (km a uhol, 10c)
+  - pole „Kríženie s prekážkou“ v dialógu (kríženia s osou mosta vybranej NK) nastaví ukotvenie symetricky okolo km kríženia a uhol kríženia; overené v prehliadači (25 + 30 + 25 okolo km 0,200 pri 60°).
 - [ ] podklad mapy (ortofoto, mapa ZBGIS) aj v pôdoryse, ako v 3D (odpoveď 23, 2026-11-01)
 - [ ] balík `packages/survey`: vlastná čítačka DXF (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha; ANSI_1250), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov)
 - [ ] import meračky DXF (len 2D podklad, bez TIN — odpoveď 23, schéma v13): výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; čiara meračky ako os prekážky

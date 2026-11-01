@@ -686,6 +686,10 @@ export const sk = {
     deck: 'Nosná konštrukcia',
     spans: 'Polia [m]',
     anchor: 'Ukotvenie',
+    crossing: 'Kríženie s prekážkou',
+    noCrossing: '— (bez prekážky)',
+    crossingLabel: (name: string, station: string, angle: string) =>
+      `${name} · ${station} · ${angle}°`,
     anchors: {
       start: 'od začiatku (prvá os)',
       end: 'od konca (posledná os)',

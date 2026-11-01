@@ -45,6 +45,10 @@ interface Props {
     pier: readonly { value: string; label: string }[];
     abutment: readonly { value: string; label: string }[];
   };
+  /** kríženia prekážok s osou mosta NK (ADR 0020): ukotvenie symetricky okolo km kríženia s jeho uhlom */
+  crossings?: (
+    deckId: string,
+  ) => readonly { id: string; label: string; station: number; angle: number }[];
   onApply: (form: SpanLayoutForm) => void;
   onClose: () => void;
 }
@@ -72,6 +76,7 @@ export function SpanLayoutDialog({
   defaults,
   preview,
   templates,
+  crossings,
   onApply,
   onClose,
 }: Props) {
@@ -92,6 +97,8 @@ export function SpanLayoutDialog({
   const [overhang, setOverhang] = useState(formatNumber(initial.overhang, 2));
   const [pier, setPier] = useState(templates.pier[0]?.value ?? '');
   const [abutment, setAbutment] = useState(templates.abutment[0]?.value ?? '');
+  const [crossing, setCrossing] = useState('');
+  const deckCrossings = crossings?.(deckId) ?? [];
 
   const parsed = parseSpanLayout(text);
   const overhangValue = parseNumber(overhang);
@@ -116,6 +123,7 @@ export function SpanLayoutDialog({
     setInitial(d);
     setText(d.text);
     setStation(d.stations[anchor]);
+    setCrossing('');
     setAngle(d.angle);
     setOverhang(formatNumber(d.overhang, 2));
   }
@@ -152,6 +160,30 @@ export function SpanLayoutDialog({
               onChange={(e) => setText(e.target.value)}
             />
           </Field>
+          {deckCrossings.length > 0 && (
+            <Field label={t.crossing}>
+              <select
+                value={crossing}
+                aria-label={t.crossing}
+                onChange={(e) => {
+                  const c = deckCrossings.find((x) => x.id === e.target.value);
+                  setCrossing(e.target.value);
+                  if (!c) return;
+                  // kríženie s prekážkou: polia symetricky okolo km kríženia, uhol kríženia prekážky
+                  setAnchor('center');
+                  setStation(Math.round(c.station * 1e4) / 1e4);
+                  setAngle(String(Math.round(c.angle * 100) / 100));
+                }}
+              >
+                <option value="">{t.noCrossing}</option>
+                {deckCrossings.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field label={t.anchor}>
             <select
               value={anchor}
@@ -160,6 +192,7 @@ export function SpanLayoutDialog({
                 const value = e.target.value as SpanAnchor;
                 setAnchor(value);
                 setStation(initial.stations[value]);
+                setCrossing('');
               }}
             >
               {(['start', 'end', 'center'] as const).map((a) => (

@@ -50,6 +50,7 @@ import {
 } from '@bridge/terrain';
 import { type DragEvent, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { type CursorInfo, formatCursor } from './format/cursor.ts';
+import { formatNumber } from './format/number.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
 import { formatTerrainIssue } from './i18n/terrainIssues.ts';
@@ -2505,6 +2506,23 @@ export function App() {
           templates={{
             pier: spanLayoutTypes('pier'),
             abutment: spanLayoutTypes('abutment'),
+          }}
+          crossings={(deckId) => {
+            const axis = project.superstructures.find((d) => d.id === deckId)?.bridgeAxis;
+            return obstacleState.flatMap((r) =>
+              r.crossings
+                .filter((c) => c.bridgeAxis === axis)
+                .map((c, i) => ({
+                  id: `${r.obstacle.id}:${i}`,
+                  label: sk.spanLayout.crossingLabel(
+                    r.obstacle.name,
+                    formatStation(c.station),
+                    formatNumber(c.angle, 2),
+                  ),
+                  station: c.station,
+                  angle: c.angle,
+                })),
+            );
           }}
           onApply={applySpanLayout}
           onClose={() => setSpanLayoutDeck(undefined)}
