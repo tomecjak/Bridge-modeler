@@ -1,19 +1,26 @@
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
-import { createEmptyProject, defaultAbutmentGeometry, type Support } from '@bridge/model';
+import {
+  type BearingLine,
+  createEmptyProject,
+  defaultAbutmentGeometry,
+  type Support,
+} from '@bridge/model';
 import { deckFromProfile, profileTemplate } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
 import { type BrowserInput, type BrowserNode, browserTree, sameTarget } from './browserTree.ts';
 
 const road = syntheticAlignmentData(undefined, 1000);
 
-function support(id: string, kind: Support['kind'], station: number, deck = 'nk'): Support {
+function line(id: string, station: number, deck = 'nk'): BearingLine {
+  return { id, name: id.slice(1), superstructure: deck, station, crossingAngle: '90' };
+}
+
+function support(id: string, kind: Support['kind'], bearingLine: string): Support {
   return {
     id,
     name: id.toUpperCase(),
     kind,
-    superstructure: deck,
-    station,
-    crossingAngle: '90',
+    bearingLine,
     offset: '0',
     geometry:
       kind === 'abutment'
@@ -39,12 +46,20 @@ function input(): BrowserInput {
   });
   project.bridgeAxes.push(bridgeAxis);
   project.superstructures.push(superstructure);
-  // podpery v opačnom poradí ako staničenie, jedna bez NK
+  // osi v opačnom poradí ako staničenie, os 3 bez podpery, os 9 bez NK, podpera p8 bez osi
+  project.bearingLines.push(
+    line('l4', 1155),
+    line('l3', 1140),
+    line('l2', 1116),
+    line('l1', 1100),
+    line('l9', 1130, 'chýba'),
+  );
   project.supports.push(
-    support('o2', 'abutment', 1155),
-    support('p1', 'pier', 1116),
-    support('o1', 'abutment', 1100),
-    support('p9', 'pier', 1130, 'chýba'),
+    support('o2', 'abutment', 'l4'),
+    support('p1', 'pier', 'l2'),
+    support('o1', 'abutment', 'l1'),
+    support('p9', 'pier', 'l9'),
+    support('p8', 'pier', 'chýba'),
   );
   project.studyArea = { alignment: road.name, from: 1080, to: 1180 };
   return {
@@ -78,14 +93,29 @@ describe('browserTree', () => {
     expect(find(tree, 'views')?.children?.map((n) => n.label)).toEqual(['3D', '2D']);
   });
 
-  it('nests the deck under its bridge axis and road, with supports ordered by station', () => {
+  it('nests the deck under its bridge axis and road, with bearing lines by station and their supports', () => {
     const tree = browserTree(input());
     const model = find(tree, 'model');
     // vetva bez prvkov mosta v modeli nie je, len v podkladoch
     expect(model?.children?.map((n) => n.label)).toEqual([road.name, 'Nepriradené']);
     const deck = find(tree, 'superstructures:nk');
     expect(deck?.detail).toBe('Komora · 16,00 + 23,00 + 16,00');
-    expect(deck?.children?.map((n) => n.label)).toEqual(['O1', 'P1', 'O2']);
+    expect(deck?.children?.map((n) => n.label)).toEqual([
+      'Os uloženia 1',
+      'Os uloženia 2',
+      'Os uloženia 3',
+      'Os uloženia 4',
+    ]);
+    expect(deck?.children?.map((n) => n.children?.map((s) => s.label))).toEqual([
+      ['O1'],
+      ['P1'],
+      [],
+      ['O2'],
+    ]);
+    expect(find(tree, 'bearingLines:l2')).toMatchObject({
+      detail: 'km 1,116 000 · 90°',
+      icon: 'bearingLine',
+    });
     expect(find(tree, 'supports:p1')).toMatchObject({ issues: 1, icon: 'pier' });
     expect(find(tree, 'supports:o1')?.icon).toBe('abutment');
     expect(find(tree, 'bridgeAxes:ax')?.children?.[0]?.key).toBe('superstructures:nk');
@@ -94,7 +124,11 @@ describe('browserTree', () => {
 
   it('keeps elements with a missing parent under Unassigned', () => {
     const tree = browserTree(input());
-    expect(find(tree, 'unassigned')?.children?.map((n) => n.key)).toEqual(['supports:p9']);
+    expect(find(tree, 'unassigned')?.children?.map((n) => n.key)).toEqual([
+      'bearingLines:l9',
+      'supports:p8',
+    ]);
+    expect(find(tree, 'bearingLines:l9')?.children?.map((n) => n.key)).toEqual(['supports:p9']);
   });
 
   it('shows all LandXML alignments with their issues among the sources', () => {

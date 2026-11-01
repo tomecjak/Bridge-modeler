@@ -456,7 +456,14 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
 }
 
 /** Druh vybraného prvku pre kontextovú kartu „Upraviť | …“. */
-export type ContextualKind = 'profile' | 'support' | 'deck' | 'planLine' | 'terrain' | 'bridgeAxis';
+export type ContextualKind =
+  | 'profile'
+  | 'support'
+  | 'bearingLine'
+  | 'deck'
+  | 'planLine'
+  | 'terrain'
+  | 'bridgeAxis';
 
 export interface ContextualContext {
   kind: ContextualKind;
@@ -469,6 +476,8 @@ export interface ContextualContext {
   onShowInSection: () => void;
   /** NK: nástroj Podpera a prechod do editora jej prierezu */
   onAddSupport: () => void;
+  /** os uloženia bez podpery: vložiť na ňu podperu (ADR 0017) */
+  onSupportOnLine: (() => void) | undefined;
   onEditProfile: () => void;
   /** čiara: tabuľka vrcholov; terén: stiahnuť znova (len DMR zo ZBGIS); os mosta: posuny */
   onVertices: () => void;
@@ -555,6 +564,18 @@ export function contextualTab(c: ContextualContext): RibbonTab {
           {
             label: t.groups.support,
             items: [button('support-section', t.showInSection, 'section', c.onShowInSection)],
+          },
+        ];
+      case 'bearingLine':
+        return [
+          {
+            label: t.groups.support,
+            items: [
+              ...(c.onSupportOnLine
+                ? [button('line-support', sk.bearingLines.addSupport, 'pier', c.onSupportOnLine)]
+                : []),
+              button('line-section', t.showInSection, 'section', c.onShowInSection),
+            ],
           },
         ];
       case 'deck':

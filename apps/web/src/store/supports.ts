@@ -2,14 +2,17 @@ import type { Alignment } from '@bridge/alignment';
 import { defaultAbutmentGeometry, type ParameterSet, type Support } from '@bridge/model';
 import {
   type AxisLength,
+  type BearingLineResult,
   type BridgeLengths,
   bridgeAxisLength,
   bridgeAxisPlan,
   bridgeLengths,
+  evaluateBearingLine,
   evaluateSpans,
   evaluateSupport,
   type SpanResult,
   type SupportResult,
+  spanLines,
 } from '@bridge/sections';
 import { useMemo } from 'react';
 import { useProject } from './projectStore.ts';
@@ -37,31 +40,44 @@ export function useAxisLengths(
 }
 
 export interface SupportState {
+  /** osi uloženia (ADR 0017) */
+  lines: BearingLineResult[];
   supports: SupportResult[];
   /** polia podľa id NK */
   spans: Map<string, DeckSpans>;
 }
 
-/** Podpery a polia projektu; prepočítajú sa pri zmene osí, parametrov alebo prvkov mosta. */
+/** Osi uloženia, podpery a polia projektu; prepočítajú sa pri zmene osí, parametrov alebo prvkov mosta. */
 export function useSupportState(
   alignments: ReadonlyMap<string, Alignment>,
   parameters: ParameterSet,
   axisLengths: ReadonlyMap<string, AxisLength>,
 ): SupportState {
   const project = useProject((s) => s.project);
-  const { bridgeAxes, profiles, superstructures, supports, planLines } = project;
+  const { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines } = project;
   return useMemo(() => {
-    const ctx = { alignments, parameters, bridgeAxes, profiles, superstructures, planLines };
-    const results = supports.map((s) => evaluateSupport(ctx, s));
+    const ctx = {
+      alignments,
+      parameters,
+      bridgeAxes,
+      profiles,
+      superstructures,
+      bearingLines,
+      planLines,
+    };
+    const lines = bearingLines.map((l) => evaluateBearingLine(ctx, l));
+    const byId = new Map(lines.map((l) => [l.line.id, l]));
+    const results = supports.map((s) => evaluateSupport(ctx, s, byId.get(s.bearingLine)));
     const spans = new Map<string, DeckSpans>();
     for (const sup of superstructures) {
-      const own = results.filter((r) => r.support.superstructure === sup.id);
-      if (own.length === 0) continue;
+      const ownLines = lines.filter((l) => l.line.superstructure === sup.id);
+      if (ownLines.length === 0) continue;
+      const own = results.filter((r) => r.superstructure === sup.id);
       const minSpan = parameters.evaluateAt(sup.from).values.get('minSpan');
       const typology = profiles.find((p) => p.id === sup.profile)?.typology;
       const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
       const measure = axisLengths.get(sup.bridgeAxis);
-      const result: DeckSpans = evaluateSpans(sup, own, {
+      const result: DeckSpans = evaluateSpans(sup, spanLines(ownLines, own), {
         ...(minSpan === undefined ? {} : { minSpan }),
         typology,
         measure: measure?.lengthAt,
@@ -80,7 +96,7 @@ export function useSupportState(
       }
       spans.set(sup.id, result);
     }
-    return { supports: results, spans };
+    return { lines, supports: results, spans };
   }, [
     alignments,
     parameters,
@@ -88,21 +104,21 @@ export function useSupportState(
     bridgeAxes,
     profiles,
     superstructures,
+    bearingLines,
     supports,
     planLines,
   ]);
 }
 
 /**
- * Nová podpera s predvolenými rozmermi; základ 8 m (pilier) alebo 5 m (opora) pod spodkom NK, zaokrúhlené na 0,1 m.
- * Opora má dĺžku podľa šírky NK (krídla pod okrajmi NK, ADR 0010).
+ * Nová podpera na osi uloženia s predvolenými rozmermi; základ 8 m (pilier) alebo 5 m (opora) pod spodkom NK,
+ * zaokrúhlené na 0,1 m. Opora má dĺžku podľa šírky NK (krídla pod okrajmi NK, ADR 0010).
  */
 export function defaultSupport(
   id: string,
   name: string,
   kind: Support['kind'],
-  superstructure: string,
-  station: number,
+  bearingLine: string,
   soffitElevation: number,
   deckWidth = 12,
 ): Support {
@@ -111,9 +127,7 @@ export function defaultSupport(
     id,
     name,
     kind,
-    superstructure,
-    station,
-    crossingAngle: '90',
+    bearingLine,
     offset: '0',
     geometry:
       kind === 'abutment'

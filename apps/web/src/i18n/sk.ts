@@ -169,6 +169,7 @@ export const sk = {
       profiles: 'Prierez',
       superstructures: 'Nosná konštrukcia',
       supports: 'Podpera',
+      bearingLines: 'Os uloženia',
       terrains: 'Terén',
       planLines: 'Čiara v pôdoryse',
     },
@@ -197,6 +198,13 @@ export const sk = {
     laws: 'Parametre prierezu po staničení',
     defaultRestore: (value: string) => `použiť predvolenú (${value})`,
     defaultOverride: (value: string) => `predvolená ${value} — zmeniť`,
+  },
+  bearingLines: {
+    kind: 'Os uloženia',
+    label: (name: string) => `Os uloženia ${name}`,
+    support: 'Podpera na osi',
+    noSupport: 'Na osi zatiaľ nestojí podpera.',
+    addSupport: 'Vložiť podperu',
   },
   supports: {
     kind: 'Druh',
@@ -260,7 +268,8 @@ export const sk = {
     overallLength: 'Celková dĺžka mosta (po konce krídel)',
     bridgedLength: 'Dĺžka premostenia (líca úložných prahov)',
     span: (n: number) => `${n}. pole`,
-    noSupports: 'NK zatiaľ nemá podpery — pridajte ich v pôdoryse tlačidlom „Pridať podperu“.',
+    noSupports:
+      'NK zatiaľ nemá osi uloženia — vložte ich nástrojom „Os uloženia“ alebo „Podpera“ (Domov → Most).',
     add: 'Pridať podperu',
     addHint: 'Kliknite na os v pôdoryse',
     noDeckHere: 'Na tomto staničení nie je žiadna NK.',

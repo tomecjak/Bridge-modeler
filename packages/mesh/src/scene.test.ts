@@ -1,12 +1,14 @@
 import { suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import {
+  type BearingLine,
   createEmptyProject,
   defaultAbutmentGeometry,
   type ProjectFile,
   type Support,
 } from '@bridge/model';
 import { twinDeckExample } from '@bridge/sections';
+import { type SupportOnLine, supportsOnLines } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { meshVolume } from './mesh.ts';
 import { buildScene, createSceneCache, sceneObjectKey, toRenderBuffers } from './scene.ts';
@@ -15,7 +17,7 @@ const data = syntheticAlignmentData(undefined, 1000);
 // balíky nemajú DOM ani Node typy (structuredClone) → kópia cez JSON
 const clone = (p: ProjectFile): ProjectFile => JSON.parse(JSON.stringify(p));
 
-function support(id: string, deck: string, kind: Support['kind'], station: number): Support {
+function support(id: string, deck: string, kind: Support['kind'], station: number): SupportOnLine {
   return {
     id,
     name: id,
@@ -59,7 +61,7 @@ function bridge200(): ProjectFile {
     bridgeAxes: ex.bridgeAxes,
     profiles: [ex.profile],
     superstructures: ex.superstructures,
-    supports,
+    ...supportsOnLines(supports),
   };
 }
 
@@ -100,7 +102,7 @@ describe('buildScene', () => {
 
     // šikmosť opory mení koniec NK
     const skewed = clone(thicker);
-    (skewed.supports.find((s) => s.id === 'P-O2') as Support).crossingAngle = '70';
+    (skewed.bearingLines.find((l) => l.id === 'bl-P-O2') as BearingLine).crossingAngle = '70';
     expect(buildScene(skewed, cache).changed).toEqual([
       sceneObjectKey('superstructure', 'P'),
       sceneObjectKey('support', 'P-O2'),

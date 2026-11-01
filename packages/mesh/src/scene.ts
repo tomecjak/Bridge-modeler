@@ -71,9 +71,12 @@ export function buildScene(
         bridgeAxes: project.bridgeAxes,
         profiles: project.profiles,
         superstructures: project.superstructures,
+        bearingLines: project.bearingLines,
         planLines: project.planLines,
       }),
     );
+    /** NK podľa id osi uloženia (podpera patrí NK cez os, ADR 0017) */
+    const lineDeck = new Map(project.bearingLines.map((l) => [l.id, l.superstructure]));
     const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
     const params = JSON.stringify(project.parameters);
     const base = (sup: Superstructure | undefined) => {
@@ -109,8 +112,8 @@ export function buildScene(
     };
 
     for (const sup of project.superstructures) {
-      const own = () => results().filter((r) => r.support.superstructure === sup.id);
-      const deckInputs = project.supports.some((s) => s.superstructure === sup.id)
+      const own = () => results().filter((r) => r.superstructure === sup.id);
+      const deckInputs = project.supports.some((s) => lineDeck.get(s.bearingLine) === sup.id)
         ? own().map((r) => [r.support.kind, r.s, r.crossingAngle, r.bearings.map((b) => b.s)])
         : [];
       const key = JSON.stringify([sup, ...base(sup), deckInputs]);
@@ -131,8 +134,9 @@ export function buildScene(
       });
     }
     project.supports.forEach((support, i) => {
-      const sup = project.superstructures.find((s) => s.id === support.superstructure);
-      const key = JSON.stringify([support, sup, ...base(sup)]);
+      const line = project.bearingLines.find((l) => l.id === support.bearingLine);
+      const sup = project.superstructures.find((s) => s.id === line?.superstructure);
+      const key = JSON.stringify([support, line, sup, ...base(sup)]);
       reuse('support', support.id, key, () => {
         const r = results()[i] as SupportResult;
         return {

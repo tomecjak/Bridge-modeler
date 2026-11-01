@@ -25,6 +25,7 @@ const OWNER = {
   superstructure: 'NK',
   bridgeAxis: 'Os mosta',
   support: 'Podpera',
+  bearingLine: 'Os uloženia',
 } as const;
 
 const TYPE = { number: 'číslo', boolean: 'logická hodnota' } as const;
@@ -141,6 +142,12 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}staničenie ${formatStation(issue.station)} je mimo NK (${formatStation(issue.from)} – ${formatStation(issue.to)}).`;
     case 'UnknownSuperstructure':
       return `${prefix}nosná konštrukcia neexistuje.`;
+    case 'UnknownBearingLine':
+      return `${prefix}os uloženia neexistuje.`;
+    case 'BearingLineWithoutSupport':
+      return `${prefix}na osi uloženia ${issue.line} zatiaľ nestojí podpera.`;
+    case 'BearingLineOccupied':
+      return `${prefix}na osi uloženia ${issue.line} stojí viac podpier (${issue.supports.join(', ')}).`;
     case 'InvalidCrossingAngle':
       return `${prefix}uhol kríženia ${formatNumber(issue.angle, 2)}° musí byť medzi 0° a 180° (90° = kolmá podpera).`;
     case 'BearingOutsideDeck':
@@ -151,14 +158,14 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}neplatný rozmer ${sk.supports.dimensions[issue.name] ?? issue.name} = ${formatNumber(issue.value, 3)}.`;
     case 'SupportOrder':
       return `${prefix}podpera „${issue.support}“ by mala byť ${issue.expected === 'abutment' ? 'opora (je na konci NK)' : 'pilier (je medzi oporami)'}.`;
-    case 'DuplicateSupportStation':
-      return `${prefix}na staničení ${formatStation(issue.station)} sú dve podpery.`;
+    case 'DuplicateBearingLineStation':
+      return `${prefix}na staničení ${formatStation(issue.station)} sú dve osi uloženia.`;
     case 'SpanTooShort':
       return `${prefix}pole dĺžky ${formatNumber(issue.length, 3)} m je kratšie ako minimum ${formatNumber(issue.minimum, 1)} m.`;
     case 'SpanAboveEconomic':
       return `${prefix}pole ${formatNumber(issue.length, 1)} m presahuje ekonomické rozpätie ~${formatNumber(issue.economic, 0)} m pre tento typ NK (informatívne, VŠB).`;
-    case 'MissingSupports':
-      return `${prefix}NK nemá aspoň dve podpery — polia sa nedajú určiť.`;
+    case 'MissingBearingLines':
+      return `${prefix}NK nemá aspoň dve osi uloženia — polia sa nedajú určiť.`;
     case 'InvalidJson':
       return `Súbor nie je platný JSON (${issue.detail}).`;
     case 'NotAProfileLibrary':

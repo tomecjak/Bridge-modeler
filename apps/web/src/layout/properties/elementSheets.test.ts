@@ -1,18 +1,40 @@
-import { defaultAbutmentGeometry, type Superstructure, type Support } from '@bridge/model';
+import {
+  type BearingLine,
+  defaultAbutmentGeometry,
+  type Superstructure,
+  type Support,
+} from '@bridge/model';
 import { profileTemplate } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../../store/commands.ts';
 import type { DeckSpans } from '../../store/supports.ts';
-import { deckSheet, profileLawSummary, profileSheet, supportSheet } from './elementSheets.tsx';
+import {
+  bearingLineSheet,
+  deckSheet,
+  profileLawSummary,
+  profileSheet,
+  supportSheet,
+} from './elementSheets.tsx';
 import type { PropertyRow, PropertySheet } from './PropertyGrid.tsx';
+
+const line2: BearingLine = {
+  id: 'l2',
+  name: '2',
+  superstructure: 'nk',
+  station: 1116,
+  crossingAngle: '76.5',
+};
+const lines: BearingLine[] = [
+  { ...line2, id: 'l1', name: '1', station: 1100 },
+  line2,
+  { ...line2, id: 'l3', name: '3', station: 1139 },
+];
 
 const pier: Support = {
   id: 'p1',
   name: 'P1',
   kind: 'pier',
-  superstructure: 'nk',
-  station: 1116,
-  crossingAngle: '76.5',
+  bearingLine: 'l2',
   offset: '0',
   geometry: { type: 'wall', thickness: '1.2', length: '4' },
   footing: { length: '8', width: '4', thickness: '1.2' },
@@ -33,6 +55,8 @@ function support(s: Support, commands: Command[] = []) {
     support: s,
     result: undefined,
     decks: [{ id: 'nk', name: 'NK' }],
+    lines,
+    occupied: new Set(['l1', 'l2']),
     onBearings: () => {},
     onDelete: () => {},
     dispatch: (c) => commands.push(c),
@@ -100,7 +124,7 @@ describe('supportSheet', () => {
     ).toContain('výška krídla na konci');
   });
 
-  it('writes changes as updateElement commands', () => {
+  it('writes the station and crossing angle to its bearing line, other changes to the support', () => {
     const commands: Command[] = [];
     const sheet = support(pier, commands);
     const angle = sheet.groups
@@ -110,11 +134,50 @@ describe('supportSheet', () => {
     sheet.type?.onChange('columns');
     expect(commands[0]).toEqual({
       type: 'updateElement',
-      collection: 'supports',
-      id: 'p1',
+      collection: 'bearingLines',
+      id: 'l2',
       changes: { crossingAngle: '68.71' },
     });
-    expect(commands[1]).toMatchObject({ changes: { geometry: { type: 'columns' } } });
+    expect(commands[1]).toMatchObject({
+      collection: 'supports',
+      changes: { geometry: { type: 'columns' } },
+    });
+  });
+
+  it('offers its own and free bearing lines only', () => {
+    const identity = support(pier).groups.find((g) => g.id === 'support-identity');
+    const select = identity?.rows?.find((r) => r.kind === 'select' && r.label === 'Os uloženia');
+    expect(select?.kind === 'select' && select.options.map((o) => o.value)).toEqual(['l2', 'l3']);
+    expect(select?.kind === 'select' && select.options[0]?.label).toBe(
+      'NK · Os uloženia 2 · km 1,116 000',
+    );
+  });
+});
+
+describe('bearingLineSheet', () => {
+  const sheet = (supports: Pick<Support, 'id' | 'name' | 'kind'>[]) =>
+    bearingLineSheet({
+      line: line2,
+      result: undefined,
+      decks: [{ id: 'nk', name: 'NK' }],
+      supports,
+      spans: undefined,
+      onAddSupport: () => {},
+      onSelectSupport: () => {},
+      onDelete: () => {},
+      dispatch: () => {},
+    });
+
+  it('shows position and the support standing on it', () => {
+    const s = sheet([{ id: 'p1', name: 'P1', kind: 'pier' }]);
+    expect(s.heading.label).toBe('Os uloženia');
+    expect(groupIds(s)).toEqual(['line-identity', 'line-position', 'line-support']);
+    expect(labels(s, 'line-position')).toEqual(['Staničenie', 'Uhol kríženia [°] (90 = kolmá)']);
+    expect(s.actions?.map((a) => a.label)).toEqual(['Odstrániť']);
+  });
+
+  it('offers to insert a support on a free line', () => {
+    expect(sheet([]).actions?.map((a) => a.label)).toEqual(['Vložiť podperu', 'Odstrániť']);
   });
 });
 
@@ -135,12 +198,22 @@ describe('deckSheet', () => {
     orientation: 'vertical',
   };
   const spans = {
-    supports: [],
+    lines: [],
     spans: [
       {
         index: 0,
-        from: { support: { id: 'o1', name: 'O1', kind: 'abutment' }, s: 100, station: 1100 },
-        to: { support: { id: 'p1', name: 'P1', kind: 'pier' }, s: 116, station: 1116 },
+        from: {
+          line: { id: 'l1', name: '1' },
+          supports: [{ id: 'o1', name: 'O1', kind: 'abutment' }],
+          s: 100,
+          station: 1100,
+        },
+        to: {
+          line: { id: 'l2', name: '2' },
+          supports: [{ id: 'p1', name: 'P1', kind: 'pier' }],
+          s: 116,
+          station: 1116,
+        },
         length: 16,
       },
     ],
@@ -171,7 +244,7 @@ describe('deckSheet', () => {
     expect(h).toMatchObject({ value: '1.1 m' });
     expect(laws.filter((r) => r.kind === 'note')).toHaveLength(1);
     expect(labels(sheet, 'deck-spans')).toEqual([
-      '1. pole (O1 – P1)',
+      '1. pole (1 – 2)',
       'Dĺžka NK',
       'Dĺžka premostenia (líca úložných prahov)',
       'Celková dĺžka mosta (po konce krídel)',

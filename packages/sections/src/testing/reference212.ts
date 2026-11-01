@@ -9,6 +9,7 @@
 import type { AlignmentData } from '@bridge/alignment';
 import { createAlignment } from '@bridge/alignment';
 import {
+  type BearingLine,
   buildParameterSet,
   createEmptyProject,
   defaultAbutmentGeometry,
@@ -16,7 +17,7 @@ import {
   type Superstructure,
   type Support,
 } from '@bridge/model';
-import { evaluateSupport, type SupportContext } from '../supports.ts';
+import { evaluateBearingLine, evaluateSupport, type SupportContext } from '../supports.ts';
 import { singleDeckExample } from '../templates/singleBeamHaunched.ts';
 
 export const GRADE = -0.0064;
@@ -67,15 +68,20 @@ export function reference212Project(): ProjectFile {
       h: { kind: 'constant', value: '1.2' },
     },
   };
+  const line = (i: number): BearingLine => ({
+    id: `l${i + 1}`,
+    name: String(i + 1),
+    superstructure: 'nk',
+    station: STATIONS[i] as number,
+    crossingAngle: String(ANGLE),
+  });
   const support = (i: number): Support => {
     const abutment = i === 0 || i === 3;
     return {
       id: `p${i + 1}`,
       name: String(i + 1),
       kind: abutment ? 'abutment' : 'pier',
-      superstructure: 'nk',
-      station: STATIONS[i] as number,
-      crossingAngle: String(ANGLE),
+      bearingLine: `l${i + 1}`,
       offset: '0',
       geometry: abutment
         ? {
@@ -110,6 +116,7 @@ export function reference212Project(): ProjectFile {
     bridgeAxes: ex.bridgeAxes,
     profiles: [ex.profile],
     superstructures: [deck],
+    bearingLines: [0, 1, 2, 3].map(line),
     supports: [0, 1, 2, 3].map(support),
   };
 }
@@ -125,10 +132,12 @@ export function evaluateReference212() {
     profiles: p.profiles,
     planLines: p.planLines,
     superstructures: p.superstructures,
+    bearingLines: p.bearingLines,
   };
+  const lines = p.bearingLines.map((l) => evaluateBearingLine(ctx, l));
   const results = p.supports.map((s) => evaluateSupport(ctx, s));
   const deck = p.superstructures[0] as Superstructure;
   const sFrom = alignment.stationing.fromDisplay(deck.from) as number;
   const sTo = alignment.stationing.fromDisplay(deck.to) as number;
-  return { p, ctx, alignment, results, deck, sFrom, sTo };
+  return { p, ctx, alignment, lines, results, deck, sFrom, sTo };
 }

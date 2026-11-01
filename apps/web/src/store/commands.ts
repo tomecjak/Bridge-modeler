@@ -1,6 +1,7 @@
 import type { AlignmentData } from '@bridge/alignment';
 import type { Vec3 } from '@bridge/geom';
 import {
+  type BearingLine,
   type BridgeAxis,
   type Brief,
   type Parameter,
@@ -19,6 +20,7 @@ export interface ElementCollections {
   bridgeAxes: BridgeAxis;
   profiles: ProfileDefinition;
   superstructures: Superstructure;
+  bearingLines: BearingLine;
   supports: Support;
   terrains: TerrainSurface;
   planLines: PlanLine;
@@ -53,11 +55,13 @@ export type Command =
       bridgeAxes?: BridgeAxis[];
       profiles?: ProfileDefinition[];
       superstructures?: Superstructure[];
+      bearingLines?: BearingLine[];
       supports?: Support[];
       terrains?: TerrainSurface[];
       planLines?: PlanLine[];
     }
   | ElementUpdate
+  /** odstráni prvok; os uloženia aj s podperami na nej (ADR 0017) */
   | { type: 'removeElement'; collection: ElementCollection; id: string }
   /** nahradí terén novým na tom istom mieste zoznamu (napr. znova stiahnutý DMR) — jeden krok späť/znova */
   | { type: 'replaceTerrain'; id: string; terrain: TerrainSurface };
@@ -106,6 +110,7 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       draft.bridgeAxes.push(...(command.bridgeAxes ?? []));
       draft.profiles.push(...(command.profiles ?? []));
       draft.superstructures.push(...(command.superstructures ?? []));
+      draft.bearingLines.push(...(command.bearingLines ?? []));
       draft.supports.push(...(command.supports ?? []));
       draft.terrains.push(...(command.terrains ?? []));
       draft.planLines.push(...(command.planLines ?? []));
@@ -120,6 +125,8 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       const list = draft[command.collection] as { id: string }[];
       const i = list.findIndex((x) => x.id === command.id);
       if (i >= 0) list.splice(i, 1);
+      if (command.collection === 'bearingLines')
+        draft.supports = draft.supports.filter((s) => s.bearingLine !== command.id);
       return;
     }
     case 'replaceTerrain': {

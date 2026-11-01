@@ -14,6 +14,8 @@ function result(
   const direction = vec2(-Math.sin(alpha), Math.cos(alpha));
   return {
     support: { geometry } as Support,
+    superstructure: 'nk',
+    line: undefined,
     s: 0,
     station: 0,
     axis: {

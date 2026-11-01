@@ -1,13 +1,14 @@
 import { formatStation } from '@bridge/alignment';
 import type {
   AbutmentGeometry,
+  BearingLine,
   BridgeAxis,
   ProfileDefinition,
   ProfileLaw,
   Superstructure,
   Support,
 } from '@bridge/model';
-import type { SupportResult } from '@bridge/sections';
+import type { BearingLineResult, SupportResult } from '@bridge/sections';
 import { formatNumber } from '../../format/number.ts';
 import { formatModelIssue } from '../../i18n/modelIssues.ts';
 import { sk } from '../../i18n/sk.ts';
@@ -105,14 +106,137 @@ function abutmentGroups(
   ];
 }
 
+/** Riadky polohy osi uloženia (staničenie, uhol kríženia); spoločné pre os aj podperu na nej (ADR 0017). */
+function lineRows(line: BearingLine, dispatch: Dispatch): PropertyRow[] {
+  const set = (changes: Partial<BearingLine>) =>
+    dispatch({ type: 'updateElement', collection: 'bearingLines', id: line.id, changes });
+  return [
+    {
+      kind: 'station',
+      label: sk.supports.station,
+      value: line.station,
+      onCommit: (station) => set({ station }),
+    },
+    expr(sk.supports.crossingAngle, line.crossingAngle, (crossingAngle) => set({ crossingAngle })),
+  ];
+}
+
+/** Popis osi uloženia vo výbere: NK, číslo osi a staničenie. */
+const lineLabel = (line: BearingLine, decks: readonly Pick<Superstructure, 'id' | 'name'>[]) =>
+  `${decks.find((d) => d.id === line.superstructure)?.name ?? '—'} · ${sk.bearingLines.label(line.name)} · ${formatStation(line.station, 3)}`;
+
 /**
- * Podpera v mriežke vlastností (ADR 0008, 0010): typ geometrie navrchu, identita, poloha, rozmery (pri opore
- * po častiach), založenie, uloženie s ložiskami („…“ = tabuľka) a výsledky výpočtu.
+ * Os uloženia v mriežke vlastností (ADR 0017): číslo, NK, staničenie a uhol kríženia, podpera na osi, susedné
+ * polia a problémy.
+ */
+export function bearingLineSheet(input: {
+  line: BearingLine;
+  result: BearingLineResult | undefined;
+  decks: readonly Pick<Superstructure, 'id' | 'name'>[];
+  /** podpery na osi (správne najviac jedna) */
+  supports: readonly Pick<Support, 'id' | 'name' | 'kind'>[];
+  spans: DeckSpans | undefined;
+  onAddSupport: () => void;
+  onSelectSupport: (id: string) => void;
+  onDelete: () => void;
+  dispatch: Dispatch;
+}): PropertySheet {
+  const { line, result, supports } = input;
+  const t = sk.bearingLines;
+  const adjacent = (input.spans?.spans ?? []).filter(
+    (sp) => sp.from.line.id === line.id || sp.to.line.id === line.id,
+  );
+  const issues = [
+    ...(result?.issues ?? []),
+    ...(input.spans?.issues ?? []).filter(
+      (i) =>
+        (i.code === 'BearingLineWithoutSupport' || i.code === 'BearingLineOccupied') &&
+        i.line === line.name,
+    ),
+  ];
+  return {
+    heading: { icon: 'bearingLine', label: t.kind },
+    groups: [
+      {
+        id: 'line-identity',
+        title: sk.properties.identity,
+        rows: [
+          {
+            kind: 'text',
+            label: sk.properties.name,
+            value: line.name,
+            onCommit: (name) =>
+              input.dispatch({
+                type: 'updateElement',
+                collection: 'bearingLines',
+                id: line.id,
+                changes: { name },
+              }),
+          },
+          {
+            kind: 'readonly',
+            label: sk.supports.deck,
+            value: input.decks.find((d) => d.id === line.superstructure)?.name ?? '—',
+          },
+        ],
+      },
+      { id: 'line-position', title: sk.properties.position, rows: lineRows(line, input.dispatch) },
+      {
+        id: 'line-support',
+        title: t.support,
+        rows:
+          supports.length === 0
+            ? [{ kind: 'note', text: t.noSupport, tone: 'muted' }]
+            : supports.map(
+                (s): PropertyRow => ({
+                  kind: 'edit',
+                  label: sk.properties.supportKinds[s.kind],
+                  value: s.name,
+                  onEdit: () => input.onSelectSupport(s.id),
+                }),
+              ),
+      },
+      ...(adjacent.length > 0
+        ? [
+            {
+              id: 'line-spans',
+              title: sk.supports.spans,
+              rows: adjacent.map(
+                (sp): PropertyRow => ({
+                  kind: 'readonly',
+                  label: sk.properties.spanRow(sp.index + 1, sp.from.line.name, sp.to.line.name),
+                  value: `${formatNumber(sp.length, 3)} m`,
+                }),
+              ),
+            },
+          ]
+        : []),
+      ...(issues.length > 0
+        ? [{ id: 'line-issues', title: sk.properties.warnings, rows: issueRows(issues) }]
+        : []),
+    ],
+    actions: [
+      ...(supports.length === 0
+        ? [{ label: t.addSupport, icon: 'pier' as const, onClick: input.onAddSupport }]
+        : []),
+      { label: sk.properties.remove, icon: 'trash', danger: true, onClick: input.onDelete },
+    ],
+  };
+}
+
+/**
+ * Podpera v mriežke vlastností (ADR 0008, 0010, 0017): typ geometrie navrchu, identita s osou uloženia, poloha
+ * (staničenie a uhol mení os uloženia), rozmery (pri opore po častiach), založenie, uloženie s ložiskami
+ * („…“ = tabuľka) a výsledky výpočtu.
  */
 export function supportSheet(input: {
   support: Support;
   result: SupportResult | undefined;
   decks: readonly Pick<Superstructure, 'id' | 'name'>[];
+  /** všetky osi uloženia projektu */
+  lines: readonly BearingLine[];
+  /** id osí, na ktorých už stojí iná podpera */
+  occupied: ReadonlySet<string>;
   onBearings: () => void;
   onDelete: () => void;
   dispatch: Dispatch;
@@ -121,6 +245,7 @@ export function supportSheet(input: {
   const s = sk.supports;
   const set = (changes: Partial<Support>) =>
     input.dispatch({ type: 'updateElement', collection: 'supports', id: support.id, changes });
+  const line = input.lines.find((l) => l.id === support.bearingLine);
   const g = support.geometry;
   const dims = s.dimensions;
   const d = (key: string) => dims[key] ?? key;
@@ -178,10 +303,15 @@ export function supportSheet(input: {
         },
         {
           kind: 'select',
-          label: s.deck,
-          value: support.superstructure,
-          options: input.decks.map((dk) => ({ value: dk.id, label: dk.name })),
-          onChange: (superstructure) => set({ superstructure }),
+          label: sk.bearingLines.kind,
+          value: support.bearingLine,
+          options: [
+            ...(line ? [] : [{ value: support.bearingLine, label: '—' }]),
+            ...input.lines
+              .filter((l) => l.id === support.bearingLine || !input.occupied.has(l.id))
+              .map((l) => ({ value: l.id, label: lineLabel(l, input.decks) })),
+          ],
+          onChange: (bearingLine) => set({ bearingLine }),
         },
       ],
     },
@@ -189,13 +319,7 @@ export function supportSheet(input: {
       id: 'support-position',
       title: sk.properties.position,
       rows: [
-        {
-          kind: 'station',
-          label: s.station,
-          value: support.station,
-          onCommit: (station) => set({ station }),
-        },
-        expr(s.crossingAngle, support.crossingAngle, (crossingAngle) => set({ crossingAngle })),
+        ...(line ? lineRows(line, input.dispatch) : []),
         expr(s.offset, support.offset, (offset) => set({ offset })),
       ],
     },
@@ -332,7 +456,7 @@ export function deckSheet(input: {
         ...spans.spans.map(
           (sp): PropertyRow => ({
             kind: 'readonly',
-            label: sk.properties.spanRow(sp.index + 1, sp.from.support.name, sp.to.support.name),
+            label: sk.properties.spanRow(sp.index + 1, sp.from.line.name, sp.to.line.name),
             value: `${formatNumber(sp.length, 3)} m`,
           }),
         ),

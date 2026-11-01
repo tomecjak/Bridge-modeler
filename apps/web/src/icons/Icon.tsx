@@ -105,6 +105,7 @@ const PATHS = {
     </>
   ),
   folder: <path d="M3 6h6l2 2h10v11H3z" />,
+  bearingLine: <path d="M3 6h18M12 2v2M12 7.5v2M12 15v2.5M12 20.5V22M8.5 14h7L12 9.5z" />,
   pointer: <path d="m5 3 13 8-6 1.5L9 19z" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,

@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "7"
+      "const": "8"
     },
     "name": {
       "type": "string"
@@ -1184,6 +1184,38 @@
         "additionalProperties": false
       }
     },
+    "bearingLines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "superstructure": {
+            "type": "string"
+          },
+          "station": {
+            "type": "number"
+          },
+          "crossingAngle": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "superstructure",
+          "station",
+          "crossingAngle"
+        ],
+        "additionalProperties": false
+      }
+    },
     "supports": {
       "type": "array",
       "items": {
@@ -1203,13 +1235,7 @@
               "pier"
             ]
           },
-          "superstructure": {
-            "type": "string"
-          },
-          "station": {
-            "type": "number"
-          },
-          "crossingAngle": {
+          "bearingLine": {
             "type": "string"
           },
           "offset": {
@@ -1400,9 +1426,7 @@
           "id",
           "name",
           "kind",
-          "superstructure",
-          "station",
-          "crossingAngle",
+          "bearingLine",
           "offset",
           "geometry",
           "footing",
@@ -1618,11 +1642,12 @@
     "bridgeAxes",
     "profiles",
     "superstructures",
+    "bearingLines",
     "supports",
     "terrains",
     "planLines"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-7.json",
-  "title": "Projekt modelára mostov (schemaVersion 7)"
+  "$id": "https://bridge-modeler.local/schema/project-8.json",
+  "title": "Projekt modelára mostov (schemaVersion 8)"
 }

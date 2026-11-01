@@ -25,6 +25,7 @@ const ctx: SupportContext = {
   profiles: [example.profile],
   planLines: [],
   superstructures: example.superstructures as Superstructure[],
+  bearingLines: [],
 };
 
 function abutment(
@@ -32,22 +33,30 @@ function abutment(
   geometry: Partial<AbutmentGeometry> = {},
   changes: Partial<Support> = {},
 ): SupportResult {
-  return evaluateSupport(ctx, {
-    id: 'o1',
-    name: 'O1',
-    kind: 'abutment',
+  const line = {
+    id: 'l1',
+    name: '1',
     superstructure: 'nk',
     station: 1020.5,
     crossingAngle: String(angle),
-    offset: '0',
-    geometry: { ...defaultAbutmentGeometry('16'), ...geometry },
-    footing: { length: '0', width: '0', thickness: '0' },
-    connection: 'bearing',
-    bearingHeight: '0.45',
-    bearings: ['-3', '3'],
-    foundationTop: '0',
-    ...changes,
-  });
+  };
+  return evaluateSupport(
+    { ...ctx, bearingLines: [line] },
+    {
+      id: 'o1',
+      name: 'O1',
+      kind: 'abutment',
+      bearingLine: 'l1',
+      offset: '0',
+      geometry: { ...defaultAbutmentGeometry('16'), ...geometry },
+      footing: { length: '0', width: '0', thickness: '0' },
+      connection: 'bearing',
+      bearingHeight: '0.45',
+      bearings: ['-3', '3'],
+      foundationTop: '0',
+      ...changes,
+    },
+  );
 }
 
 const part = (parts: SolidPart[] | undefined, name: SolidPart['name'], i = 0) =>

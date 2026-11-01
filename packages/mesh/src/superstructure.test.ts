@@ -1,19 +1,9 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { dot3, type Polygon2D, signedArea, sub3, type Vec2, type Vec3, vec2 } from '@bridge/geom';
-import {
-  buildParameterSet,
-  defaultAbutmentGeometry,
-  type Superstructure,
-  type Support,
-} from '@bridge/model';
-import {
-  evaluateSuperstructure,
-  evaluateSupport,
-  type SectionContext,
-  type SupportContext,
-  twinDeckExample,
-} from '@bridge/sections';
+import { buildParameterSet, defaultAbutmentGeometry, type Superstructure } from '@bridge/model';
+import { evaluateSuperstructure, type SectionContext, twinDeckExample } from '@bridge/sections';
+import { evaluateSupportOnLine, type SupportOnLine } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { MeshKernel } from './kernel.ts';
 import { meshVolume } from './mesh.ts';
@@ -152,7 +142,7 @@ describe('rez 3D siete = 2D prierez (kritérium Fázy 5)', () => {
 describe('šikmý koniec NK podľa opory', () => {
   it('turns the deck start parallel to a 70° abutment and keeps the other end square', () => {
     const sup = deck('L', { from: 1010, to: 1045 }); // priamka s = 0 … 50
-    const abutment: Support = {
+    const abutment: SupportOnLine = {
       id: 'o1',
       name: 'O1',
       kind: 'abutment',
@@ -167,11 +157,11 @@ describe('šikmý koniec NK podľa opory', () => {
       bearings: ['-3', '3'],
       foundationTop: '240',
     };
-    const sctx: SupportContext = { ...ctx, superstructures: [sup] };
+    const sctx = { ...ctx, superstructures: [sup] };
     const r = superstructureMesh(kernel, {
       ctx,
       superstructure: sup,
-      supports: [evaluateSupport(sctx, abutment)],
+      supports: [evaluateSupportOnLine(sctx, abutment)],
     });
     expect(r.endAngles.start).toBeCloseTo((70 * Math.PI) / 180, 12);
     expect(r.endAngles.end).toBeCloseTo(Math.PI / 2, 12);

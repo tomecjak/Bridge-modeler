@@ -37,6 +37,27 @@ export const MIGRATIONS: Readonly<
   '5': { to: '6', migrate: (raw) => ({ ...raw, planLines: [] }) },
   /** 6 → 7: zadanie a oblasť mosta (Fáza 10a) */
   '6': { to: '7', migrate: (raw) => ({ ...raw, brief: emptyBrief(), studyArea: null }) },
+  /** 7 → 8: osi uloženia (ADR 0017); každá podpera dostane vlastnú os so svojím staničením a uhlom kríženia */
+  '7': {
+    to: '8',
+    migrate: (raw) => {
+      const supports = (Array.isArray(raw.supports) ? raw.supports : []) as RawProject[];
+      return {
+        ...raw,
+        bearingLines: supports.map((s) => ({
+          id: `bl-${String(s.id)}`,
+          name: s.name,
+          superstructure: s.superstructure,
+          station: s.station,
+          crossingAngle: s.crossingAngle,
+        })),
+        supports: supports.map(({ superstructure: _d, station: _s, crossingAngle: _a, ...s }) => ({
+          ...s,
+          bearingLine: `bl-${String(s.id)}`,
+        })),
+      };
+    },
+  },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

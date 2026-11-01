@@ -33,7 +33,7 @@ export function deckDrawingData(
   supports: readonly SupportResult[],
   options: DeckSamplingOptions = {},
 ): DeckDrawingData | undefined {
-  const own = supports.filter((r) => r.support.superstructure === sup.id);
+  const own = supports.filter((r) => r.superstructure === sup.id);
   const samples = sampleSuperstructure(ctx, sup, own, options);
   if (!('sections' in samples)) return undefined;
   const { alignment, axis, sFrom, sTo } = samples;

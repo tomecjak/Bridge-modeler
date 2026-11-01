@@ -98,7 +98,8 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('7');
+      expect(r.project.schemaVersion).toBe('8');
+      expect(r.project.bearingLines).toEqual([]);
       expect(r.project.studyArea).toBeNull();
       expect(r.project.brief.roadCategory).toBe('');
       expect(r.project.terrains).toEqual([]);
@@ -115,13 +116,47 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '7', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '8', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '7', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '8', name: 'Starý most', parameters: [] },
     });
+  });
+
+  it('gives every version 7 support its own bearing line with its station and crossing angle', () => {
+    const { bearingLines: _lines, ...empty } = createEmptyProject('Most v7');
+    const v7 = {
+      ...empty,
+      schemaVersion: '7',
+      supports: [
+        {
+          id: 'o1',
+          name: 'O1',
+          kind: 'abutment',
+          superstructure: 'nk',
+          station: 1020.5,
+          crossingAngle: 'alpha',
+          offset: '0',
+          geometry: { type: 'wall', thickness: '1.2', length: '4' },
+          footing: { length: '8', width: '4', thickness: '1.2' },
+          connection: 'bearing',
+          bearingHeight: '0.35',
+          bearings: ['-1.8', '1.8'],
+          foundationTop: '240',
+        },
+      ],
+    };
+    const r = openProject(JSON.stringify(v7));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.bearingLines).toEqual([
+      { id: 'bl-o1', name: 'O1', superstructure: 'nk', station: 1020.5, crossingAngle: 'alpha' },
+    ]);
+    expect(r.project.supports[0]).toMatchObject({ id: 'o1', bearingLine: 'bl-o1' });
+    expect(r.project.supports[0]).not.toHaveProperty('station');
+    expect(r.project.supports[0]).not.toHaveProperty('superstructure');
   });
 
   it('adds an empty brief and no study area to version 6 files', () => {

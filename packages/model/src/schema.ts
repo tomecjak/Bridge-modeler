@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BriefSchema, emptyBrief, StudyAreaSchema } from './brief.ts';
 import {
+  BearingLineSchema,
   BridgeAxisSchema,
   ParameterSchema,
   PlanLineSchema,
@@ -11,7 +12,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '7';
+export const SCHEMA_VERSION = '8';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -85,6 +86,7 @@ export const ProjectFileSchema = z.strictObject({
   bridgeAxes: z.array(BridgeAxisSchema),
   profiles: z.array(ProfileDefinitionSchema),
   superstructures: z.array(SuperstructureSchema),
+  bearingLines: z.array(BearingLineSchema),
   supports: z.array(SupportSchema),
   terrains: z.array(TerrainSurfaceSchema),
   planLines: z.array(PlanLineSchema),
@@ -104,6 +106,7 @@ export function createEmptyProject(name: string): ProjectFile {
     bridgeAxes: [],
     profiles: [],
     superstructures: [],
+    bearingLines: [],
     supports: [],
     terrains: [],
     planLines: [],

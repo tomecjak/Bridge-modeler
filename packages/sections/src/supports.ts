@@ -1,5 +1,6 @@
+import type { Alignment } from '@bridge/alignment';
 import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
-import type { IssueOwner, ModelIssue, Superstructure, Support } from '@bridge/model';
+import type { BearingLine, IssueOwner, ModelIssue, Superstructure, Support } from '@bridge/model';
 import { highestCrossing, lowestCrossing } from './crossing.ts';
 import { evaluateNumber } from './expressions.ts';
 import {
@@ -12,6 +13,23 @@ import {
 
 export interface SupportContext extends SectionContext {
   superstructures: readonly Superstructure[];
+  bearingLines: readonly BearingLine[];
+}
+
+/** Vyhodnotená os uloženia (ADR 0017): bod na osi mosta a smer otočený o uhol kríženia. */
+export interface BearingLineResult {
+  line: BearingLine;
+  superstructure: Superstructure | undefined;
+  alignment: Alignment | undefined;
+  /** spojité a zobrazované staničenie osi cesty */
+  s: number;
+  station: number;
+  axis: BridgeAxisPoint | undefined;
+  /** jednotkový smer osi uloženia v pôdoryse */
+  direction: Vec2;
+  /** uhol kríženia [rad] */
+  crossingAngle: number;
+  issues: ModelIssue[];
 }
 
 export interface BearingResult {
@@ -44,6 +62,9 @@ export interface DeckEnd {
 
 export interface SupportResult {
   support: Support;
+  /** id NK z osi uloženia (undefined, ak os neexistuje) */
+  superstructure: string | undefined;
+  line: BearingLineResult | undefined;
   s: number;
   station: number;
   axis: BridgeAxisPoint | undefined;
@@ -66,16 +87,109 @@ export interface SupportResult {
 }
 
 /**
- * Vyhodnotí podperu (ADR 0008): os podpery otočená o uhol kríženia proti smeru hodín od osi mosta, ložiská na nej,
- * spodok NK nad každým ložiskom z rezu prierezu, horná hrana = spodok − výška uloženia, výška = horná hrana − základ.
+ * Vyhodnotí os uloženia (ADR 0017): bod osi mosta na staničení a smer otočený o uhol kríženia proti smeru hodín
+ * od dotyčnice osi mosta (ADR 0008).
  */
-export function evaluateSupport(ctx: SupportContext, support: Support): SupportResult {
+export function evaluateBearingLine(ctx: SupportContext, line: BearingLine): BearingLineResult {
+  const owner: IssueOwner = { kind: 'bearingLine', name: line.name };
+  const issues: ModelIssue[] = [];
+  const result: BearingLineResult = {
+    line,
+    superstructure: undefined,
+    alignment: undefined,
+    s: Number.NaN,
+    station: line.station,
+    axis: undefined,
+    direction: vec2(1, 0),
+    crossingAngle: Math.PI / 2,
+    issues,
+  };
+  const done = () => {
+    result.issues = issues.map((i) => ({ owner, ...i }));
+    return result;
+  };
+
+  const sup = ctx.superstructures.find((x) => x.id === line.superstructure);
+  if (!sup) {
+    issues.push({ code: 'UnknownSuperstructure', id: line.superstructure });
+    return done();
+  }
+  result.superstructure = sup;
+  const axisDef = ctx.bridgeAxes.find((a) => a.id === sup.bridgeAxis);
+  const alignment = axisDef ? ctx.alignments.get(axisDef.alignment) : undefined;
+  if (!axisDef || !alignment) {
+    issues.push(
+      axisDef
+        ? { code: 'UnknownAlignment', name: axisDef.alignment }
+        : { code: 'UnknownBridgeAxis', id: sup.bridgeAxis },
+    );
+    return done();
+  }
+  result.alignment = alignment;
+  if (line.station < sup.from - 1e-9 || line.station > sup.to + 1e-9) {
+    issues.push({
+      code: 'StationOutsideSuperstructure',
+      station: line.station,
+      from: sup.from,
+      to: sup.to,
+    });
+    return done();
+  }
+  const s0 = alignment.stationing.fromDisplay(line.station);
+  if (s0 === undefined) {
+    issues.push({ code: 'StationNotOnAlignment', station: line.station });
+    return done();
+  }
+  result.s = s0;
+
+  const scope = globalScope(ctx.parameters, line.station);
+  const angle = evaluateNumber(line.crossingAngle, scope, 'crossingAngle');
+  if (!angle.ok) {
+    issues.push(angle.issue);
+    return done();
+  }
+  if (!(angle.value > 0 && angle.value < 180)) {
+    issues.push({ code: 'InvalidCrossingAngle', angle: angle.value });
+    return done();
+  }
+  const alpha = (angle.value * Math.PI) / 180;
+  result.crossingAngle = alpha;
+
+  const axisPoint = evaluateBridgeAxis(axisDef, alignment, scope, s0);
+  if (!axisPoint.ok) {
+    issues.push(axisPoint.issue);
+    return done();
+  }
+  const axis = axisPoint.value;
+  result.axis = axis;
+  const azimuth = Math.atan2(axis.frame.tangent.x, axis.frame.tangent.y);
+  // smerník rastie v smere hodín → otočenie proti smeru hodín o α znamená azimut − α
+  result.direction = azimuthToVector(azimuth - alpha);
+  return done();
+}
+
+/** Blokujúce problémy (chyby, nie upozornenia). */
+const hasErrors = (issues: readonly ModelIssue[]) => issues.some((i) => i.severity !== 'warning');
+
+/**
+ * Vyhodnotí podperu (ADR 0008, 0017): stojí na osi uloženia, ložiská na nej, spodok NK nad každým ložiskom z rezu
+ * prierezu, horná hrana = spodok − výška uloženia, výška = horná hrana − základ. Problémy osi uloženia sa prenesú
+ * do výsledku podpery. `lineResult` = už vyhodnotená os (inak sa vyhodnotí z `ctx.bearingLines`).
+ */
+export function evaluateSupport(
+  ctx: SupportContext,
+  support: Support,
+  lineResult?: BearingLineResult,
+): SupportResult {
   const owner: IssueOwner = { kind: 'support', name: support.name };
   const issues: ModelIssue[] = [];
+  let lineIssues: ModelIssue[] = [];
   const result: SupportResult = {
     support,
+    superstructure: undefined,
+    line: undefined,
     s: Number.NaN,
-    station: support.station,
+    station: Number.NaN,
     axis: undefined,
     direction: vec2(1, 0),
     center: vec2(0, 0),
@@ -88,48 +202,32 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
     issues,
   };
   const done = () => {
-    result.issues = issues.map((i) => ({ owner, ...i }));
+    result.issues = [...lineIssues, ...issues.map((i) => ({ owner, ...i }))];
     return result;
   };
 
-  const sup = ctx.superstructures.find((x) => x.id === support.superstructure);
-  if (!sup) {
-    issues.push({ code: 'UnknownSuperstructure', id: support.superstructure });
+  const lineDef = ctx.bearingLines.find((l) => l.id === support.bearingLine);
+  if (!lineDef) {
+    issues.push({ code: 'UnknownBearingLine', id: support.bearingLine });
     return done();
   }
-  const axisDef = ctx.bridgeAxes.find((a) => a.id === sup.bridgeAxis);
-  const alignment = axisDef ? ctx.alignments.get(axisDef.alignment) : undefined;
-  if (!axisDef || !alignment) {
-    issues.push(
-      axisDef
-        ? { code: 'UnknownAlignment', name: axisDef.alignment }
-        : { code: 'UnknownBridgeAxis', id: sup.bridgeAxis },
-    );
-    return done();
-  }
-  if (support.station < sup.from - 1e-9 || support.station > sup.to + 1e-9) {
-    issues.push({
-      code: 'StationOutsideSuperstructure',
-      station: support.station,
-      from: sup.from,
-      to: sup.to,
-    });
-    return done();
-  }
-  const s0 = alignment.stationing.fromDisplay(support.station);
-  if (s0 === undefined) {
-    issues.push({ code: 'StationNotOnAlignment', station: support.station });
-    return done();
-  }
+  const line =
+    lineResult && lineResult.line === lineDef ? lineResult : evaluateBearingLine(ctx, lineDef);
+  result.line = line;
+  result.superstructure = lineDef.superstructure;
+  result.station = line.station;
+  lineIssues = line.issues;
+  const { superstructure: sup, alignment, axis } = line;
+  if (hasErrors(line.issues) || !sup || !alignment || !axis) return done();
+  const s0 = line.s;
   result.s = s0;
 
-  const scope = globalScope(ctx.parameters, support.station);
+  const scope = globalScope(ctx.parameters, line.station);
   const num = (text: string, field: Parameters<typeof evaluateNumber>[2]) => {
     const r = evaluateNumber(text, scope, field);
     if (!r.ok) issues.push(r.issue);
     return r.ok ? r.value : undefined;
   };
-  const angleDeg = num(support.crossingAngle, 'crossingAngle');
   const offset = num(support.offset, 'offset');
   const bearingHeight = num(support.bearingHeight, 'bearingHeight');
   const foundationTop = num(support.foundationTop, 'foundationTop');
@@ -149,7 +247,6 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
   if (footing.thickness !== undefined && footing.thickness < 0)
     issues.push({ code: 'InvalidDimension', name: 'footing.thickness', value: footing.thickness });
   if (
-    angleDeg === undefined ||
     offset === undefined ||
     bearingHeight === undefined ||
     foundationTop === undefined ||
@@ -158,24 +255,11 @@ export function evaluateSupport(ctx: SupportContext, support: Support): SupportR
     return done();
   }
   result.footing = footing as SupportResult['footing'];
-  if (!(angleDeg > 0 && angleDeg < 180)) {
-    issues.push({ code: 'InvalidCrossingAngle', angle: angleDeg });
-    return done();
-  }
-  const alpha = (angleDeg * Math.PI) / 180;
+  const alpha = line.crossingAngle;
   result.crossingAngle = alpha;
   result.foundationTop = foundationTop - alignment.origin.z;
-
-  const axisPoint = evaluateBridgeAxis(axisDef, alignment, scope, s0);
-  if (!axisPoint.ok) {
-    issues.push(axisPoint.issue);
-    return done();
-  }
-  const axis = axisPoint.value;
   result.axis = axis;
-  const azimuth = Math.atan2(axis.frame.tangent.x, axis.frame.tangent.y);
-  // smerník rastie v smere hodín → otočenie proti smeru hodín o α znamená azimut − α
-  const d = azimuthToVector(azimuth - alpha);
+  const d = line.direction;
   result.direction = d;
   const sin = Math.sin(alpha);
   const cot = Math.cos(alpha) / sin;

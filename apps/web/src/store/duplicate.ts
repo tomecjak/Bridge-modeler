@@ -1,4 +1,5 @@
-import type { ProjectFile } from '@bridge/model';
+import type { BearingLine, ProjectFile, Support } from '@bridge/model';
+import { nextLineName } from './bearingLines.ts';
 import type { Command, ElementCollection } from './commands.ts';
 
 /** Posun kópie podpery po staničení a čiary v pôdoryse [m], aby nebola na rovnakom mieste ako originál. */
@@ -24,9 +25,43 @@ function nextSupportName(prefix: string, existing: readonly string[]): string {
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 /**
+ * Kópia osi uloženia posunutá o 5 m po staničení (pri konci NK späť, aby ostala v rozsahu NK) s ďalším voľným
+ * číslom v NK a kópie podpier na nej s ďalšími číslami podpier.
+ */
+function copyLine(
+  project: ProjectFile,
+  line: BearingLine,
+  supports: readonly Support[],
+  newId: (prefix: string) => string,
+): { line: BearingLine; supports: Support[] } {
+  const deck = project.superstructures.find((d) => d.id === line.superstructure);
+  const shifted = line.station + DUPLICATE_SHIFT;
+  const copy: BearingLine = {
+    ...clone(line),
+    id: newId('bl'),
+    name: nextLineName(
+      project.bearingLines
+        .filter((l) => l.superstructure === line.superstructure)
+        .map((l) => l.name),
+    ),
+    station: deck && shifted > deck.to ? line.station - DUPLICATE_SHIFT : shifted,
+  };
+  const names = project.supports.map((x) => x.name);
+  return {
+    line: copy,
+    supports: supports.map((s) => {
+      const name = nextSupportName(s.kind === 'abutment' ? 'O' : 'P', names);
+      names.push(name);
+      return { ...clone(s), id: newId('sup'), name, bearingLine: copy.id };
+    }),
+  };
+}
+
+/**
  * Kópia prvku (Upraviť → Duplikovať, ADR 0016) ako jeden príkaz `addElements`:
- * - podpera dostane ďalšie číslo a posun o 5 m po staničení (v rozsahu NK),
- * - NK sa skopíruje aj s vlastnou osou mosta (dá sa posunúť nabok, napr. druhá NK dvojice),
+ * - podpera aj os uloženia dostanú novú os posunutú o 5 m po staničení (v rozsahu NK, ADR 0017) a ďalšie čísla,
+ * - NK sa skopíruje aj s vlastnou osou mosta, osami uloženia a podperami (dá sa posunúť nabok, napr. druhá NK
+ *   dvojice),
  * - os mosta, prierez a čiara (posunutá o 5 m na východ) dostanú názov „(kópia)“.
  * Terén sa nekopíruje. `newId` vytvorí nové id s predponou.
  */
@@ -39,22 +74,22 @@ export function duplicateElement(
   switch (collection) {
     case 'supports': {
       const s = project.supports.find((x) => x.id === id);
-      if (!s) return undefined;
-      const deck = project.superstructures.find((d) => d.id === s.superstructure);
-      const shifted = s.station + DUPLICATE_SHIFT;
-      const station = deck && shifted > deck.to ? s.station - DUPLICATE_SHIFT : shifted;
-      const copy = {
-        ...clone(s),
-        id: newId('sup'),
-        name: nextSupportName(
-          s.kind === 'abutment' ? 'O' : 'P',
-          project.supports.map((x) => x.name),
-        ),
-        station,
-      };
+      const line = project.bearingLines.find((l) => l.id === s?.bearingLine);
+      if (!s || !line) return undefined;
+      const copy = copyLine(project, line, [s], newId);
       return {
-        command: { type: 'addElements', supports: [copy] },
-        selected: { collection, id: copy.id },
+        command: { type: 'addElements', bearingLines: [copy.line], supports: copy.supports },
+        selected: { collection, id: copy.supports[0]?.id ?? '' },
+      };
+    }
+    case 'bearingLines': {
+      const line = project.bearingLines.find((l) => l.id === id);
+      if (!line) return undefined;
+      const on = project.supports.filter((s) => s.bearingLine === id);
+      const copy = copyLine(project, line, on, newId);
+      return {
+        command: { type: 'addElements', bearingLines: [copy.line], supports: copy.supports },
+        selected: { collection, id: copy.line.id },
       };
     }
     case 'superstructures': {
@@ -78,11 +113,25 @@ export function duplicateElement(
         ),
         bridgeAxis: axisCopy?.id ?? d.bridgeAxis,
       };
+      const lineIds = new Map(
+        project.bearingLines
+          .filter((l) => l.superstructure === d.id)
+          .map((l) => [l.id, newId('bl')]),
+      );
+      const bearingLines = project.bearingLines.flatMap((l) => {
+        const lineId = lineIds.get(l.id);
+        return lineId ? [{ ...clone(l), id: lineId, superstructure: copy.id }] : [];
+      });
+      const supports = project.supports.flatMap((s) => {
+        const lineId = lineIds.get(s.bearingLine);
+        return lineId ? [{ ...clone(s), id: newId('sup'), bearingLine: lineId }] : [];
+      });
       return {
         command: {
           type: 'addElements',
           ...(axisCopy ? { bridgeAxes: [axisCopy] } : {}),
           superstructures: [copy],
+          ...(bearingLines.length > 0 ? { bearingLines, supports } : {}),
         },
         selected: { collection, id: copy.id },
       };

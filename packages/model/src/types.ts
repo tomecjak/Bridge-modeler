@@ -199,16 +199,28 @@ export function defaultAbutmentGeometry(length = '12'): AbutmentGeometry {
   };
 }
 
-/** Podpera (ADR 0008): patrí jednej NK, leží na jej osi mosta. */
+/**
+ * Os uloženia (ADR 0017): patrí jednej NK, priamka cez bod osi mosta otočená o uhol kríženia; polia NK sa počítajú
+ * z osí uloženia, podpery na nich stoja.
+ */
+export const BearingLineSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  superstructure: z.string(),
+  /** zobrazované staničenie osi cesty v osi mosta */
+  station: z.number(),
+  /** uhol kríženia [°], 90 = kolmá; od osi mosta v smere staničenia proti smeru hodín (ADR 0008) */
+  crossingAngle: ExprSchema,
+});
+export type BearingLine = z.infer<typeof BearingLineSchema>;
+
+/** Podpera (ADR 0008, 0017): stojí na osi uloženia, z ktorej preberá NK, staničenie a uhol kríženia. */
 export const SupportSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   kind: z.enum(['abutment', 'pier']),
-  superstructure: z.string(),
-  /** zobrazované staničenie */
-  station: z.number(),
-  /** uhol kríženia [°], 90 = kolmá; od osi mosta v smere staničenia proti smeru hodín */
-  crossingAngle: ExprSchema,
+  /** id osi uloženia */
+  bearingLine: z.string(),
   /** posun stredu podpery kolmo od osi NK [m], + vpravo */
   offset: ExprSchema,
   geometry: SupportGeometrySchema,

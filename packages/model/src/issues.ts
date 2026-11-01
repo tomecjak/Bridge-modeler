@@ -17,7 +17,7 @@ export type ExpressionField =
 
 /** Prvok modelu, ktorého sa problém týka (prierez, NK, os mosta). */
 export interface IssueOwner {
-  kind: 'profile' | 'superstructure' | 'bridgeAxis' | 'support';
+  kind: 'profile' | 'superstructure' | 'bridgeAxis' | 'support' | 'bearingLine';
   name: string;
 }
 
@@ -73,15 +73,20 @@ export type ModelIssue = {
   | { code: 'EdgeCurveNotReached'; curve: string; station: number }
   | { code: 'StationOutsideSuperstructure'; station: number; from: number; to: number }
   | { code: 'UnknownSuperstructure'; id: string }
+  | { code: 'UnknownBearingLine'; id: string }
+  /** os uloženia bez podpery (ADR 0017) — polia sa počítajú, 3D a výkresy ju nemajú */
+  | { code: 'BearingLineWithoutSupport'; line: string }
+  /** na jednej osi uloženia stojí viac podpier */
+  | { code: 'BearingLineOccupied'; line: string; supports: string[] }
   | { code: 'InvalidCrossingAngle'; angle: number }
   | { code: 'BearingOutsideDeck'; index: number; x: number }
   | { code: 'NonPositiveSupportHeight'; height: number }
   | { code: 'InvalidDimension'; name: string; value: number }
   | { code: 'SupportOrder'; support: string; expected: 'abutment' | 'pier' }
-  | { code: 'DuplicateSupportStation'; station: number }
+  | { code: 'DuplicateBearingLineStation'; station: number }
   | { code: 'SpanTooShort'; length: number; minimum: number }
   | { code: 'SpanAboveEconomic'; length: number; economic: number; typology: string }
-  | { code: 'MissingSupports' }
+  | { code: 'MissingBearingLines' }
   | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
   /** súbor nie je knižnica prierezov (chýba značka formátu) */

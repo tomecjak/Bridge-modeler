@@ -8,6 +8,7 @@ import {
   overallLength,
   sampleSuperstructure,
   seatAt,
+  spanLines,
 } from '@bridge/sections';
 import { evaluateReference212, reference212Project, SIN } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
@@ -20,8 +21,8 @@ describe('referenčný most 212-00', () => {
   });
 
   it('has spans 16 / 23 / 16 m along the axis and 14.10 / 20.26 / 14.10 m perpendicular', () => {
-    const { results, deck } = evaluateReference212();
-    const spans = evaluateSpans(deck, results);
+    const { lines, results, deck } = evaluateReference212();
+    const spans = evaluateSpans(deck, spanLines(lines, results));
     expect(spans.issues.filter((i) => i.severity !== 'warning')).toEqual([]);
     expect(spans.spans.map((s) => s.length)).toEqual([
       expect.closeTo(16, 9),

@@ -52,6 +52,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     bridgeAxes: project.bridgeAxes,
     profiles: project.profiles,
     superstructures: project.superstructures,
+    bearingLines: project.bearingLines,
     planLines: project.planLines,
   };
   const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
@@ -60,7 +61,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
   const decks = new Map<string, ShapeHandle>();
   const objects: ExactObject[] = [];
   for (const sup of project.superstructures) {
-    const own = results.filter((r) => r.support.superstructure === sup.id);
+    const own = results.filter((r) => r.superstructure === sup.id);
     const samples = sampleSuperstructure(ctx, sup, own, { globalLaws });
     const name = `${sup.name} (${sup.id})`;
     if (!('sections' in samples)) {
@@ -91,7 +92,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
       return;
     }
     let body = kernel.union(partSolids(kernel, r, parts));
-    const deck = decks.get(support.superstructure);
+    const deck = r.superstructure === undefined ? undefined : decks.get(r.superstructure);
     if (deck && overlaps(kernel.bounds(body), kernel.bounds(deck))) {
       body = kernel.subtract(body, deck);
     }

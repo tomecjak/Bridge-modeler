@@ -85,6 +85,7 @@ const ctx: SupportContext = {
   profiles: project.profiles,
   planLines: project.planLines,
   superstructures: project.superstructures,
+  bearingLines: project.bearingLines,
 };
 const deck = project.superstructures[0] as Superstructure;
 const results = project.supports.map((s) => evaluateSupport(ctx, s));

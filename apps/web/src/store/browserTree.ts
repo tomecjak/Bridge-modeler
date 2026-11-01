@@ -37,6 +37,7 @@ export interface BrowserInput {
     | 'alignments'
     | 'bridgeAxes'
     | 'superstructures'
+    | 'bearingLines'
     | 'supports'
     | 'profiles'
     | 'terrains'
@@ -73,8 +74,9 @@ const withIssues = (node: BrowserNode, issues: number): BrowserNode =>
   issues > 0 ? { ...node, issues } : node;
 
 /**
- * Strom prehliadača projektu (ADR 0016): pohľady, model hierarchicky (os cesty → os mosta → NK → podpery podľa
- * staničenia, oblasť mosta), podklady, prierezy a parametre. Prvky s neplatným odkazom sú v skupine Nepriradené.
+ * Strom prehliadača projektu (ADR 0016): pohľady, model hierarchicky (os cesty → os mosta → NK → osi uloženia podľa
+ * staničenia → podpera, oblasť mosta), podklady, prierezy a parametre. Prvky s neplatným odkazom sú v skupine
+ * Nepriradené.
  */
 export function browserTree(input: BrowserInput): BrowserNode[] {
   const { project, issues, spans } = input;
@@ -87,12 +89,31 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
       {
         key: `supports:${s.id}`,
         label: s.name,
-        detail: `${sk.supports.kinds[s.kind]} · ${formatStation(s.station, 3)}`,
+        detail: sk.supports.kinds[s.kind],
         icon: s.kind === 'abutment' ? 'abutment' : 'pier',
         target: element('supports', s.id),
         editable: true,
       },
       issues.element(s.id),
+    );
+  };
+
+  const lineNode = (id: string): BrowserNode | undefined => {
+    const l = project.bearingLines.find((x) => x.id === id);
+    if (!l) return undefined;
+    return withIssues(
+      {
+        key: `bearingLines:${l.id}`,
+        label: sk.bearingLines.label(l.name),
+        detail: `${formatStation(l.station, 3)} · ${l.crossingAngle}°`,
+        icon: 'bearingLine',
+        target: element('bearingLines', l.id),
+        editable: true,
+        children: project.supports
+          .filter((s) => s.bearingLine === l.id)
+          .flatMap((s) => supportNode(s.id) ?? []),
+      },
+      issues.element(l.id),
     );
   };
 
@@ -107,10 +128,10 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
     ]
       .filter((x) => x !== undefined)
       .join(' · ');
-    const children = project.supports
-      .filter((s) => s.superstructure === d.id)
+    const children = project.bearingLines
+      .filter((l) => l.superstructure === d.id)
       .sort((a, b) => a.station - b.station)
-      .flatMap((s) => supportNode(s.id) ?? []);
+      .flatMap((l) => lineNode(l.id) ?? []);
     return withIssues(
       {
         key: `superstructures:${d.id}`,
@@ -174,6 +195,7 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
   const roads = new Set(project.alignments.map((a) => a.name));
   const axisIds = new Set(project.bridgeAxes.map((a) => a.id));
   const deckIds = new Set(project.superstructures.map((d) => d.id));
+  const lineIds = new Set(project.bearingLines.map((l) => l.id));
   const orphans: BrowserNode[] = [
     ...project.bridgeAxes
       .filter((a) => !roads.has(a.alignment))
@@ -181,8 +203,11 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
     ...project.superstructures
       .filter((d) => !axisIds.has(d.bridgeAxis))
       .flatMap((d) => deckNode(d.id) ?? []),
+    ...project.bearingLines
+      .filter((l) => !deckIds.has(l.superstructure))
+      .flatMap((l) => lineNode(l.id) ?? []),
     ...project.supports
-      .filter((s) => !deckIds.has(s.superstructure))
+      .filter((s) => !lineIds.has(s.bearingLine))
       .flatMap((s) => supportNode(s.id) ?? []),
   ];
   if (orphans.length > 0) {

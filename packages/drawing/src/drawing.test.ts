@@ -6,6 +6,7 @@ import {
   bridgeLengths,
   evaluateSpans,
   polylineProfileLine,
+  spanLines,
 } from '@bridge/sections';
 import { evaluateReference212 } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
@@ -261,7 +262,9 @@ describe('profileReadout', () => {
 
 describe('bridgeDimensions', () => {
   it('gives the dimension chains of the 212-00 drawing', () => {
-    const spans = evaluateSpans(ref.deck, ref.results, { measure: measure.lengthAt }).spans;
+    const spans = evaluateSpans(ref.deck, spanLines(ref.lines, ref.results), {
+      measure: measure.lengthAt,
+    }).spans;
     const lengths = bridgeLengths({
       measure,
       supports: ref.results,

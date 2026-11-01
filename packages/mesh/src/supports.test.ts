@@ -1,22 +1,17 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { type Polygon2D, pointInPolygon, signedArea, vec2 } from '@bridge/geom';
-import {
-  buildParameterSet,
-  defaultAbutmentGeometry,
-  type Superstructure,
-  type Support,
-} from '@bridge/model';
+import { buildParameterSet, defaultAbutmentGeometry, type Superstructure } from '@bridge/model';
 import {
   abutmentParts,
   BEARING_PLAN_SIZE,
-  evaluateSupport,
   type SupportContext,
   type SupportResult,
   seatAt,
   singleDeckExample,
   supportPlan,
 } from '@bridge/sections';
+import { evaluateSupportOnLine, type SupportOnLine } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { MeshKernel } from './kernel.ts';
 import { meshBounds, meshVolume } from './mesh.ts';
@@ -33,10 +28,11 @@ const ctx: SupportContext = {
   profiles: [example.profile],
   planLines: [],
   superstructures: example.superstructures as Superstructure[],
+  bearingLines: [],
 };
 
-const pier = (changes: Partial<Support> = {}): SupportResult =>
-  evaluateSupport(ctx, {
+const pier = (changes: Partial<SupportOnLine> = {}): SupportResult =>
+  evaluateSupportOnLine(ctx, {
     id: 'p1',
     name: 'P1',
     kind: 'pier',
@@ -131,7 +127,7 @@ describe('supportMesh', () => {
 });
 
 describe('supportMesh — opora', () => {
-  const abutment = (changes: Partial<Support> = {}) =>
+  const abutment = (changes: Partial<SupportOnLine> = {}) =>
     pier({
       kind: 'abutment',
       station: 1021,

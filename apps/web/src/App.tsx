@@ -11,7 +11,13 @@ import {
   translate,
 } from '@bridge/drawing';
 import { type Vec2, vec2 } from '@bridge/geom';
-import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
+import {
+  type BearingLine,
+  createEmptyProject,
+  evaluateLaw,
+  openProject,
+  type TerrainSurface,
+} from '@bridge/model';
 import {
   bridgeAxisPlan,
   evaluateSuperstructure,
@@ -48,7 +54,12 @@ import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
 import { AxisOffsetDialog } from './layout/properties/AxisOffsetDialog.tsx';
 import { BearingsDialog } from './layout/properties/BearingsDialog.tsx';
-import { deckSheet, profileSheet, supportSheet } from './layout/properties/elementSheets.tsx';
+import {
+  bearingLineSheet,
+  deckSheet,
+  profileSheet,
+  supportSheet,
+} from './layout/properties/elementSheets.tsx';
 import { PlanLineVerticesDialog } from './layout/properties/PlanLineVerticesDialog.tsx';
 import { ProfileLawDialog } from './layout/properties/ProfileLawDialog.tsx';
 import { ProfileTablesDialog } from './layout/properties/ProfileTablesDialog.tsx';
@@ -76,6 +87,7 @@ import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
 import { drawingFileName } from './persistence/fileName.ts';
+import { nextLineName } from './store/bearingLines.ts';
 import { type BrowserTarget, browserTree } from './store/browserTree.ts';
 import type { ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
@@ -304,7 +316,7 @@ export function App() {
 
   /** Podpery na osiach mosta vedených po zobrazenej osi cesty (pre pôdorys a profil). */
   const roadSupports = supportState.supports.filter((r) => {
-    const deck = project.superstructures.find((d) => d.id === r.support.superstructure);
+    const deck = project.superstructures.find((d) => d.id === r.superstructure);
     const axis = project.bridgeAxes.find((a) => a.id === deck?.bridgeAxis);
     return axis !== undefined && axis.alignment === item?.data.name;
   });
@@ -315,7 +327,7 @@ export function App() {
     roadDecks.find((d) => d.id === (profileDeckId ?? selectedSuperstructureId)) ?? roadDecks[0];
   /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
   const sectionSupports = roadSupports
-    .filter((r) => Math.abs(r.support.station - sectionAt) <= 0.5 && r.axis)
+    .filter((r) => Math.abs(r.station - sectionAt) <= 0.5 && r.axis)
     .flatMap((r) => projectSupport(r, item?.alignment.origin.z ?? 0) ?? []);
 
   const otherAlignments = useMemo(
@@ -442,30 +454,21 @@ export function App() {
     setMessage(sk.export.done(file));
   }
 
-  /** Klik v pôdoryse: podpera pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie ku kliknutiu. */
-  function addSupportAt(s: number, offset: number) {
+  /**
+   * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0017): opora pri konci NK (do 2 m) alebo na krajnej
+   * z aspoň dvoch osí NK, inak pilier. `lines` = osi projektu vrátane novej osi.
+   */
+  function newSupportOn(line: BearingLine, lines: readonly BearingLine[]) {
     const road = item?.alignment;
-    if (!road) return;
-    const station = Math.round(road.stationing.toDisplay(s).station * 1000) / 1000;
-    const scope = globalScope(parameterState.set, station);
-    const candidates = project.superstructures
-      .filter((d) => station >= d.from && station <= d.to)
-      .map((d) => {
-        const axis = project.bridgeAxes.find(
-          (a) => a.id === d.bridgeAxis && a.alignment === road.name,
-        );
-        const h = axis ? evaluateLaw(axis.horizontalOffset, 'length', scope, station) : undefined;
-        return { d, distance: h?.ok ? Math.abs(h.value - offset) : Number.POSITIVE_INFINITY };
-      })
-      .filter((c) => Number.isFinite(c.distance))
-      .sort((a, b) => a.distance - b.distance);
-    const deck = candidates[0]?.d;
-    if (!deck) {
-      setMessage(sk.supports.noDeckHere);
-      return;
-    }
-    const nearEnd = station - deck.from < 2 || deck.to - station < 2;
-    const kind = nearEnd ? 'abutment' : 'pier';
+    const deck = project.superstructures.find((d) => d.id === line.superstructure);
+    const s = road?.stationing.fromDisplay(line.station);
+    if (!road || !deck || s === undefined) return undefined;
+    const own = lines
+      .filter((l) => l.superstructure === deck.id)
+      .sort((a, b) => a.station - b.station);
+    const atEnd = own.length >= 2 && (own[0]?.id === line.id || own.at(-1)?.id === line.id);
+    const nearEnd = line.station - deck.from < 2 || deck.to - line.station < 2;
+    const kind = nearEnd || atEnd ? 'abutment' : 'pier';
     const prefix = kind === 'abutment' ? 'O' : 'P';
     const existing = new Set(project.supports.map((x) => x.name));
     let n = 1;
@@ -492,16 +495,57 @@ export function App() {
       .filter((l) => l.role === 'outer')
       .flatMap((l) => l.polygon.map((p) => p.x));
     const width = xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : undefined;
-    const support = defaultSupport(
-      newId('sup'),
-      `${prefix}${n}`,
-      kind,
-      deck.id,
-      station,
-      soffit,
-      width,
-    );
+    return defaultSupport(newId('sup'), `${prefix}${n}`, kind, line.id, soffit, width);
+  }
+
+  /** Podpera na voľnej osi uloženia (vlastnosti osi, kontextová karta). */
+  function addSupportOnLine(lineId: string) {
+    const line = project.bearingLines.find((l) => l.id === lineId);
+    const support = line && newSupportOn(line, project.bearingLines);
+    if (!support) return;
     projectStore.getState().dispatch({ type: 'addElements', supports: [support] });
+    setSelectedElement({ collection: 'supports', id: support.id });
+  }
+
+  /**
+   * Klik v pôdoryse: os uloženia a podpera na nej pre NK, ktorej rozsah obsahuje staničenie a ktorej os je najbližšie
+   * ku kliknutiu (jeden krok späť).
+   */
+  function addSupportAt(s: number, offset: number) {
+    const road = item?.alignment;
+    if (!road) return;
+    const station = Math.round(road.stationing.toDisplay(s).station * 1000) / 1000;
+    const scope = globalScope(parameterState.set, station);
+    const candidates = project.superstructures
+      .filter((d) => station >= d.from && station <= d.to)
+      .map((d) => {
+        const axis = project.bridgeAxes.find(
+          (a) => a.id === d.bridgeAxis && a.alignment === road.name,
+        );
+        const h = axis ? evaluateLaw(axis.horizontalOffset, 'length', scope, station) : undefined;
+        return { d, distance: h?.ok ? Math.abs(h.value - offset) : Number.POSITIVE_INFINITY };
+      })
+      .filter((c) => Number.isFinite(c.distance))
+      .sort((a, b) => a.distance - b.distance);
+    const deck = candidates[0]?.d;
+    if (!deck) {
+      setMessage(sk.supports.noDeckHere);
+      return;
+    }
+    const line: BearingLine = {
+      id: newId('bl'),
+      name: nextLineName(
+        project.bearingLines.filter((l) => l.superstructure === deck.id).map((l) => l.name),
+      ),
+      superstructure: deck.id,
+      station,
+      crossingAngle: '90',
+    };
+    const support = newSupportOn(line, [...project.bearingLines, line]);
+    if (!support) return;
+    projectStore
+      .getState()
+      .dispatch({ type: 'addElements', bearingLines: [line], supports: [support] });
     setSelectedElement({ collection: 'supports', id: support.id });
     setSectionStation(station);
     setMessage(undefined);
@@ -660,8 +704,8 @@ export function App() {
         return;
       case 'element': {
         setSelectedElement({ collection: target.collection, id: target.id });
-        const support = project.supports.find((x) => x.id === target.id);
-        if (support) setSectionStation(support.station);
+        const station = lineStationOf(target.id);
+        if (station !== undefined) setSectionStation(station);
         return;
       }
       case 'studyArea':
@@ -677,11 +721,17 @@ export function App() {
     }
   }
 
-  /** Staničenie prvku na priblíženie (podpera, stred NK). */
+  /** Staničenie osi uloženia podľa id osi alebo podpery na nej. */
+  function lineStationOf(id: string): number | undefined {
+    const lineId = project.supports.find((x) => x.id === id)?.bearingLine ?? id;
+    return project.bearingLines.find((l) => l.id === lineId)?.station;
+  }
+
+  /** Staničenie prvku na priblíženie (os uloženia, podpera, stred NK). */
   function targetStation(target: BrowserTarget): number | undefined {
     if (target.type !== 'element') return undefined;
-    const support = project.supports.find((x) => x.id === target.id);
-    if (support) return support.station;
+    const station = lineStationOf(target.id);
+    if (station !== undefined) return station;
     const deck = project.superstructures.find((x) => x.id === target.id);
     return deck ? (deck.from + deck.to) / 2 : undefined;
   }
@@ -826,6 +876,7 @@ export function App() {
   const contextualKinds: Record<ElementCollection, ContextualKind> = {
     profiles: 'profile',
     supports: 'support',
+    bearingLines: 'bearingLine',
     superstructures: 'deck',
     planLines: 'planLine',
     terrains: 'terrain',
@@ -849,6 +900,11 @@ export function App() {
         setMode('2d');
         setTool('support');
       },
+      onSupportOnLine:
+        selectedElement.collection === 'bearingLines' &&
+        !project.supports.some((s) => s.bearingLine === selectedElement.id)
+          ? () => addSupportOnLine(selectedElement.id)
+          : undefined,
       onEditProfile: () => {
         const deck = project.superstructures.find((d) => d.id === selectedElement.id);
         if (!deck) return;
@@ -1228,7 +1284,30 @@ export function App() {
               support,
               result: supportState.supports.find((r) => r.support.id === support.id),
               decks: project.superstructures,
+              lines: project.bearingLines,
+              occupied: new Set(
+                project.supports.filter((x) => x.id !== support.id).map((x) => x.bearingLine),
+              ),
               onBearings: () => setBearingsOf(support.id),
+              onDelete: deleteSelected,
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'bearingLines') {
+      const line = project.bearingLines.find((x) => x.id === el.id);
+      if (line)
+        return (
+          <PropertiesPalette
+            sheet={bearingLineSheet({
+              line,
+              result: supportState.lines.find((r) => r.line.id === line.id),
+              decks: project.superstructures,
+              supports: project.supports.filter((s) => s.bearingLine === line.id),
+              spans: supportState.spans.get(line.superstructure),
+              onAddSupport: () => addSupportOnLine(line.id),
+              onSelectSupport: (id) => setSelectedElement({ collection: 'supports', id }),
               onDelete: deleteSelected,
               dispatch,
             })}
@@ -1517,8 +1596,8 @@ export function App() {
                 }
                 const collection = picked.kind === 'support' ? 'supports' : 'superstructures';
                 setSelectedElement({ collection, id: picked.id });
-                const support = project.supports.find((x) => x.id === picked.id);
-                if (support) setSectionStation(support.station);
+                const station = lineStationOf(picked.id);
+                if (station !== undefined) setSectionStation(station);
               }}
               station={sectionAt}
               stationRange={sectionRange}

@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { bridgeAxisLength } from './axisLength.ts';
 import { bridgeLengths } from './bridgeLengths.ts';
 import { bridgeAxisPlan } from './longitudinal.ts';
-import { evaluateSpans } from './spans.ts';
-import { evaluateSupport, type SupportContext } from './supports.ts';
+import { evaluateSpans, spanLines } from './spans.ts';
+import { evaluateBearingLine, evaluateSupport, type SupportContext } from './supports.ts';
 import { reference212Project } from './testing/index.ts';
 
 /** Dĺžky mosta projektu s jednou NK (ako v `store/supports.ts`). */
@@ -21,7 +21,9 @@ function lengthsOf(p: ProjectFile) {
     profiles: p.profiles,
     planLines: p.planLines,
     superstructures: p.superstructures,
+    bearingLines: p.bearingLines,
   };
+  const lines = p.bearingLines.map((l) => evaluateBearingLine(ctx, l));
   const results = p.supports.map((s) => evaluateSupport(ctx, s));
   const deck = p.superstructures[0] as Superstructure;
   const axis = p.bridgeAxes[0];
@@ -29,7 +31,7 @@ function lengthsOf(p: ProjectFile) {
   const sFrom = alignment.stationing.fromDisplay(deck.from) as number;
   const sTo = alignment.stationing.fromDisplay(deck.to) as number;
   const measure = bridgeAxisLength(axis, alignment, parameters);
-  const spans = evaluateSpans(deck, results, { measure: measure.lengthAt });
+  const spans = evaluateSpans(deck, spanLines(lines, results), { measure: measure.lengthAt });
   const lengths = bridgeLengths({
     measure,
     supports: results,
