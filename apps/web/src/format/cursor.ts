@@ -5,7 +5,7 @@ import { formatGrade, formatNumber } from './number.ts';
 
 export type CursorInfo =
   | { source: 'plan'; point: Vec2; s: number | undefined; offset: number | undefined }
-  | { source: 'profile'; s: number | undefined };
+  | { source: 'profile'; s: number | undefined; point?: Vec2 | undefined };
 
 /** Text stavového riadka pre polohu kurzora v pôdoryse alebo v profile. */
 export function formatCursor(cursor: CursorInfo, alignment: Alignment, origin: Vec3): string {

@@ -41,6 +41,12 @@ export function evaluateLaw(
   return c.fn.at(sta, scope);
 }
 
+/** Mená globálnych parametrov, na ktoré staničná funkcia odkazuje (prázdne aj pri chybnej funkcii). */
+export function lawReferences(law: StationFunction, unit: ParameterUnit): ReadonlySet<string> {
+  const c = compiled(law, unit);
+  return c.ok ? c.fn.references : new Set();
+}
+
 /** Všetky statické problémy staničnej funkcie (syntax, úseky). */
 export function lawIssues(law: StationFunction, unit: ParameterUnit): ModelIssue[] {
   const c = compiled(law, unit);

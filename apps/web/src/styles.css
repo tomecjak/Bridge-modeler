@@ -1001,6 +1001,16 @@ text.dw-stationing {
   pointer-events: none;
 }
 
+/* čiara pozdĺžneho profilu v pôdoryse (Fáza 10b) */
+.profile-axis-plan {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-opacity: 0.35;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
 .plan-line-vertex {
   fill: var(--panel);
   stroke: var(--warning);

@@ -2,10 +2,11 @@ import type { Alignment } from '@bridge/alignment';
 import type { Drawing } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
+import type { ProfileLine } from '@bridge/sections';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
-import { ProfileView } from '../views/ProfileView.tsx';
+import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
 
@@ -17,12 +18,16 @@ interface Props {
   alignment: Alignment | undefined;
   cursorS: number | undefined;
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
-  onProfileCursor: (s: number | undefined) => void;
+  onProfileCursor: (cursor: ProfileCursor | undefined) => void;
+  /** bod kurzora z profilu na čiare profilu (značka v pôdoryse) */
+  planCursorPoint: Vec2 | undefined;
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
-  /** rozvinutý pozdĺžny rez v osi vybranej NK */
-  profile: Drawing | undefined;
+  /** pozdĺžny profil v zvolenej osi (Fáza 10b): čiara, výkres, kľúč osi a názov */
+  profile:
+    | { line: ProfileLine; drawing: Drawing | undefined; axis: string; title: string }
+    | undefined;
   onAddSupport: (s: number, offset: number) => void;
   /** stav pohľadov z ribbonu (ADR 0016) */
   tool: ViewTool;
@@ -60,6 +65,7 @@ export function Viewport({
   cursorS,
   onPlanCursor,
   onProfileCursor,
+  planCursorPoint,
   parametersView,
   sectionView,
   plan,
@@ -115,6 +121,7 @@ export function Viewport({
               key={alignment.name}
               alignment={alignment}
               cursorS={cursorS}
+              cursorPoint={planCursorPoint}
               onCursor={onPlanCursor}
               drawing={plan}
               selected={selectedId}
@@ -129,23 +136,31 @@ export function Viewport({
               planLines={planLines}
               onAddPlanLine={onAddPlanLine}
               onMovePlanLineVertex={onMovePlanLineVertex}
+              profileLine={
+                profile && profile.line.kind !== 'road' && profile.line.kind !== 'bridgeAxis'
+                  ? profile.line.points.map((p) => p.point)
+                  : undefined
+              }
             />
-            <ProfileView
-              key={`${alignment.name}-profile`}
-              alignment={alignment}
-              cursorS={cursorS}
-              onCursor={onProfileCursor}
-              drawing={profile}
-              selected={selectedId}
-              exaggeration={exaggeration}
-              tool={tool}
-              onTool={onTool}
-              fitRequest={fitRequest}
-              studyArea={studyArea}
-              focus={focus}
-              onStudyArea={onStudyArea}
-              goTo={goTo}
-            />
+            {profile && (
+              <ProfileView
+                key={`${alignment.name}-profile-${profile.axis}`}
+                line={profile.line}
+                title={profile.title}
+                cursorS={cursorS}
+                onCursor={onProfileCursor}
+                drawing={profile.drawing}
+                selected={selectedId}
+                exaggeration={exaggeration}
+                tool={tool}
+                onTool={onTool}
+                fitRequest={fitRequest}
+                studyArea={studyArea}
+                focus={focus}
+                onStudyArea={onStudyArea}
+                goTo={goTo}
+              />
+            )}
           </div>
         )}
       </div>

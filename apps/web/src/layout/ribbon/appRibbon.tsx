@@ -47,6 +47,10 @@ export interface RibbonContext {
   decks: readonly { id: string; name: string }[];
   profileDeckId: string | undefined;
   setProfileDeckId: (id: string) => void;
+  /** os pozdĺžneho profilu (Fáza 10b) */
+  profileAxis: string;
+  profileAxes: readonly { value: string; label: string }[];
+  setProfileAxis: (key: string) => void;
   view3d: View3dState;
   setView3d: (changes: Partial<View3dState>) => void;
   onProjectInfo: () => void;
@@ -298,6 +302,16 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
                   },
                 ]
               : []),
+            {
+              kind: 'select',
+              id: 'profile-axis',
+              label: t.profileAxis,
+              title: t.profileAxisTitle,
+              value: c.profileAxis,
+              options: [...c.profileAxes],
+              onChange: c.setProfileAxis,
+              disabled: !in2d || c.profileAxes.length < 2,
+            },
           ],
         },
         {
@@ -427,6 +441,8 @@ export interface ContextualContext {
   onVertices: () => void;
   onRedownload: (() => void) | undefined;
   onAxisOffset: (which: 'horizontalOffset' | 'verticalOffset') => void;
+  /** NK: profil v jej osi mosta; čiara: profil v čiare (Fáza 10b) */
+  onProfileHere: () => void;
   /** editor prierezu (Fáza 8b) */
   profileTool: ProfileTool;
   setProfileTool: (tool: ProfileTool) => void;
@@ -516,6 +532,7 @@ export function contextualTab(c: ContextualContext): RibbonTab {
               button('deck-support', t.support, 'pier', c.onAddSupport, t.supportTitle),
               button('deck-profile', t.editProfile, 'section', c.onEditProfile),
               button('deck-section', t.showInSection, 'section', c.onShowInSection),
+              button('deck-longitudinal', t.profileInAxis, 'profile', c.onProfileHere),
             ],
           },
         ];
@@ -523,7 +540,10 @@ export function contextualTab(c: ContextualContext): RibbonTab {
         return [
           {
             label: t.groups.line,
-            items: [button('line-vertices', t.vertices, 'line', c.onVertices)],
+            items: [
+              button('line-vertices', t.vertices, 'line', c.onVertices),
+              button('line-profile', t.profileInLine, 'profile', c.onProfileHere),
+            ],
           },
         ];
       case 'terrain':

@@ -4,6 +4,7 @@ import { type BridgeAxis, evaluateLaw, type ParameterSet } from '@bridge/model';
 import type { SolidPart } from './abutment.ts';
 import { highestCrossing, lowestCrossing } from './crossing.ts';
 import type { DeckSamples } from './deckSampling.ts';
+import type { BridgeAxisPoint, SuperstructureSection } from './superstructure.ts';
 
 /** Bod osi mosta v pôdoryse so spojitým staničením osi cesty. */
 export interface AxisLinePoint {
@@ -217,3 +218,173 @@ export function deckLongitudinal(samples: Pick<DeckSamples, 'sections'>): DeckLo
   }
   return result;
 }
+
+/** Okraj NK sa reže tesne dnu, aby bolo vidno čelo konzoly [m]. */
+const EDGE_INSET = 1e-3;
+/** Priesečník čiary bližšie k okraju ako táto hodnota sa posunie na okraj [m]. */
+const EDGE_SNAP = 5e-3;
+/** Najväčšia vzdialenosť priesečníka čiary s rovinou prierezu od osi mosta [m]. */
+const CROSSING_REACH = 100;
+
+interface CutValues {
+  u: number;
+  top: number;
+  bottom: number;
+  voids: Map<string, { top: number; bottom: number }>;
+}
+
+/**
+ * Rozvinutý rez NK zvislou plochou cez ľubovoľnú čiaru v pôdoryse (Fáza 10b, z parametrov, ADR 0007): v každej vzorke
+ * NK priesečník čiary s rovinou prierezu (os mosta + x · vodorovná normála), zvislica v odsadení x pretne vonkajšie
+ * obrysy a dutiny. Konce NK sú šikmé roviny rovnobežné s osou krajnej opory ako v obryse NK (prierez sa za koncovú
+ * rovinu predlžuje po dotyčnici); okraj NK sa reže 1 mm dnu. Výsledok v rovine rezu: x = u čiary, y = lokálne z.
+ */
+export function deckCutAlong(
+  samples: Pick<DeckSamples, 'sections' | 'sFrom' | 'sTo' | 'endAngles'>,
+  line: readonly { u: number; point: Vec2 }[],
+): DeckLongitudinal {
+  const sections = samples.sections.filter((s) => s.axis && s.loops.length > 0);
+  const result: DeckLongitudinal = { outer: [], voids: [] };
+  const first = sections[0];
+  const last = sections[sections.length - 1];
+  if (!first || !last || line.length < 2) return result;
+
+  // úseky čiary v okolí NK (obdĺžnik okolo osi mosta s rezervou na šírku NK)
+  const reach = Math.max(
+    ...sections.flatMap((sec) => sec.loops.flatMap((l) => l.polygon.map((p) => Math.abs(p.x)))),
+  );
+  const pad = reach + 1;
+  const xs = sections.map((sec) => sec.axis?.point.x ?? 0);
+  const ys = sections.map((sec) => sec.axis?.point.y ?? 0);
+  const box = {
+    minX: Math.min(...xs) - pad,
+    maxX: Math.max(...xs) + pad,
+    minY: Math.min(...ys) - pad,
+    maxY: Math.max(...ys) + pad,
+  };
+  const near: number[] = [];
+  for (let i = 0; i + 1 < line.length; i++) {
+    const a = (line[i] as (typeof line)[number]).point;
+    const b = (line[i + 1] as (typeof line)[number]).point;
+    if (Math.max(a.x, b.x) < box.minX || Math.min(a.x, b.x) > box.maxX) continue;
+    if (Math.max(a.y, b.y) < box.minY || Math.min(a.y, b.y) > box.maxY) continue;
+    near.push(i);
+  }
+
+  /** priesečník čiary s priamkou o + x · d najbližšie k o: dĺžka u a parameter x */
+  const crossing = (o: Vec2, d: Vec2): { u: number; x: number } | undefined => {
+    let best: { u: number; x: number } | undefined;
+    for (const i of near) {
+      const a = line[i] as (typeof line)[number];
+      const b = line[i + 1] as (typeof line)[number];
+      const ex = b.point.x - a.point.x;
+      const ey = b.point.y - a.point.y;
+      const den = ex * d.y - ey * d.x;
+      if (Math.abs(den) < 1e-12) continue;
+      const wx = o.x - a.point.x;
+      const wy = o.y - a.point.y;
+      const t = (wx * d.y - wy * d.x) / den;
+      if (t < -1e-9 || t > 1 + 1e-9) continue;
+      const x = (wx * ey - wy * ex) / den;
+      if (Math.abs(x) > CROSSING_REACH) continue;
+      if (!best || Math.abs(x) < Math.abs(best.x)) best = { u: a.u + t * (b.u - a.u), x };
+    }
+    return best;
+  };
+
+  const unit = (v: { x: number; y: number }) => {
+    const n = Math.hypot(v.x, v.y);
+    return vec2(v.x / n, v.y / n);
+  };
+  /** rez prierezom `sec` zvislicou v odsadení x; `dz` posun výšky (predĺženie za koncovú rovinu) */
+  const cutAt = (
+    sec: SuperstructureSection,
+    x: number,
+    u: number,
+    dz = 0,
+  ): CutValues | undefined => {
+    const outer = sec.loops.filter((l) => l.role === 'outer').map((l) => l.polygon);
+    const all = outer.flat();
+    const xMin = Math.min(...all.map((p) => p.x));
+    const xMax = Math.max(...all.map((p) => p.x));
+    let xc = x;
+    if (xc > xMax - EDGE_INSET && xc < xMax + EDGE_SNAP) xc = xMax - EDGE_INSET;
+    if (xc < xMin + EDGE_INSET && xc > xMin - EDGE_SNAP) xc = xMin + EDGE_INSET;
+    const top = highestCrossing(outer, xc);
+    const bottom = lowestCrossing(outer, xc);
+    if (top === undefined || bottom === undefined || top - bottom < 1e-9) return undefined;
+    const z = (y: number) => sec.toWorld(vec2(xc, y)).z + dz;
+    const voids = new Map<string, { top: number; bottom: number }>();
+    for (const l of sec.loops.filter((loop) => loop.role === 'void')) {
+      const vt = highestCrossing([l.polygon], xc);
+      const vb = lowestCrossing([l.polygon], xc);
+      if (vt !== undefined && vb !== undefined && vt - vb > 1e-9)
+        voids.set(l.name, { top: z(vt), bottom: z(vb) });
+    }
+    return { u, top: z(top), bottom: z(bottom), voids };
+  };
+
+  const cot0 = cot(samples.endAngles.start);
+  const cot1 = cot(samples.endAngles.end);
+  const entries: CutValues[] = [];
+  for (const sec of sections) {
+    const axis = sec.axis as BridgeAxisPoint;
+    const c = crossing(vec2(axis.point.x, axis.point.y), unit(axis.frame.normal));
+    if (!c) continue;
+    // za šikmou koncovou rovinou NK v odsadení x nie je
+    if (sec.s < samples.sFrom - c.x * cot0 - 1e-9 || sec.s > samples.sTo - c.x * cot1 + 1e-9)
+      continue;
+    const v = cutAt(sec, c.x, c.u);
+    if (v) entries.push(v);
+  }
+  // konce NK: priesečník čiary so šikmou koncovou rovinou, prierez konca predĺžený po dotyčnici
+  for (const [sec, k] of [
+    [first, cot0],
+    [last, cot1],
+  ] as const) {
+    const axis = sec.axis as BridgeAxisPoint;
+    const n = unit(axis.frame.normal);
+    const t3 = axis.frame.tangent;
+    const th = Math.hypot(t3.x, t3.y);
+    const t = vec2(t3.x / th, t3.y / th);
+    const c = crossing(vec2(axis.point.x, axis.point.y), vec2(n.x - k * t.x, n.y - k * t.y));
+    if (!c) continue;
+    const v = cutAt(sec, c.x, c.u, -c.x * k * (t3.z / th));
+    if (v) entries.push(v);
+  }
+  entries.sort((a, b) => a.u - b.u);
+
+  type Run = { top: Vec2[]; bottom: Vec2[] };
+  const outline = (r: Run): Polygon2D => [...r.top, ...[...r.bottom].reverse()];
+  const runs = new Map<string, Run[]>();
+  const open = new Map<string, Run>();
+  for (const e of entries) {
+    const keys = new Set(['outer', ...[...e.voids.keys()].map((n) => `void:${n}`)]);
+    for (const [key, run] of open) {
+      if (!keys.has(key)) {
+        open.delete(key);
+        runs.set(key, [...(runs.get(key) ?? []), run]);
+      }
+    }
+    for (const key of keys) {
+      const v = key === 'outer' ? e : e.voids.get(key.slice(5));
+      if (!v) continue;
+      let run = open.get(key);
+      if (!run) {
+        run = { top: [], bottom: [] };
+        open.set(key, run);
+      }
+      run.top.push(vec2(e.u, v.top));
+      run.bottom.push(vec2(e.u, v.bottom));
+    }
+  }
+  for (const [key, run] of open) runs.set(key, [...(runs.get(key) ?? []), run]);
+  for (const [key, list] of runs) {
+    const polys = list.filter((r) => r.top.length >= 2).map(outline);
+    if (key === 'outer') result.outer.push(...polys);
+    else result.voids.push(...polys);
+  }
+  return result;
+}
+
+const cot = (a: number) => Math.cos(a) / Math.sin(a);

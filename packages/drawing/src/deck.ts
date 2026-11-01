@@ -1,22 +1,15 @@
 import type { Superstructure } from '@bridge/model';
 import {
-  type AxisCut,
   type AxisLinePoint,
   bridgeAxisPlan,
-  cutAlongAxis,
-  type DeckLongitudinal,
   type DeckOutline,
+  type DeckSamples,
   type DeckSamplingOptions,
-  deckLongitudinal,
   deckOutline,
   type SectionContext,
   type SupportResult,
   sampleSuperstructure,
-  supportParts,
 } from '@bridge/sections';
-
-/** Presah osi mosta za konce NK pre rez podperami (opory s krídlami) [m]. */
-const CUT_REACH = 30;
 
 /** Geometria jednej NK pre pôdorys a pozdĺžny rez (z parametrov, ADR 0002). */
 export interface DeckDrawingData {
@@ -27,12 +20,13 @@ export interface DeckDrawingData {
   outline: DeckOutline;
   /** os mosta v pôdoryse v rozsahu NK */
   axis: AxisLinePoint[];
-  longitudinal: DeckLongitudinal;
-  /** rezy podperami tejto NK v jej osi mosta */
-  supports: { id: string; name: string; station: number; cut: AxisCut[] }[];
+  /** vzorky prierezov NK (rezy v pozdĺžnom profile, `profileCuts`) */
+  samples: DeckSamples;
+  /** vyhodnotené podpery tejto NK */
+  own: SupportResult[];
 }
 
-/** Vzorky NK, obrys v pôdoryse, rez v osi mosta a rezy jej podperami; `undefined`, ak NK nie je vyhodnotiteľná. */
+/** Vzorky NK, obrys a os mosta v pôdoryse a jej podpery; `undefined`, ak NK nie je vyhodnotiteľná. */
 export function deckDrawingData(
   ctx: SectionContext,
   sup: Superstructure,
@@ -43,19 +37,13 @@ export function deckDrawingData(
   const samples = sampleSuperstructure(ctx, sup, own, options);
   if (!('sections' in samples)) return undefined;
   const { alignment, axis, sFrom, sTo } = samples;
-  const line = bridgeAxisPlan(axis, alignment, ctx.parameters, sFrom - CUT_REACH, sTo + CUT_REACH);
   return {
     id: sup.id,
     name: sup.name,
     road: alignment.name,
     outline: deckOutline(samples),
-    axis: line.filter((p) => p.s >= sFrom - 1e-9 && p.s <= sTo + 1e-9),
-    longitudinal: deckLongitudinal(samples),
-    supports: own.map((r) => ({
-      id: r.support.id,
-      name: r.support.name,
-      station: r.station,
-      cut: cutAlongAxis(supportParts(r), line),
-    })),
+    axis: bridgeAxisPlan(axis, alignment, ctx.parameters, sFrom, sTo),
+    samples,
+    own,
   };
 }

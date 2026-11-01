@@ -10,6 +10,7 @@ import {
   type Drawing,
   deckDrawingData,
   planDrawing,
+  profileCuts,
   profileDrawing,
   projectSection,
   projectSupport,
@@ -18,7 +19,7 @@ import {
   toSvg,
   translate,
 } from '@bridge/drawing';
-import { evaluateSuperstructure } from '@bridge/sections';
+import { bridgeAxisLength, bridgeAxisProfileLine, evaluateSuperstructure } from '@bridge/sections';
 import { evaluateReference212 } from '@bridge/sections/testing';
 
 const dir = resolve(
@@ -30,6 +31,11 @@ const ref = evaluateReference212();
 const origin = ref.p.crs.origin ?? { x: 0, y: 0, z: 0 };
 const deck = deckDrawingData(ref.ctx, ref.deck, ref.results) as DeckDrawingData;
 const pier = ref.results[1] as (typeof ref.results)[number];
+const axis = ref.p.bridgeAxes[0];
+if (!axis) throw new Error('chýba os mosta');
+const measure = bridgeAxisLength(axis, ref.alignment, ref.ctx.parameters);
+const line = bridgeAxisProfileLine(ref.alignment, measure);
+const cuts = profileCuts(deck, line, measure);
 const section = projectSection(
   evaluateSuperstructure(ref.ctx, ref.deck, pier.s),
   ref.alignment,
@@ -50,9 +56,9 @@ const drawings: Record<string, Drawing> = {
     origin.y,
   ),
   'pozdlzny-rez': profileDrawing({
-    alignment: ref.alignment,
-    decks: [{ id: deck.id, cut: deck.longitudinal }],
-    supports: deck.supports,
+    line,
+    decks: [{ id: deck.id, cut: cuts.deck }],
+    supports: cuts.supports,
     terrain: [],
   }),
   'priecny-rez': sectionDrawing({

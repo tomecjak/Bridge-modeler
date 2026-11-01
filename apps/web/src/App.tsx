@@ -81,6 +81,7 @@ import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
 import { duplicateElement } from './store/duplicate.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
+import { type ProfileAxisKey, useProfileView } from './store/profile.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
 import { defaultSupport, useAxisLengths, useSupportState } from './store/supports.ts';
@@ -128,6 +129,8 @@ export function App() {
   const [sectionStation, setSectionStation] = useState<number>();
   /** NK, v osi ktorej je pozdĺžny rez (výber v profile); inak vybraná alebo prvá NK */
   const [profileDeckId, setProfileDeckId] = useState<string>();
+  /** os pozdĺžneho profilu (Fáza 10b); bez voľby os mosta NK, inak os cesty */
+  const [profileAxisKey, setProfileAxisKey] = useState<ProfileAxisKey>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [deckDialog, setDeckDialog] = useState(false);
@@ -301,34 +304,6 @@ export function App() {
   const roadDecks = deckDrawings.filter((d) => d.road === item?.data.name);
   const profileDeck =
     roadDecks.find((d) => d.id === (profileDeckId ?? selectedSuperstructureId)) ?? roadDecks[0];
-  /** terén pozdĺž osi mosta vybranej NK (bez NK pozdĺž osi cesty) */
-  const profileTerrain = useMemo(() => {
-    if (!road || tins.length === 0) return [];
-    const sup = project.superstructures.find((d) => d.id === profileDeck?.id);
-    const axis = project.bridgeAxes.find((a) => a.id === sup?.bridgeAxis);
-    if (!axis) return terrainProfiles(tins, road);
-    const line = bridgeAxisPlan(axis, road, parameterState.set, 0, road.length);
-    return terrainProfilesAlong(tins, line, road.origin.z);
-  }, [
-    tins,
-    road,
-    profileDeck?.id,
-    project.superstructures,
-    project.bridgeAxes,
-    parameterState.set,
-  ]);
-  const profileView = useMemo(
-    () =>
-      road &&
-      profileDrawing({
-        alignment: road,
-        decks: profileDeck ? [{ id: profileDeck.id, cut: profileDeck.longitudinal }] : [],
-        supports: profileDeck?.supports ?? [],
-        terrain: profileTerrain.flatMap((t) => t.runs),
-      }),
-    [road, profileDeck, profileTerrain],
-  );
-
   /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
   const sectionSupports = roadSupports
     .filter((r) => Math.abs(r.support.station - sectionAt) <= 0.5 && r.axis)
@@ -338,6 +313,20 @@ export function App() {
     () => alignments.filter((a) => a.alignment !== road).map((a) => a.alignment),
     [alignments, road],
   );
+  const profileDeckAxis = project.superstructures.find((d) => d.id === profileDeck?.id)?.bridgeAxis;
+  const profile = useProfileView({
+    key: profileAxisKey,
+    road,
+    deck: profileDeck,
+    measure: profileDeckAxis ? axisLengths.get(profileDeckAxis) : undefined,
+    others: otherAlignments,
+    planLines: project.planLines,
+    tins,
+  });
+  const profileView = profile.drawing;
+  const profileTitle = `${sk.viewport.profile} – ${
+    profile.options.find((o) => o.value === profile.axis)?.label ?? ''
+  }`;
   const planView = useMemo(
     () =>
       road &&
@@ -836,6 +825,15 @@ export function App() {
           ? () => void downloadDmrTerrain(selectedElement.id)
           : undefined,
       onAxisOffset: (which) => setAxisOffset({ axisId: selectedElement.id, which }),
+      onProfileHere: () => {
+        if (selectedElement.collection === 'superstructures') {
+          setProfileDeckId(selectedElement.id);
+          setProfileAxisKey('bridgeAxis');
+        } else {
+          setProfileAxisKey(`line:${selectedElement.id}`);
+        }
+        setMode('2d');
+      },
       profileTool,
       setProfileTool: (next) => {
         setMode('section');
@@ -897,6 +895,9 @@ export function App() {
     decks: roadDecks,
     profileDeckId: profileDeck?.id,
     setProfileDeckId,
+    profileAxis: profile.axis,
+    profileAxes: profile.options,
+    setProfileAxis: setProfileAxisKey,
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
@@ -1288,6 +1289,9 @@ export function App() {
           decks: roadDecks,
           profileDeckId: profileDeck?.id,
           setProfileDeckId,
+          profileAxis: profile.axis,
+          profileAxes: profile.options,
+          setProfileAxis: setProfileAxisKey,
           section: {
             station: sectionAt,
             range: sectionRange,
@@ -1401,7 +1405,8 @@ export function App() {
         alignment={item?.alignment}
         cursorS={cursor?.s}
         onPlanCursor={(c) => setCursor(c && { source: 'plan', ...c })}
-        onProfileCursor={(s) => setCursor(s === undefined ? undefined : { source: 'profile', s })}
+        onProfileCursor={(c) => setCursor(c && { source: 'profile', s: c.s, point: c.point })}
+        planCursorPoint={cursor?.source === 'profile' ? cursor.point : undefined}
         parametersView={
           <ParameterTable
             parameters={project.parameters}
@@ -1414,7 +1419,14 @@ export function App() {
           />
         }
         plan={planView}
-        profile={profileView}
+        profile={
+          profile.line && {
+            line: profile.line,
+            drawing: profileView,
+            axis: profile.axis,
+            title: profileTitle,
+          }
+        }
         onAddSupport={addSupportAt}
         tool={tool}
         onTool={setTool}

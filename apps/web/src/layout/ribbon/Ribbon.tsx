@@ -23,6 +23,7 @@ export interface RibbonSelect {
   value: string;
   options: readonly { value: string; label: string }[];
   onChange: (value: string) => void;
+  title?: string;
   disabled?: boolean;
 }
 
@@ -91,7 +92,7 @@ function Item({ item }: { item: RibbonItem }) {
   if (item.kind === 'custom') return <div className="ribbon-custom">{item.node}</div>;
   if (item.kind === 'select') {
     return (
-      <label className="ribbon-select">
+      <label className="ribbon-select" title={item.title}>
         <span>{item.label}</span>
         <select
           value={item.value}

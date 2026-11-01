@@ -1,10 +1,11 @@
 import { type Vec2, vec2 } from '@bridge/geom';
+import { bridgeAxisLength, bridgeAxisProfileLine, polylineProfileLine } from '@bridge/sections';
 import { evaluateReference212 } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { type DeckDrawingData, deckDrawingData } from './deck.ts';
 import { type Drawing, type Entity, type TextEntity, textHeight, translate } from './model.ts';
 import { planDrawing } from './plan.ts';
-import { profileDrawing } from './profile.ts';
+import { profileCuts, profileDrawing, profileGrade, profileTicks } from './profile.ts';
 import { sectionDrawing } from './section.ts';
 import { readableText } from './text.ts';
 
@@ -12,18 +13,61 @@ const ref = evaluateReference212();
 const data = deckDrawingData(ref.ctx, ref.deck, ref.results) as DeckDrawingData;
 
 describe('deckDrawingData', () => {
-  it('collects the outline, the bridge axis over the deck and cuts of all its supports', () => {
+  it('collects the outline, the bridge axis over the deck, its samples and supports', () => {
     expect(data.road).toBe(ref.alignment.name);
     expect(data.axis[0]?.s).toBeCloseTo(ref.sFrom, 9);
     expect(data.axis.at(-1)?.s).toBeCloseTo(ref.sTo, 9);
     expect(data.outline.polygon.length).toBeGreaterThan(4);
-    expect(data.longitudinal.outer).toHaveLength(1);
-    expect(data.supports.map((s) => [s.name, s.cut.length > 0])).toEqual([
+    expect(data.samples.sections.length).toBeGreaterThan(10);
+    expect(data.own.map((r) => r.support.name)).toEqual(['1', '2', '3', '4']);
+  });
+});
+
+const axis = ref.p.bridgeAxes[0];
+if (!axis) throw new Error('chýba os mosta');
+const measure = bridgeAxisLength(axis, ref.alignment, ref.ctx.parameters);
+const axisLine = bridgeAxisProfileLine(ref.alignment, measure);
+const cuts = profileCuts(data, axisLine, measure);
+
+describe('profileCuts', () => {
+  it('cuts the deck and all its supports in the bridge axis with x = length along the axis', () => {
+    expect(cuts.deck.outer).toHaveLength(1);
+    const xs = cuts.deck.outer[0]?.map((p) => p.x) ?? [];
+    expect(Math.min(...xs)).toBeCloseTo(measure.lengthAt(ref.sFrom), 9);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(56, 6);
+    expect(cuts.supports.map((s) => [s.name, s.cut.length > 0])).toEqual([
       ['1', true],
       ['2', true],
       ['3', true],
       ['4', true],
     ]);
+  });
+
+  it('cuts only what the line crosses along the deck edge', () => {
+    const edge = polylineProfileLine('deckEdge', data.outline.right, ref.alignment);
+    const c = profileCuts(data, edge);
+    expect(c.deck.outer).toHaveLength(1);
+    // stenové piliere (7,5 m) okraj NK nezasiahne, opory (krídla pod okrajmi) áno
+    expect(c.supports.map((s) => s.cut.length > 0)).toEqual([true, false, false, true]);
+  });
+});
+
+describe('profileTicks', () => {
+  it('labels the bridge axis in road kilometres', () => {
+    const ticks = profileTicks(axisLine, 20, 0, axisLine.uTo);
+    expect(ticks.map((t) => t.station)).toEqual([
+      9260, 9280, 9300, 9320, 9340, 9360, 9380, 9400, 9420, 9440,
+    ]);
+    expect(ticks[0]?.u).toBeCloseTo(measure.lengthAt(10), 9);
+  });
+
+  it('labels a plan line by the road station at the foot of the perpendicular', () => {
+    const edge = polylineProfileLine('deckEdge', data.outline.right, ref.alignment);
+    const ticks = profileTicks(edge, 10, edge.uFrom, edge.uTo);
+    // pravý okraj šikmej NK je posunutý o −8,25 · cot α ≈ −4,4 m (km 9,302 9 – 9,358 9)
+    expect(ticks.map((t) => t.station)).toEqual([9310, 9320, 9330, 9340, 9350]);
+    const at = edge.stationAt(ticks[0]?.u ?? 0) ?? 0;
+    expect(ref.alignment.stationing.toDisplay(at).station).toBeCloseTo(9310, 6);
   });
 });
 
@@ -99,13 +143,13 @@ describe('planDrawing', () => {
 
 describe('profileDrawing', () => {
   const profile = profileDrawing({
-    alignment: ref.alignment,
-    decks: [{ id: data.id, cut: data.longitudinal }],
-    supports: data.supports,
+    line: axisLine,
+    decks: [{ id: data.id, cut: cuts.deck }],
+    supports: cuts.supports,
     terrain: [
       [
-        { s: 40, z: 310 },
-        { s: 140, z: 309 },
+        { u: 40, z: 310 },
+        { u: 140, z: 309 },
       ],
     ],
   });
@@ -120,6 +164,12 @@ describe('profileDrawing', () => {
     expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(1.6);
     expect(on(profile, 'footing')).toHaveLength(2);
     expect(on(profile, 'support').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('draws the grade over the whole road axis in the bridge axis', () => {
+    const grade = profileGrade(axisLine);
+    expect(grade[0]?.x).toBeCloseTo(0, 9);
+    expect(grade.at(-1)?.x).toBeCloseTo(200, 9);
   });
 
   it('labels each support vertically with its name and station', () => {

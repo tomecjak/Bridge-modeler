@@ -1,6 +1,6 @@
 import type { Alignment } from '@bridge/alignment';
 import { integrate } from '@bridge/geom';
-import { type BridgeAxis, evaluateLaw, type ParameterSet } from '@bridge/model';
+import { type BridgeAxis, evaluateLaw, lawReferences, type ParameterSet } from '@bridge/model';
 
 /** Prevod spojitého staničenia osi cesty ↔ vodorovná dĺžka po osi mosta (ADR 0007, doplnok 10b). */
 export interface AxisLength {
@@ -8,6 +8,8 @@ export interface AxisLength {
   lengthAt(s: number): number;
   /** spojité staničenie osi cesty, ktorému zodpovedá dĺžka po osi mosta `l` */
   stationAt(l: number): number;
+  /** vodorovný posun osi mosta na `s` (mimo rozsahu priebehu hodnota krajného bodu) [m] */
+  offsetAt(s: number): number;
   /** dĺžka osi mosta na celej osi cesty [m] */
   readonly total: number;
 }
@@ -53,11 +55,13 @@ export function bridgeAxisLength(
     }
   }
 
+  // bez odkazov na globálne parametre sa ich hodnoty nevyhodnocujú (posun sa počíta v každom uzle kvadratúry)
+  const global = lawReferences(law, 'length').size > 0;
   const offset = (s: number): number => {
     const sc = Math.min(sHi, Math.max(sLo, s));
     const station = stationing.toDisplay(sc).station;
-    const values = parameters.evaluateAt(station).values;
-    const r = evaluateLaw(law, 'length', (n) => values.get(n), station);
+    const values = global ? parameters.evaluateAt(station).values : undefined;
+    const r = evaluateLaw(law, 'length', (n) => values?.get(n), station);
     return r.ok ? r.value : 0;
   };
 
@@ -152,5 +156,5 @@ export function bridgeAxisLength(
     return s;
   };
 
-  return { lengthAt, stationAt, total };
+  return { lengthAt, stationAt, offsetAt: offset, total };
 }

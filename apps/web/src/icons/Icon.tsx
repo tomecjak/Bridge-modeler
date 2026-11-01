@@ -80,6 +80,7 @@ const PATHS = {
   cube: <path d="m12 2 9 5v10l-9 5-9-5V7zM12 12l9-5M12 12v10M12 12 3 7" />,
   plan: <path d="M3 19c6 0 7-13 18-13M6 17l1.5 1.5M10 13l1.5 1.5M14 9l1.5 1.5" />,
   section: <path d="M2 6h20v2h-3l-1 10H6L5 8H2zM8 9h8l-1 6H9z" />,
+  profile: <path d="M2 20h20M2 13c4-3 8-4 11-3s6 0 9-3M6 20v-8.5M12 20v-9.8M18 20v-11" />,
   parameters: (
     <>
       <path d="M4 6h16M4 12h16M4 18h16" />

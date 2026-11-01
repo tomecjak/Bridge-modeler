@@ -1,12 +1,14 @@
-import { type Alignment, formatStation } from '@bridge/alignment';
+import { formatStation } from '@bridge/alignment';
 import {
   type Drawing,
   drawingBounds,
   type LayerId,
-  sampleProfile,
-  stationTicks,
+  profileGrade,
+  profilePvis,
+  profileTicks,
 } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
+import type { ProfileLine } from '@bridge/sections';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
@@ -23,11 +25,21 @@ import {
   worldToScreen,
 } from './viewTransform.ts';
 
+/** Kurzor v profile: staničenie osi cesty (päta kolmice) a bod čiary profilu v pôdoryse. */
+export interface ProfileCursor {
+  s: number | undefined;
+  point: Vec2;
+}
+
 interface Props {
-  alignment: Alignment;
+  /** čiara profilu (os cesty, os mosta, okraj NK, iná os, čiara; Fáza 10b): x = u čiary */
+  line: ProfileLine;
+  /** názov pohľadu (os profilu) */
+  title?: string | undefined;
+  /** spoločný kurzor v spojitom staničení osi cesty */
   cursorS: number | undefined;
-  onCursor: (s: number | undefined) => void;
-  /** rozvinutý pozdĺžny rez v osi vybranej NK 1 : 1 (NK, podpery, terén; ADR 0012) */
+  onCursor: (cursor: ProfileCursor | undefined) => void;
+  /** rozvinutý pozdĺžny rez v čiare profilu 1 : 1 (NK, podpery, terén; ADR 0012) */
   drawing: Drawing | undefined;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
@@ -38,11 +50,11 @@ interface Props {
   onTool: (tool: ViewTool) => void;
   /** Prispôsobiť / Celá os z ribbonu */
   fitRequest: FitRequest;
-  /** oblasť mosta na tejto osi (Fáza 10a) */
+  /** oblasť mosta na osi cesty (Fáza 10a, spojité staničenie) */
   studyArea?: SRange | undefined;
-  /** úsek, na ktorý sa pohľad prispôsobí (oblasť mosta, inak NK); bez neho celá os */
+  /** úsek osi cesty, na ktorý sa pohľad prispôsobí (oblasť mosta, inak NK); bez neho celá čiara */
   focus?: SRange | undefined;
-  /** vyznačená oblasť mosta (ťahom v nástroji „Oblasť mosta“) */
+  /** vyznačená oblasť mosta (ťahom v nástroji „Oblasť mosta“), spojité staničenie osi cesty */
   onStudyArea?: (range: SRange) => void;
   /** prejsť na staničenie: nová hodnota `nonce` vycentruje pohľad na spojité staničenie `s` */
   goTo?: { s: number; nonce: number } | undefined;
@@ -58,6 +70,23 @@ const BAND_LABELS_INSIDE_PX = 160;
 const MIN_AREA = 1;
 const CONTROLS = 'button, input, select, textarea, label';
 
+/** y lomenej čiary (vzostupné x) v bode x; mimo rozsahu undefined. */
+function yAt(points: readonly Vec2[], x: number): number | undefined {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last || x < first.x || x > last.x) return undefined;
+  let lo = 0;
+  let hi = points.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if ((points[mid] as Vec2).x <= x) lo = mid;
+    else hi = mid;
+  }
+  const a = points[lo] as Vec2;
+  const b = points[hi] as Vec2;
+  return b.x > a.x ? a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x) : a.y;
+}
+
 /** Výškový rozsah bodov výkresu, ktoré ležia v rozsahu staničení (prázdny výkres → undefined). */
 function elevationsIn(drawing: Drawing | undefined, from: number, to: number): number[] {
   if (!drawing) return [];
@@ -70,7 +99,8 @@ function elevationsIn(drawing: Drawing | undefined, from: number, to: number): n
 }
 
 export function ProfileView({
-  alignment,
+  line,
+  title,
   cursorS,
   onCursor,
   drawing,
@@ -85,24 +115,34 @@ export function ProfileView({
   goTo,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
-  /** rozťahovaná oblasť mosta (spojité staničenie začiatku a kurzora) */
-  const [areaDraft, setAreaDraft] = useState<{ s0: number; s1: number }>();
+  /** rozťahovaná oblasť mosta (u začiatku a kurzora) */
+  const [areaDraft, setAreaDraft] = useState<{ u0: number; u1: number }>();
   const whole = fitRequest.whole;
-  const samples = useMemo(() => sampleProfile(alignment, 1), [alignment]);
-  const profile = alignment.profile;
-  const range = useMemo(() => {
-    const first = samples[0]?.s ?? 0;
-    const last = samples.at(-1)?.s ?? 1;
-    return focus && !whole
-      ? focusRange({ from: focus.sFrom, to: focus.sTo }, first, last)
-      : { from: first, to: last };
-  }, [samples, focus, whole]);
+  const road = line.road;
+  /** niveleta v čiare profilu (u, výška v m n. m.) */
+  const grade = useMemo(() => profileGrade(line), [line]);
+  const pvis = useMemo(() => profilePvis(line), [line]);
+  const first = grade[0]?.x ?? 0;
+  const last = grade.at(-1)?.x ?? 1;
+  const toU = (s: number) => line.lengthAt(s);
+  const focusU = useMemo(() => {
+    if (!focus) return undefined;
+    const a = line.lengthAt(focus.sFrom);
+    const b = line.lengthAt(focus.sTo);
+    return a === undefined || b === undefined
+      ? undefined
+      : { from: Math.min(a, b), to: Math.max(a, b) };
+  }, [focus, line]);
+  const range = useMemo(
+    () => (focusU && !whole ? focusRange(focusU, first, last) : { from: first, to: last }),
+    [focusU, whole, first, last],
+  );
   const bounds = useMemo(() => {
     // výškový rozsah zahŕňa niveletu, terén, NK aj podpery v zobrazenom úseku
-    const inRange = samples.filter((p) => p.s >= range.from && p.s <= range.to);
-    const content = focus && !whole ? undefined : drawing && drawingBounds(drawing);
+    const inRange = grade.filter((p) => p.x >= range.from && p.x <= range.to);
+    const content = focusU && !whole ? undefined : drawing && drawingBounds(drawing);
     const zs = [
-      ...inRange.map((p) => p.z),
+      ...inRange.map((p) => p.y),
       ...(content ? [content.minY, content.maxY] : elevationsIn(drawing, range.from, range.to)),
     ];
     const minZ = Math.min(...zs);
@@ -115,9 +155,9 @@ export function ProfileView({
       // nad podperami sú zvislé popisy a lišta pohľadu
       maxY: maxZ + 2.5 * margin,
     };
-  }, [samples, drawing, range, focus, whole]);
+  }, [grade, drawing, range, focusU, whole]);
   const fit =
-    size.width > 0 && samples.length > 0 ? fitView(bounds, size, 48, exaggeration) : undefined;
+    size.width > 0 && grade.length > 1 ? fitView(bounds, size, 48, exaggeration) : undefined;
   const { view, handlers, dragMove, reset, centerOn } = usePanZoom(ref, size, fit, tool !== 'area');
   // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa pri novej žiadosti z ribbonu a pri zmene prevýšenia
   useEffect(() => {
@@ -126,9 +166,11 @@ export function ProfileView({
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: vycentruje sa len pri novej žiadosti (nonce), nie pri zmene pohľadu
   useEffect(() => {
-    if (!goTo || !profile) return;
-    const s = Math.min(profile.endS, Math.max(profile.startS, goTo.s));
-    centerOn({ x: s, y: alignment.elevation(s).z + alignment.origin.z });
+    const u0 = goTo && line.lengthAt(goTo.s);
+    if (u0 === undefined) return;
+    const u = Math.min(last, Math.max(first, u0));
+    const z = yAt(grade, u);
+    if (z !== undefined) centerOn({ x: u, y: z });
   }, [goTo?.nonce]);
 
   // zrušený nástroj (Esc v App) zahodí rozťahovanú oblasť
@@ -139,7 +181,7 @@ export function ProfileView({
   const stationStep = view ? niceStep(STATION_LABEL_PX / view.sx) : 0;
   const elevationStep = view ? niceStep(ELEVATION_LINE_PX / view.sy) : 0;
 
-  if (!profile) {
+  if (grade.length < 2) {
     return (
       <div className="drawing">
         <p className="panel-empty centered drawing-message">{sk.viewport.noProfile}</p>
@@ -156,11 +198,11 @@ export function ProfileView({
     : undefined;
   const ticks =
     visible && stationStep > 0
-      ? stationTicks(
-          alignment.stationing,
+      ? profileTicks(
+          line,
           stationStep,
-          Math.max(profile.startS, visible.left.x),
-          Math.min(profile.endS, visible.right.x),
+          Math.max(first, visible.left.x),
+          Math.min(last, visible.right.x),
         )
       : [];
   const elevations: number[] = [];
@@ -173,31 +215,29 @@ export function ProfileView({
       elevations.push(z);
     }
   }
-  const line = samples
+  const gradeLine = grade
     .map((p) => {
-      const q = toScreen({ x: p.s, y: p.z });
+      const q = toScreen(p);
       return `${q.x.toFixed(1)},${q.y.toFixed(1)}`;
     })
     .join(' ');
-  const polygon = profile.keyPoints
-    .filter((k) => k.kind === 'start' || k.kind === 'pvi' || k.kind === 'end')
-    .map((k) => toScreen({ x: k.s, y: k.z + alignment.origin.z }));
+  const polygon = pvis.map(toScreen);
 
-  /** Spojité staničenie pod ukazovateľom, orezané na rozsah nivelety. */
-  function stationAt(e: PointerEvent<HTMLDivElement>): number | undefined {
-    if (!view || !profile) return undefined;
+  /** u pod ukazovateľom, orezané na rozsah nivelety. */
+  function uAt(e: PointerEvent<HTMLDivElement>): number | undefined {
+    if (!view) return undefined;
     const rect = e.currentTarget.getBoundingClientRect();
-    const s = screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top }).x;
-    return Math.min(profile.endS, Math.max(profile.startS, s));
+    const u = screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top }).x;
+    return Math.min(last, Math.max(first, u));
   }
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     const onControl = e.target instanceof Element && e.target.closest(CONTROLS);
     if (tool === 'area' && e.button === 0 && !onControl) {
-      const s = stationAt(e);
-      if (s === undefined) return;
+      const u = uAt(e);
+      if (u === undefined) return;
       e.currentTarget.setPointerCapture(e.pointerId);
-      setAreaDraft({ s0: s, s1: s });
+      setAreaDraft({ u0: u, u1: u });
       return;
     }
     handlers.onPointerDown(e);
@@ -210,36 +250,60 @@ export function ProfileView({
     }
     if (e.currentTarget.hasPointerCapture(e.pointerId))
       e.currentTarget.releasePointerCapture(e.pointerId);
-    const sFrom = Math.min(areaDraft.s0, areaDraft.s1);
-    const sTo = Math.max(areaDraft.s0, areaDraft.s1);
-    if (sTo - sFrom >= MIN_AREA) onStudyArea?.({ sFrom, sTo });
+    const a = line.stationAt(Math.min(areaDraft.u0, areaDraft.u1));
+    const b = line.stationAt(Math.max(areaDraft.u0, areaDraft.u1));
+    if (a !== undefined && b !== undefined && Math.abs(b - a) >= MIN_AREA)
+      onStudyArea?.({ sFrom: Math.min(a, b), sTo: Math.max(a, b) });
     setAreaDraft(undefined);
     onTool('none');
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (areaDraft) {
-      const s = stationAt(e);
-      if (s !== undefined) setAreaDraft({ ...areaDraft, s1: s });
+      const u = uAt(e);
+      if (u !== undefined) setAreaDraft({ ...areaDraft, u1: u });
     } else if (dragMove(e)) {
       return;
     }
     if (!view) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const s = screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top }).x;
-    onCursor(s >= 0 && s <= alignment.length ? s : undefined);
+    const u = screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top }).x;
+    if (u < line.uFrom || u > line.uTo) {
+      onCursor(undefined);
+      return;
+    }
+    const s = line.stationAt(u);
+    onCursor({
+      s: s !== undefined && s >= 0 && s <= road.length ? s : undefined,
+      point: line.pointAt(u),
+    });
   }
 
-  const cursorInProfile =
-    cursorS !== undefined && cursorS >= profile.startS && cursorS <= profile.endS;
-  const cursorPoint = cursorInProfile
-    ? toScreen({ x: cursorS, y: alignment.elevation(cursorS).z + alignment.origin.z })
-    : undefined;
+  const cursorU = cursorS === undefined ? undefined : toU(cursorS);
+  const cursorZ = cursorU === undefined ? undefined : yAt(grade, cursorU);
+  const cursorPoint =
+    cursorU !== undefined && cursorZ !== undefined
+      ? toScreen({ x: cursorU, y: cursorZ })
+      : undefined;
 
-  const band: SRange | undefined = areaDraft
-    ? { sFrom: Math.min(areaDraft.s0, areaDraft.s1), sTo: Math.max(areaDraft.s0, areaDraft.s1) }
-    : studyArea;
-  const bandLabel = (s: number) => formatStation(alignment.stationing.toDisplay(s).station, 0);
+  /** pás oblasti mosta v u (oblasť je v staničení osi cesty) */
+  const band = (() => {
+    if (areaDraft)
+      return {
+        from: Math.min(areaDraft.u0, areaDraft.u1),
+        to: Math.max(areaDraft.u0, areaDraft.u1),
+      };
+    if (!studyArea) return undefined;
+    const a = toU(studyArea.sFrom);
+    const b = toU(studyArea.sTo);
+    return a === undefined || b === undefined
+      ? undefined
+      : { from: Math.min(a, b), to: Math.max(a, b) };
+  })();
+  const bandLabel = (u: number) => {
+    const s = line.stationAt(u);
+    return s === undefined ? '' : formatStation(road.stationing.toDisplay(s).station, 0);
+  };
 
   return (
     <div
@@ -256,7 +320,7 @@ export function ProfileView({
       onDoubleClick={reset}
     >
       <div className="drawing-toolbar">
-        <span className="drawing-title">{sk.viewport.profile}</span>
+        <span className="drawing-title">{title ?? sk.viewport.profile}</span>
       </div>
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.profile}>
@@ -274,26 +338,26 @@ export function ProfileView({
           {band && (
             <g className="study-area">
               <rect
-                x={toScreen({ x: band.sFrom, y: 0 }).x}
+                x={toScreen({ x: band.from, y: 0 }).x}
                 y={0}
                 width={Math.max(
                   0,
-                  toScreen({ x: band.sTo, y: 0 }).x - toScreen({ x: band.sFrom, y: 0 }).x,
+                  toScreen({ x: band.to, y: 0 }).x - toScreen({ x: band.from, y: 0 }).x,
                 )}
                 height={size.height}
               />
-              {[band.sFrom, band.sTo].map((s, i) => {
-                const x = toScreen({ x: s, y: 0 }).x;
+              {[band.from, band.to].map((u, i) => {
+                const x = toScreen({ x: u, y: 0 }).x;
                 // v úzkom páse by sa popisy prekrývali → dajú sa von z pásu
                 const inside =
-                  toScreen({ x: band.sTo, y: 0 }).x - toScreen({ x: band.sFrom, y: 0 }).x >
+                  toScreen({ x: band.to, y: 0 }).x - toScreen({ x: band.from, y: 0 }).x >
                   BAND_LABELS_INSIDE_PX;
                 const toRight = (i === 0) === inside;
                 return (
                   <g key={i === 0 ? 'from' : 'to'}>
                     <line x1={x} y1={0} x2={x} y2={size.height} />
                     <text x={toRight ? x + 4 : x - 4} y={56} textAnchor={toRight ? 'start' : 'end'}>
-                      {bandLabel(s)}
+                      {bandLabel(u)}
                     </text>
                   </g>
                 );
@@ -313,9 +377,9 @@ export function ProfileView({
               );
             })}
             {ticks.map((t) => {
-              const x = toScreen({ x: t.s, y: 0 }).x;
+              const x = toScreen({ x: t.u, y: 0 }).x;
               return (
-                <g key={t.s}>
+                <g key={t.u}>
                   <line x1={x} y1={0} x2={x} y2={size.height} />
                   <text x={x + 3} y={size.height - 6}>
                     {formatStation(t.station, stationStep < 1 ? 1 : 0)}
@@ -339,7 +403,7 @@ export function ProfileView({
               selected={selected}
             />
           )}
-          <polyline className="profile-line" points={line} />
+          <polyline className="profile-line" points={gradeLine} />
           {cursorPoint && (
             <g className="cursor">
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />

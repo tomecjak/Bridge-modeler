@@ -357,6 +357,10 @@ export function viewSheet(input: {
   decks: readonly { id: string; name: string }[];
   profileDeckId: string | undefined;
   setProfileDeckId: (id: string) => void;
+  /** os pozdĺžneho profilu (Fáza 10b) */
+  profileAxis: string;
+  profileAxes: readonly { value: string; label: string }[];
+  setProfileAxis: (key: string) => void;
   section: {
     station: number;
     range: { from: number; to: number } | undefined;
@@ -400,6 +404,14 @@ export function viewSheet(input: {
                     },
                   ]
                 : []),
+              {
+                kind: 'select',
+                label: sk.ribbon.profileAxis,
+                value: input.profileAxis,
+                options: [...input.profileAxes],
+                onChange: input.setProfileAxis,
+                disabled: input.profileAxes.length < 2,
+              },
               { kind: 'note', text: sk.viewport.exaggerationTitle },
             ],
           },

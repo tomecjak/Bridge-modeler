@@ -9,6 +9,7 @@ export * from './edge.ts';
 export * from './expressions.ts';
 export * from './longitudinal.ts';
 export * from './profile.ts';
+export * from './profileLine.ts';
 export * from './sampling.ts';
 export * from './spans.ts';
 export * from './superstructure.ts';

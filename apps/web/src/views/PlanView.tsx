@@ -29,6 +29,8 @@ export interface PlanCursor {
 interface Props {
   alignment: Alignment;
   cursorS: number | undefined;
+  /** bod kurzora z pozdĺžneho profilu na jeho čiare (inak bod osi cesty na `cursorS`) */
+  cursorPoint?: Vec2 | undefined;
   onCursor: (cursor: PlanCursor | undefined) => void;
   /** pôdorys mosta (obrysy NK, os mosta, podpery; ADR 0012) */
   drawing: Drawing | undefined;
@@ -54,6 +56,8 @@ interface Props {
   /** nakreslená čiara (lokálne súradnice) */
   onAddPlanLine: (points: Vec2[]) => void;
   onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
+  /** čiara pozdĺžneho profilu, ak nie je os cesty ani os mosta (zvýraznená) */
+  profileLine?: readonly Vec2[] | undefined;
 }
 
 /** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
@@ -68,6 +72,7 @@ const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['roadAxis', 'stationing']);
 export function PlanView({
   alignment,
   cursorS,
+  cursorPoint,
   onCursor,
   drawing,
   selected,
@@ -82,6 +87,7 @@ export function PlanView({
   planLines,
   onAddPlanLine,
   onMovePlanLineVertex,
+  profileLine,
 }: Props) {
   /** vrcholy rozkreslenej čiary */
   const [sketch, setSketch] = useState<Vec2[]>([]);
@@ -191,7 +197,12 @@ export function PlanView({
       })
       .join(' ');
 
-  const cursor = cursorS === undefined ? undefined : alignment.evaluateHorizontal(cursorS);
+  const cursor =
+    cursorPoint !== undefined
+      ? { point: cursorPoint }
+      : cursorS === undefined
+        ? undefined
+        : alignment.evaluateHorizontal(cursorS);
   const areaAxis = studyArea && [
     alignment.evaluateHorizontal(studyArea.sFrom).point,
     ...samples.filter((p) => p.s > studyArea.sFrom && p.s < studyArea.sTo),
@@ -296,6 +307,9 @@ export function PlanView({
               skip={OWN_LAYERS}
               selected={selected}
             />
+          )}
+          {profileLine && profileLine.length > 1 && (
+            <polyline className="profile-axis-plan" points={polyline(profileLine)} />
           )}
           {selectedLine && (
             <g className="plan-line-edit">

@@ -1,8 +1,10 @@
-import type { Polygon2D, Vec2 } from '@bridge/geom';
+import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
 import type { BridgeAxis, ProfileDefinition } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
+import { deckOutline } from './deckOutline.ts';
 import { type DeckSamples, sampleSuperstructure } from './deckSampling.ts';
-import { bridgeAxisPlan, cutAlongAxis, deckLongitudinal } from './longitudinal.ts';
+import { bridgeAxisPlan, cutAlongAxis, deckCutAlong, deckLongitudinal } from './longitudinal.ts';
+import { polylineProfileLine } from './profileLine.ts';
 import { supportParts } from './supportGeometry.ts';
 import { evaluateSupport, seatAt } from './supports.ts';
 import { evaluateReference212, SIN } from './testing/reference212.ts';
@@ -116,5 +118,52 @@ describe('cutAlongAxis', () => {
       geometry: { type: 'wall', thickness: '1.2', length: '4' },
     });
     expect(cutAlongAxis(supportParts(away), line)).toEqual([]);
+  });
+});
+
+describe('deckCutAlong', () => {
+  it('gives the same cut as deckLongitudinal along the bridge axis', () => {
+    const along = deckCutAlong(
+      samples,
+      line.map((p) => ({ u: p.s, point: p.point })),
+    );
+    const exact = deckLongitudinal(samples).outer[0] as Polygon2D;
+    expect(along.outer).toHaveLength(1);
+    const deck = along.outer[0] as Polygon2D;
+    expect(Math.min(...xs(deck))).toBeCloseTo(ref.sFrom, 6);
+    expect(Math.max(...xs(deck))).toBeCloseTo(ref.sTo, 6);
+    const mid = (ref.sFrom + ref.sTo) / 2;
+    expect(verticalAt(deck, mid).top).toBeCloseTo(verticalAt(exact, mid).top, 6);
+    expect(verticalAt(deck, mid).bottom).toBeCloseTo(verticalAt(exact, mid).bottom, 6);
+  });
+
+  it('cuts the deck edge 1 mm inside, showing the cantilever end face', () => {
+    const edge = polylineProfileLine('deckEdge', deckOutline(samples).right, ref.alignment);
+    const cut = deckCutAlong(samples, edge.points);
+    expect(cut.outer).toHaveLength(1);
+    const deck = cut.outer[0] as Polygon2D;
+    // šikmé konce sú rovnobežné → okraj má dĺžku NK
+    expect(length(deck)).toBeCloseTo(56, 3);
+    const sec = samples.sections[Math.floor(samples.sections.length / 2)];
+    const outer = sec?.loops.filter((l) => l.role === 'outer').flatMap((l) => l.polygon) ?? [];
+    const xMax = Math.max(...outer.map((p) => p.x));
+    const face = outer.filter((p) => Math.abs(p.x - xMax) < 1e-9).map((p) => p.y);
+    const v = verticalAt(deck, edge.uTo / 2);
+    expect(v.top - v.bottom).toBeCloseTo(Math.max(...face) - Math.min(...face), 2);
+  });
+
+  it('follows the skewed deck ends on a line parallel to the bridge axis', () => {
+    // čiara 5 m vpravo od osi mosta, u = staničenie (priama os)
+    const a = ref.alignment.evaluateHorizontal(0);
+    const b = ref.alignment.evaluateHorizontal(ref.alignment.length);
+    const shift = (p: Vec2, az: number) => vec2(p.x + 5 * Math.cos(az), p.y - 5 * Math.sin(az));
+    const parallel = [
+      { u: 0, point: shift(a.point, a.azimuth) },
+      { u: ref.alignment.length, point: shift(b.point, b.azimuth) },
+    ];
+    const cut = deckCutAlong(samples, parallel).outer[0] as Polygon2D;
+    const cot = (x: number) => Math.cos(x) / Math.sin(x);
+    expect(Math.min(...xs(cut))).toBeCloseTo(ref.sFrom - 5 * cot(samples.endAngles.start), 6);
+    expect(Math.max(...xs(cut))).toBeCloseTo(ref.sTo - 5 * cot(samples.endAngles.end), 6);
   });
 });
