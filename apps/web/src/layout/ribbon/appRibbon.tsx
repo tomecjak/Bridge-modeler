@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { sk } from '../../i18n/sk.ts';
-import type { BasemapKind } from '../../viewer/basemap.ts';
+import { BASEMAP_KINDS, type BasemapKind } from '../../viewer/basemap.ts';
 import type { ProfileTool } from '../../views/ProfileEditorView.tsx';
 import type { ViewTool } from '../../views/viewState.ts';
 import { VIEW_TABS, type ViewMode } from '../Viewport.tsx';
@@ -64,6 +64,9 @@ export interface RibbonContext {
   /** kóty v pôdoryse a profile */
   dimensions: boolean;
   setDimensions: (on: boolean) => void;
+  /** mapový podklad pôdorysu (odpoveď 23); potrebuje počiatok projektu */
+  planBasemap: BasemapKind;
+  setPlanBasemap: (kind: BasemapKind) => void;
   view3d: View3dState;
   setView3d: (changes: Partial<View3dState>) => void;
   onProjectInfo: () => void;
@@ -319,6 +322,21 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
           ],
         },
         {
+          label: t.groups.plan,
+          items: [
+            {
+              kind: 'select',
+              id: 'plan-basemap',
+              label: t.basemap,
+              title: t.planBasemapTitle,
+              value: c.planBasemap,
+              options: BASEMAP_KINDS.map((k) => ({ value: k, label: sk.viewer3d.basemaps[k] })),
+              onChange: (v) => c.setPlanBasemap(v as BasemapKind),
+              disabled: !in2d || !c.hasOrigin,
+            },
+          ],
+        },
+        {
           label: t.groups.longitudinal,
           items: [
             {
@@ -421,10 +439,7 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               id: 'basemap',
               label: t.basemap,
               value: c.view3d.basemap,
-              options: (['none', 'ortofoto', 'mapa'] as const).map((k) => ({
-                value: k,
-                label: sk.viewer3d.basemaps[k],
-              })),
+              options: BASEMAP_KINDS.map((k) => ({ value: k, label: sk.viewer3d.basemaps[k] })),
               onChange: (v) => c.setView3d({ basemap: v as BasemapKind }),
               disabled: !in3d || !c.hasTerrain || !c.view3d.terrain,
             },

@@ -10,6 +10,13 @@ import { type Vec2, vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
+import {
+  type BasemapSource,
+  basemapUrl,
+  imageSize,
+  loadImage,
+  MAX_IMAGE,
+} from '../viewer/basemap.ts';
 import { PlanDimensions, SpanInput } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
@@ -19,12 +26,14 @@ import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import type { FitRequest, ViewTool } from './viewState.ts';
 import {
+  type Bounds,
   boundsOf,
   fitView,
   focusRange,
   niceStep,
   type SRange,
   screenToWorld,
+  visibleBounds,
   worldToScreen,
 } from './viewTransform.ts';
 
@@ -72,7 +81,12 @@ interface Props {
   onMeasure?: (text: string | undefined) => void;
   /** kóty mosta pozdĺž osí mostov (len na obrazovke) */
   dimensions?: readonly PlanDimensionSet[] | undefined;
+  /** mapový podklad ZBGIS pod výkresom (ako v 3D, odpoveď 23) a počiatok projektu v S-JTSK */
+  basemap?: { source: BasemapSource; origin: Vec2 } | undefined;
 }
+
+/** Oneskorenie načítania mapy po posune alebo zmene priblíženia [ms]. */
+const BASEMAP_DELAY = 350;
 
 /** Kóty jednej NK v pôdoryse: reťazce, bod v odsadení od osi mosta, strana a vzdialenosť okraja NK. */
 export interface PlanDimensionSet {
@@ -115,6 +129,7 @@ export function PlanView({
   profileLine,
   onMeasure,
   dimensions,
+  basemap,
 }: Props) {
   /** vrcholy rozkreslenej čiary */
   const [sketch, setSketch] = useState<Vec2[]>([]);
@@ -318,6 +333,47 @@ export function PlanView({
   }
 
   const toScreen = (p: Vec2) => (view ? worldToScreen(view, size, p) : p);
+
+  // mapový podklad pre viditeľný výrez (lokálne súradnice → S-JTSK), načíta sa po zastavení pohybu;
+  // predošlý obrázok ostáva, kým sa nový nenačíta
+  const [map, setMap] = useState<{ url: string; box: Bounds; source: BasemapSource }>();
+  const [mapFailed, setMapFailed] = useState(false);
+  const shown = view && size.width > 0 && size.height > 0 ? visibleBounds(view, size) : undefined;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: načíta sa pri zmene výrezu (hodnôt), nie pri každom novom objekte pohľadu
+  useEffect(() => {
+    setMapFailed(false);
+    if (!basemap || !shown) {
+      setMap(undefined);
+      return;
+    }
+    let alive = true;
+    const timer = setTimeout(() => {
+      const o = basemap.origin;
+      const px = Math.min(
+        MAX_IMAGE,
+        Math.ceil(Math.max(size.width, size.height) * (window.devicePixelRatio || 1)),
+      );
+      const box = {
+        minX: shown.minX + o.x,
+        minY: shown.minY + o.y,
+        maxX: shown.maxX + o.x,
+        maxY: shown.maxY + o.y,
+      };
+      void basemapUrl(basemap.source, box, imageSize(shown, px))
+        .then(async (url) => {
+          await loadImage(url, false);
+          if (alive) setMap({ url, box: shown, source: basemap.source });
+        })
+        .catch(() => {
+          if (alive) setMapFailed(true);
+        });
+    }, BASEMAP_DELAY);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [basemap, shown?.minX, shown?.minY, shown?.maxX, shown?.maxY]);
+  const mapShown = map && map.source === basemap?.source ? map : undefined;
   const polyline = (pts: readonly Vec2[]) =>
     pts
       .map((p) => {
@@ -399,8 +455,31 @@ export function PlanView({
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
       </div>
+      {basemap && (mapShown || mapFailed) && (
+        <span className="plan-map-note">
+          {mapFailed
+            ? sk.viewport.mapFailed(basemap.source.label)
+            : sk.viewer3d.mapAttribution(basemap.source.label, basemap.source.attribution)}
+        </span>
+      )}
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.plan}>
+          {mapShown &&
+            (() => {
+              const tl = toScreen({ x: mapShown.box.minX, y: mapShown.box.maxY });
+              const br = toScreen({ x: mapShown.box.maxX, y: mapShown.box.minY });
+              return (
+                <image
+                  className="plan-basemap"
+                  href={mapShown.url}
+                  x={tl.x}
+                  y={tl.y}
+                  width={br.x - tl.x}
+                  height={br.y - tl.y}
+                  preserveAspectRatio="none"
+                />
+              );
+            })()}
           {areaAxis && <polyline className="study-area-axis" points={polyline(areaAxis)} />}
           {ticks.map((t) => {
             const p = toScreen(t.point);

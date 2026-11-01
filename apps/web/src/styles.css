@@ -1154,6 +1154,32 @@ text.dw-stationing {
   paint-order: stroke;
 }
 
+/* mapový podklad pôdorysu (odpoveď 23) — len na obrazovke, stlmený pod výkresom */
+.plan-basemap {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .plan-basemap {
+    opacity: 0.45;
+    filter: brightness(0.75);
+  }
+}
+
+.plan-map-note {
+  position: absolute;
+  right: 8px;
+  bottom: 6px;
+  z-index: 1;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--canvas) 80%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
 /* kóty len na obrazovke (Fáza 10b, ADR 0012) */
 .dimensions {
   pointer-events: none;

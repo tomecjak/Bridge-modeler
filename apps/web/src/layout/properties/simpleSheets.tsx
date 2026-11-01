@@ -14,7 +14,7 @@ import { terrainSize } from '../../import/importTerrain.ts';
 import type { Command } from '../../store/commands.ts';
 import type { EvaluatedAlignment } from '../../store/derived.ts';
 import type { SectionResult } from '../../store/sections.ts';
-import type { BasemapKind } from '../../viewer/basemap.ts';
+import { BASEMAP_KINDS, type BasemapKind } from '../../viewer/basemap.ts';
 import { StationControl } from '../../views/StationControl.tsx';
 import { IssueList } from '../IssueList.tsx';
 import { SectionResultDetails } from '../SectionPanel.tsx';
@@ -381,6 +381,9 @@ export function viewSheet(input: {
   canEdgeTerrain: boolean;
   dimensions: boolean;
   setDimensions: (on: boolean) => void;
+  planBasemap: BasemapKind;
+  setPlanBasemap: (kind: BasemapKind) => void;
+  hasOrigin: boolean;
   section: {
     station: number;
     range: { from: number; to: number } | undefined;
@@ -401,6 +404,20 @@ export function viewSheet(input: {
       return {
         heading: { icon: 'plan', label: heading.label },
         groups: [
+          {
+            id: 'view-plan',
+            title: p.plan,
+            rows: [
+              {
+                kind: 'select',
+                label: sk.ribbon.basemap,
+                value: input.planBasemap,
+                options: BASEMAP_KINDS.map((k) => ({ value: k, label: sk.viewer3d.basemaps[k] })),
+                onChange: (v) => input.setPlanBasemap(v as BasemapKind),
+                disabled: !input.hasOrigin,
+              },
+            ],
+          },
           {
             id: 'view-2d',
             title: p.longitudinal,
@@ -516,10 +533,7 @@ export function viewSheet(input: {
                 kind: 'select',
                 label: sk.ribbon.basemap,
                 value: input.view3d.basemap,
-                options: (['none', 'ortofoto', 'mapa'] as const).map((k) => ({
-                  value: k,
-                  label: sk.viewer3d.basemaps[k],
-                })),
+                options: BASEMAP_KINDS.map((k) => ({ value: k, label: sk.viewer3d.basemaps[k] })),
                 onChange: (v) => input.setView3d({ basemap: v as BasemapKind }),
                 disabled: !input.hasTerrain || !input.view3d.terrain,
               },

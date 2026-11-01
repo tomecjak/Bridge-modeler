@@ -37,6 +37,13 @@ export const screenToWorld = (v: View, size: Size, p: Vec2): Vec2 => ({
   y: v.cy + (size.height / 2 - p.y) / v.sy,
 });
 
+/** Svetová obálka viditeľného výrezu (napr. pre mapový podklad pôdorysu). */
+export function visibleBounds(v: View, size: Size): Bounds {
+  const a = screenToWorld(v, size, { x: 0, y: size.height });
+  const b = screenToWorld(v, size, { x: size.width, y: 0 });
+  return { minX: a.x, minY: a.y, maxX: b.x, maxY: b.y };
+}
+
 /** Pohľad, ktorý zobrazí celé `bounds` s okrajom `padding` px; `aspect` = sy / sx (prevýšenie). */
 export function fitView(bounds: Bounds, size: Size, padding = 24, aspect = 1): View {
   const bw = Math.max(bounds.maxX - bounds.minX, 1e-6);

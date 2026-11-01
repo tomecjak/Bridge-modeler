@@ -70,6 +70,7 @@ export const sk = {
     legend: { axis: 'terén v osi', left: 'vľavo', right: 'vpravo' },
     exaggeration: 'prevýšenie',
     exaggerationTitle: 'Prevýšenie výšok v pohľade; export DXF a SVG je vždy 1 : 1',
+    mapFailed: (label: string) => `${label} je nedostupná — pôdorys bez mapy.`,
     profileDeck: 'rez v osi',
   },
   viewer3d: {
@@ -617,6 +618,7 @@ export const sk = {
       section: 'Priečny rez',
       parameters: 'Parametre',
     },
+    plan: 'Pôdorys',
     longitudinal: 'Pozdĺžny profil',
     display3d: 'Zobrazenie',
     sectionCut: 'Rez',
@@ -830,6 +832,7 @@ export const sk = {
       element: 'Prvok',
       measure: 'Merať',
       navigation: 'Navigácia',
+      plan: 'Pôdorys',
       longitudinal: 'Pozdĺžny profil',
       view3d: '3D',
       windows: 'Okná',
@@ -893,6 +896,8 @@ export const sk = {
     cut: 'Rez',
     terrain: 'Terén',
     basemap: 'Podklad',
+    planBasemapTitle:
+      'Mapa ZBGIS pod pôdorysom vo viditeľnom výreze (len na obrazovke, export DXF a SVG ju neobsahuje); treba počiatok projektu v S-JTSK',
     exact: 'Presný model',
     projectInfo: 'Informácie o projekte',
     projectInfoTitle: 'Zadanie: stavba, objekt, kategória cesty a voľná šírka na moste',

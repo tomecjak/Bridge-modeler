@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import type { ProfileFreeHeight } from '../store/obstacles.ts';
 import type { EdgeTerrain } from '../store/profile.ts';
+import type { BasemapSource } from '../viewer/basemap.ts';
 import type { LineEditing } from '../views/lineEdit.ts';
 import { type PlanCursor, type PlanDimensionSet, PlanView } from '../views/PlanView.tsx';
 import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
@@ -34,6 +35,8 @@ interface Props {
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
+  /** mapový podklad pôdorysu a počiatok projektu v S-JTSK (odpoveď 23) */
+  planBasemap: { source: BasemapSource; origin: Vec2 } | undefined;
   /** pozdĺžny profil v zvolenej osi (Fáza 10b): čiara, výkres, kľúč osi a názov */
   profile:
     | {
@@ -90,6 +93,7 @@ export function Viewport({
   parametersView,
   sectionView,
   plan,
+  planBasemap,
   profile,
   lineEditing,
   tool,
@@ -164,6 +168,7 @@ export function Viewport({
               }
               onMeasure={onMeasure}
               dimensions={planDimensions}
+              basemap={planBasemap}
             />
             {profile && (
               <ProfileView

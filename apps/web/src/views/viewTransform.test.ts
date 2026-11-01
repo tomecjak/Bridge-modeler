@@ -6,6 +6,7 @@ import {
   niceStep,
   pan,
   screenToWorld,
+  visibleBounds,
   worldToScreen,
   zoomAt,
 } from './viewTransform.ts';
@@ -20,6 +21,11 @@ describe('view transform', () => {
     const w = screenToWorld(v, size, { x: 123, y: 456 });
     expect(worldToScreen(v, size, w).x).toBeCloseTo(123, 12);
     expect(worldToScreen(v, size, w).y).toBeCloseTo(456, 12);
+  });
+
+  it('gives the world bounds of the visible window', () => {
+    const v = { cx: 100, cy: 50, sx: 2, sy: 2 };
+    expect(visibleBounds(v, size)).toEqual({ minX: -100, minY: -100, maxX: 300, maxY: 200 });
   });
 
   it('fits bounds with padding and vertical exaggeration', () => {

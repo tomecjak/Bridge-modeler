@@ -3,6 +3,9 @@ import { childNamed, parseXml, type XmlNode } from '@bridge/alignment';
 /** Mapový podklad na teréne (ADR 0011, doplnok) — ako v Mini-IFC-tools (tomecjak). */
 export type BasemapKind = 'none' | 'ortofoto' | 'mapa';
 
+/** Poradie volieb podkladu vo výberoch (3D aj pôdorys). */
+export const BASEMAP_KINDS: readonly BasemapKind[] = ['none', 'ortofoto', 'mapa'];
+
 export interface BasemapSource {
   label: string;
   attribution: string;
@@ -141,15 +144,28 @@ function serviceLayers(src: BasemapSource) {
   return p;
 }
 
-/** Obrázok mapy pre obálku v EPSG:5514 (CORS — bez neho by sa nedal použiť ako textúra). */
-export async function loadBasemap(src: BasemapSource, b: Box): Promise<HTMLImageElement> {
+/** Adresa obrázka mapy pre obálku v EPSG:5514 s rozmermi `size` (výrez pôdorysu, obálka terénu v 3D). */
+export async function basemapUrl(
+  src: BasemapSource,
+  b: Box,
+  size: { width: number; height: number },
+): Promise<string> {
   const caps = await serviceLayers(src);
-  const url = getMapUrl(src, caps.layers, caps.crs, b, imageSize(b));
+  return getMapUrl(src, caps.layers, caps.crs, b, size);
+}
+
+/** Načíta obrázok mapy; `cors` treba len pre textúru vo WebGL, obrázok v SVG ho nepotrebuje. */
+export function loadImage(url: string, cors: boolean): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.crossOrigin = 'anonymous';
+    if (cors) image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('obrázok mapy sa nenačítal'));
     image.src = url;
   });
+}
+
+/** Obrázok mapy pre obálku v EPSG:5514 (CORS — bez neho by sa nedal použiť ako textúra). */
+export async function loadBasemap(src: BasemapSource, b: Box): Promise<HTMLImageElement> {
+  return loadImage(await basemapUrl(src, b, imageSize(b)), true);
 }

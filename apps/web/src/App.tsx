@@ -146,6 +146,7 @@ import {
   terrainProfilesAlong,
   useTerrainTins,
 } from './store/terrain.ts';
+import { BASEMAPS, type BasemapKind } from './viewer/basemap.ts';
 import type { Cut } from './viewer/sceneView.ts';
 import { deckReach, planFrame } from './views/Dimensions.tsx';
 import { GoToStation } from './views/GoToStation.tsx';
@@ -202,6 +203,8 @@ export function App() {
   const [measureText, setMeasureText] = useState<string>();
   /** kóty mosta v pôdoryse a profile (len na obrazovke, Fáza 10b) */
   const [dimensionsOn, setDimensionsOn] = useState(true);
+  /** mapový podklad v pôdoryse (odpoveď 23) */
+  const [planBasemap, setPlanBasemap] = useState<BasemapKind>('none');
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [supportLibraryOpen, setSupportLibraryOpen] = useState(false);
@@ -457,6 +460,14 @@ export function App() {
       ];
     });
   }, [dimensionsOn, road, roadDecks, project.superstructures, axisLengths, supportState.spans]);
+  const crsOrigin = project.crs.origin;
+  const planBasemapSource = useMemo(
+    () =>
+      planBasemap !== 'none' && crsOrigin
+        ? { source: BASEMAPS[planBasemap], origin: crsOrigin }
+        : undefined,
+    [planBasemap, crsOrigin],
+  );
   const profileTitle = `${sk.viewport.profile} – ${
     profile.options.find((o) => o.value === profile.axis)?.label ?? ''
   }`;
@@ -1674,6 +1685,8 @@ export function App() {
     canEdgeTerrain: profile.line?.kind === 'bridgeAxis' && tins.length > 0,
     dimensions: dimensionsOn,
     setDimensions: setDimensionsOn,
+    planBasemap,
+    setPlanBasemap,
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
@@ -2127,6 +2140,9 @@ export function App() {
           canEdgeTerrain: profile.line?.kind === 'bridgeAxis' && tins.length > 0,
           dimensions: dimensionsOn,
           setDimensions: setDimensionsOn,
+          planBasemap,
+          setPlanBasemap,
+          hasOrigin: project.crs.origin !== null,
           section: {
             station: sectionAt,
             range: sectionRange,
@@ -2261,6 +2277,7 @@ export function App() {
           />
         }
         plan={planView}
+        planBasemap={planBasemapSource}
         profile={
           profile.line && {
             line: profile.line,

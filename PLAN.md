@@ -480,7 +480,9 @@ Rozhodnutia 2026-11-01 (plan mode): hodnoty predvolieb voľných prierezov sú z
   - `checkClearance` (`clearanceChecks.ts`): vzorky po osi prekážky s krokom 0,5 m v odsadeniach okrajov, polovíc, osi a skosení, spodok NK z rezu prierezu (premietnutie na os cesty, `lowestCrossing`), najmenšia rezerva; pôdorys podpery (drieky aj základ) voči pásu voľného prierezu. Vo vlastnostiach prekážky voľná výška min. s km, odznak chyby v prehliadači; kóta „v 6,66“ v profile v krížení (len na obrazovke, s kótami).
 - [x] ukotvenie Rozloženia polí na kríženie s prekážkou (km a uhol, 10c)
   - pole „Kríženie s prekážkou“ v dialógu (kríženia s osou mosta vybranej NK) nastaví ukotvenie symetricky okolo km kríženia a uhol kríženia; overené v prehliadači (25 + 30 + 25 okolo km 0,200 pri 60°).
-- [ ] podklad mapy (ortofoto, mapa ZBGIS) aj v pôdoryse, ako v 3D (odpoveď 23, 2026-11-01)
+- [x] podklad mapy (ortofoto, mapa ZBGIS) aj v pôdoryse, ako v 3D (odpoveď 23, 2026-11-01)
+  - voľba „Podklad“ v skupine Pôdorys (karta Pohľad) a vo vlastnostiach pohľadu 2D, nezávislá od 3D a od terénu (treba len počiatok projektu); WMS GetMap pre viditeľný výrez (`visibleBounds`, lokálne + `crs.origin` → EPSG:5514) 350 ms po zastavení posunu, predošlý obrázok ostáva, kým sa nový nenačíta (`loadImage` bez CORS); stlmený pod výkresom, atribúcia ZBGIS vpravo dole, hlásenie pri nedostupnej službe. Len na obrazovke, export DXF a SVG mapu neobsahuje. Overené v prehliadači na 125-00 (ortofoto, mapa, posun, priblíženie, vypnutie, blokovaná služba; svetlá aj tmavá téma).
+  - *Ostáva:* pri posune sú okraje mimo pôvodného výrezu prázdne, kým sa nenačíta nový obrázok.
 - [ ] balík `packages/survey`: vlastná čítačka DXF (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha; ANSI_1250), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov)
 - [ ] import meračky DXF (len 2D podklad, bez TIN — odpoveď 23, schéma v13): výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; čiara meračky ako os prekážky
 
