@@ -490,13 +490,15 @@ export function App() {
   }
 
   /**
-   * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0017): opora pri konci NK (do 2 m) alebo na krajnej
-   * z aspoň dvoch osí NK, inak pilier. `lines` = osi projektu vrátane novej osi.
+   * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0017): opora pri konci NK (do 2 m), na existujúcej osi
+   * aj na krajnej z aspoň dvoch osí NK, inak pilier. Nová os z kliku sa za krajnú neberie — inak by sa koniec NK
+   * odvodený z opory (ADR 0018) stiahol k osi v strede NK. `lines` = osi projektu vrátane novej osi.
    */
   function newSupportOn(
     line: BearingLine,
     lines: readonly BearingLine[],
     forceKind?: Support['kind'],
+    newLine = false,
   ) {
     const road = item?.alignment;
     const deck = project.superstructures.find((d) => d.id === line.superstructure);
@@ -505,7 +507,8 @@ export function App() {
     const own = lines
       .filter((l) => l.superstructure === deck.id)
       .sort((a, b) => a.station - b.station);
-    const atEnd = own.length >= 2 && (own[0]?.id === line.id || own.at(-1)?.id === line.id);
+    const atEnd =
+      !newLine && own.length >= 2 && (own[0]?.id === line.id || own.at(-1)?.id === line.id);
     const nearEnd = line.station - deck.from < 2 || deck.to - line.station < 2;
     const kind = forceKind ?? (nearEnd || atEnd ? 'abutment' : 'pier');
     const prefix = kind === 'abutment' ? 'O' : 'P';
@@ -863,7 +866,7 @@ export function App() {
       store.dispatch({ type: 'addElements', bearingLines: [line] });
       setSelectedElement({ collection: 'bearingLines', id: line.id });
     } else {
-      const support = newSupportOn(line, [...project.bearingLines, line]);
+      const support = newSupportOn(line, [...project.bearingLines, line], undefined, true);
       if (!support) return;
       store.dispatch({ type: 'addElements', bearingLines: [line], supports: [support] });
       setSelectedElement({ collection: 'supports', id: support.id });
