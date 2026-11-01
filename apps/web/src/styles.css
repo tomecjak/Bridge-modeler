@@ -7,6 +7,8 @@
   --accent: #2563eb;
   --canvas: #e9ecf1;
   --terrain: #8a6d3b;
+  --terrain-left: #0f766e;
+  --terrain-right: #be185d;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
@@ -22,6 +24,8 @@
     --accent: #60a5fa;
     --canvas: #101317;
     --terrain: #c9a66b;
+    --terrain-left: #2dd4bf;
+    --terrain-right: #f472b6;
   }
 }
 
@@ -999,6 +1003,50 @@ text.dw-stationing {
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
   pointer-events: none;
+}
+
+/* terén na okrajoch NK v profile v osi mosta (Fáza 10b) */
+.edge-terrain {
+  fill: none;
+  stroke-width: 1.25;
+  stroke-dasharray: 6 3;
+  pointer-events: none;
+}
+
+.edge-terrain-left {
+  stroke: var(--terrain-left);
+}
+
+.edge-terrain-right {
+  stroke: var(--terrain-right);
+}
+
+.drawing-legend {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.drawing-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 16px;
+  margin-right: 4px;
+  vertical-align: middle;
+  border-top: 2px solid var(--terrain);
+}
+
+.drawing-legend .legend-terrain-left::before {
+  border-top: 2px dashed var(--terrain-left);
+}
+
+.drawing-legend .legend-terrain-right::before {
+  border-top: 2px dashed var(--terrain-right);
 }
 
 /* čiara pozdĺžneho profilu v pôdoryse (Fáza 10b) */

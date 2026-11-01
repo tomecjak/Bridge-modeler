@@ -41,6 +41,8 @@ interface Props {
   onCursor: (cursor: ProfileCursor | undefined) => void;
   /** rozvinutý pozdĺžny rez v čiare profilu 1 : 1 (NK, podpery, terén; ADR 0012) */
   drawing: Drawing | undefined;
+  /** terén na okrajoch NK premietnutý do profilu v osi mosta (len na obrazovke) */
+  edgeTerrain?: { left: readonly Vec2[][]; right: readonly Vec2[][] } | undefined;
   /** vybraný prvok mosta (zvýraznenie) */
   selected?: string | undefined;
   /** prevýšenie výšok (ribbon); export je vždy 1 : 1 */
@@ -104,6 +106,7 @@ export function ProfileView({
   cursorS,
   onCursor,
   drawing,
+  edgeTerrain,
   selected,
   exaggeration,
   tool,
@@ -322,6 +325,13 @@ export function ProfileView({
       <div className="drawing-toolbar">
         <span className="drawing-title">{title ?? sk.viewport.profile}</span>
       </div>
+      {edgeTerrain && (
+        <div className="drawing-legend">
+          <span className="legend-terrain">{sk.viewport.legend.axis}</span>
+          <span className="legend-terrain-left">{sk.viewport.legend.left}</span>
+          <span className="legend-terrain-right">{sk.viewport.legend.right}</span>
+        </div>
+      )}
       {view && (
         <svg width={size.width} height={size.height} role="img" aria-label={sk.viewport.profile}>
           <defs>
@@ -403,6 +413,22 @@ export function ProfileView({
               selected={selected}
             />
           )}
+          {edgeTerrain &&
+            (['left', 'right'] as const).map((side) =>
+              edgeTerrain[side].map((run, i) => (
+                <polyline
+                  // biome-ignore lint/suspicious/noArrayIndexKey: úseky terénu sú určené poradím
+                  key={`${side}-${i}`}
+                  className={`edge-terrain edge-terrain-${side}`}
+                  points={run
+                    .map((p) => {
+                      const q = toScreen(p);
+                      return `${q.x.toFixed(1)},${q.y.toFixed(1)}`;
+                    })
+                    .join(' ')}
+                />
+              )),
+            )}
           <polyline className="profile-line" points={gradeLine} />
           {cursorPoint && (
             <g className="cursor">

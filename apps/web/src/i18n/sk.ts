@@ -67,6 +67,7 @@ export const sk = {
     profile: 'Pozdĺžny profil',
     fit: 'Prispôsobiť',
     noProfile: 'Os nemá niveletu.',
+    legend: { axis: 'terén v osi', left: 'vľavo', right: 'vpravo' },
     exaggeration: 'prevýšenie',
     exaggerationTitle: 'Prevýšenie výšok v pohľade; export DXF a SVG je vždy 1 : 1',
     profileDeck: 'rez v osi',
@@ -625,6 +626,9 @@ export const sk = {
     profileAxisTitle: 'Čiara, v ktorej sa kreslí pozdĺžny profil (x = rozvinutá dĺžka čiary)',
     profileInLine: 'Profil v čiare',
     profileInAxis: 'Profil v osi mosta',
+    edgeTerrain: 'Terén na okrajoch',
+    edgeTerrainTitle:
+      'Terén rezaný na ľavom a pravom okraji NK premietnutý do profilu v osi mosta (len na obrazovke)',
     cut: 'Rez',
     terrain: 'Terén',
     basemap: 'Podklad',

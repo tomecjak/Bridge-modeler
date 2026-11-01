@@ -51,6 +51,10 @@ export interface RibbonContext {
   profileAxis: string;
   profileAxes: readonly { value: string; label: string }[];
   setProfileAxis: (key: string) => void;
+  /** terén na okrajoch NK v profile v osi mosta (len s terénom) */
+  edgeTerrain: boolean;
+  setEdgeTerrain: (on: boolean) => void;
+  canEdgeTerrain: boolean;
   view3d: View3dState;
   setView3d: (changes: Partial<View3dState>) => void;
   onProjectInfo: () => void;
@@ -311,6 +315,17 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               options: [...c.profileAxes],
               onChange: c.setProfileAxis,
               disabled: !in2d || c.profileAxes.length < 2,
+            },
+            {
+              kind: 'button',
+              id: 'edge-terrain',
+              label: t.edgeTerrain,
+              icon: 'terrain',
+              title: t.edgeTerrainTitle,
+              size: 'small',
+              disabled: !in2d || !c.canEdgeTerrain,
+              pressed: c.edgeTerrain && c.canEdgeTerrain,
+              onClick: () => c.setEdgeTerrain(!c.edgeTerrain),
             },
           ],
         },

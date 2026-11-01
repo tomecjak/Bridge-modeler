@@ -104,6 +104,49 @@ function runsNear(
   return runs;
 }
 
+/** Predĺženie okrajov NK za jej konce pri teréne na okrajoch [m]. */
+export const EDGE_TERRAIN_REACH = 30;
+
+/**
+ * Ľavý a pravý okraj NK v pôdoryse na premietnutie terénu do profilu v osi mosta (Fáza 10b): body okraja z obrysu NK
+ * (vrátane šikmých koncov), za koncami predĺžené o `reach` rovnobežne s osou mosta v krajnom odsadení. Hodnota `s`
+ * bodu je dĺžka po osi mosta v päte kolmice (bod okraja leží v priečnej rovine prierezu), teda x profilu.
+ */
+export function profileEdgeLines(
+  deck: DeckDrawingData,
+  measure: AxisLength,
+  reach = EDGE_TERRAIN_REACH,
+): { left: AxisLinePoint[]; right: AxisLinePoint[] } {
+  const road = deck.samples.alignment;
+  const at = (s: number, x: number): Vec2 => {
+    const r = road.evaluateHorizontal(Math.min(road.length, Math.max(0, s)));
+    const h = measure.offsetAt(s) + x;
+    return vec2(r.point.x + h * Math.cos(r.azimuth), r.point.y - h * Math.sin(r.azimuth));
+  };
+  const edge = (points: readonly Vec2[]): AxisLinePoint[] => {
+    const feet = points.flatMap((point) => {
+      const f = road.project(point);
+      return f ? [{ s: f.s, x: f.offset - measure.offsetAt(f.s), point }] : [];
+    });
+    const first = feet[0];
+    const last = feet[feet.length - 1];
+    if (!first || !last) return [];
+    const extend = (from: number, to: number, x: number) => {
+      const n = Math.max(1, Math.ceil(Math.abs(to - from)));
+      return Array.from({ length: n }, (_, k) => from + ((to - from) * k) / n)
+        .filter((s) => s >= 0 && s <= road.length)
+        .map((s) => ({ s, x, point: at(s, x) }));
+    };
+    const all = [
+      ...extend(first.s - reach, first.s, first.x),
+      ...feet,
+      ...extend(last.s + reach, last.s, last.x).reverse(),
+    ];
+    return all.map((p) => ({ s: measure.lengthAt(p.s), point: p.point }));
+  };
+  return { left: edge(deck.outline.left), right: edge(deck.outline.right) };
+}
+
 /**
  * Niveleta v čiare profilu (u, výška v m n. m.): pri inej osi z LandXML jej vlastná niveleta, inak niveleta osi cesty
  * v päte kolmice (v osi cesty a osi mosta vrátane PVC/PVT). Prázdne bez nivelety.

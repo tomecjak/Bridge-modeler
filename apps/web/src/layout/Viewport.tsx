@@ -5,6 +5,7 @@ import type { PlanLine } from '@bridge/model';
 import type { ProfileLine } from '@bridge/sections';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
+import type { EdgeTerrain } from '../store/profile.ts';
 import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
 import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
@@ -26,7 +27,13 @@ interface Props {
   plan: Drawing | undefined;
   /** pozdĺžny profil v zvolenej osi (Fáza 10b): čiara, výkres, kľúč osi a názov */
   profile:
-    | { line: ProfileLine; drawing: Drawing | undefined; axis: string; title: string }
+    | {
+        line: ProfileLine;
+        drawing: Drawing | undefined;
+        axis: string;
+        title: string;
+        edgeTerrain: EdgeTerrain | undefined;
+      }
     | undefined;
   onAddSupport: (s: number, offset: number) => void;
   /** stav pohľadov z ribbonu (ADR 0016) */
@@ -150,6 +157,7 @@ export function Viewport({
                 cursorS={cursorS}
                 onCursor={onProfileCursor}
                 drawing={profile.drawing}
+                edgeTerrain={profile.edgeTerrain}
                 selected={selectedId}
                 exaggeration={exaggeration}
                 tool={tool}

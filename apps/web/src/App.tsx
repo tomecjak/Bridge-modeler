@@ -131,6 +131,8 @@ export function App() {
   const [profileDeckId, setProfileDeckId] = useState<string>();
   /** os pozdĺžneho profilu (Fáza 10b); bez voľby os mosta NK, inak os cesty */
   const [profileAxisKey, setProfileAxisKey] = useState<ProfileAxisKey>();
+  /** terén na okrajoch NK v profile v osi mosta (Fáza 10b) */
+  const [edgeTerrainOn, setEdgeTerrainOn] = useState(true);
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [deckDialog, setDeckDialog] = useState(false);
@@ -322,6 +324,7 @@ export function App() {
     others: otherAlignments,
     planLines: project.planLines,
     tins,
+    edgeTerrain: edgeTerrainOn,
   });
   const profileView = profile.drawing;
   const profileTitle = `${sk.viewport.profile} – ${
@@ -898,6 +901,9 @@ export function App() {
     profileAxis: profile.axis,
     profileAxes: profile.options,
     setProfileAxis: setProfileAxisKey,
+    edgeTerrain: edgeTerrainOn,
+    setEdgeTerrain: setEdgeTerrainOn,
+    canEdgeTerrain: profile.line?.kind === 'bridgeAxis' && tins.length > 0,
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
@@ -1292,6 +1298,9 @@ export function App() {
           profileAxis: profile.axis,
           profileAxes: profile.options,
           setProfileAxis: setProfileAxisKey,
+          edgeTerrain: edgeTerrainOn,
+          setEdgeTerrain: setEdgeTerrainOn,
+          canEdgeTerrain: profile.line?.kind === 'bridgeAxis' && tins.length > 0,
           section: {
             station: sectionAt,
             range: sectionRange,
@@ -1425,6 +1434,7 @@ export function App() {
             drawing: profileView,
             axis: profile.axis,
             title: profileTitle,
+            edgeTerrain: profile.edgeTerrain,
           }
         }
         onAddSupport={addSupportAt}

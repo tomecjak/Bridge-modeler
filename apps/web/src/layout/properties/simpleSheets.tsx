@@ -361,6 +361,9 @@ export function viewSheet(input: {
   profileAxis: string;
   profileAxes: readonly { value: string; label: string }[];
   setProfileAxis: (key: string) => void;
+  edgeTerrain: boolean;
+  setEdgeTerrain: (on: boolean) => void;
+  canEdgeTerrain: boolean;
   section: {
     station: number;
     range: { from: number; to: number } | undefined;
@@ -411,6 +414,13 @@ export function viewSheet(input: {
                 options: [...input.profileAxes],
                 onChange: input.setProfileAxis,
                 disabled: input.profileAxes.length < 2,
+              },
+              {
+                kind: 'toggle',
+                label: sk.ribbon.edgeTerrain,
+                value: input.edgeTerrain && input.canEdgeTerrain,
+                disabled: !input.canEdgeTerrain,
+                onChange: input.setEdgeTerrain,
               },
               { kind: 'note', text: sk.viewport.exaggerationTitle },
             ],

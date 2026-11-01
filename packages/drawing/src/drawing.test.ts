@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { type DeckDrawingData, deckDrawingData } from './deck.ts';
 import { type Drawing, type Entity, type TextEntity, textHeight, translate } from './model.ts';
 import { planDrawing } from './plan.ts';
-import { profileCuts, profileDrawing, profileGrade, profileTicks } from './profile.ts';
+import {
+  profileCuts,
+  profileDrawing,
+  profileEdgeLines,
+  profileGrade,
+  profileTicks,
+} from './profile.ts';
 import { sectionDrawing } from './section.ts';
 import { readableText } from './text.ts';
 
@@ -49,6 +55,24 @@ describe('profileCuts', () => {
     expect(c.deck.outer).toHaveLength(1);
     // stenové piliere (7,5 m) okraj NK nezasiahne, opory (krídla pod okrajmi) áno
     expect(c.supports.map((s) => s.cut.length > 0)).toEqual([true, false, false, true]);
+  });
+});
+
+describe('profileEdgeLines', () => {
+  it('runs along both deck edges 30 m beyond the deck ends with x = length along the bridge axis', () => {
+    const { left, right } = profileEdgeLines(data, measure);
+    for (const [edge, x] of [
+      [left, -8.25],
+      [right, 8.25],
+    ] as const) {
+      for (const p of edge) {
+        expect(ref.alignment.project(p.point)?.offset).toBeCloseTo(x, 6);
+      }
+      const us = edge.map((p) => p.s);
+      expect(us.every((u, i) => i === 0 || u > (us[i - 1] as number))).toBe(true);
+      // šikmé konce: okraj začína o x · cot α pred / za koncom NK v osi
+      expect((us.at(-1) as number) - (us[0] as number)).toBeCloseTo(56 + 60, 6);
+    }
   });
 });
 

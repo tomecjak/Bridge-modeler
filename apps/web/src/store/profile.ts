@@ -1,5 +1,12 @@
 import type { Alignment } from '@bridge/alignment';
-import { type DeckDrawingData, type Drawing, profileCuts, profileDrawing } from '@bridge/drawing';
+import {
+  type DeckDrawingData,
+  type Drawing,
+  profileCuts,
+  profileDrawing,
+  profileEdgeLines,
+} from '@bridge/drawing';
+import { type Vec2, vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
 import {
   type AxisLength,
@@ -18,6 +25,12 @@ import { type TerrainTin, terrainProfilesAlong } from './terrain.ts';
  * `alignment:<názov osi>`, `line:<id čiary>`.
  */
 export type ProfileAxisKey = string;
+
+/** Terénne čiary na ľavom a pravom okraji NK premietnuté do profilu v osi mosta (u, výška v m n. m.). */
+export interface EdgeTerrain {
+  left: Vec2[][];
+  right: Vec2[][];
+}
 
 export interface ProfileAxisOption {
   value: ProfileAxisKey;
@@ -90,11 +103,15 @@ export function useProfileView(input: {
   others: readonly Alignment[];
   planLines: readonly PlanLine[];
   tins: readonly TerrainTin[];
+  /** terén na okrajoch NK v profile v osi mosta */
+  edgeTerrain: boolean;
 }): {
   line: ProfileLine | undefined;
   options: ProfileAxisOption[];
   axis: ProfileAxisKey;
   drawing: Drawing | undefined;
+  /** terén na ľavom a pravom okraji NK (u, výška v m n. m.); len v osi mosta, nejde do exportu */
+  edgeTerrain: EdgeTerrain | undefined;
 } {
   const { key, road, deck, measure, others, planLines, tins } = input;
   const options = useMemo(
@@ -121,5 +138,16 @@ export function useProfileView(input: {
       terrain,
     });
   }, [line, deck, measure, tins]);
-  return { line, options, axis, drawing };
+  const showEdges = input.edgeTerrain;
+  const edgeTerrain = useMemo(() => {
+    if (!showEdges || line?.kind !== 'bridgeAxis' || !deck || !measure || tins.length === 0)
+      return undefined;
+    const { left, right } = profileEdgeLines(deck, measure);
+    const runs = (edge: typeof left) =>
+      terrainProfilesAlong(tins, edge, line.road.origin.z).flatMap((t) =>
+        t.runs.map((r) => r.map((p) => vec2(p.s, p.z))),
+      );
+    return { left: runs(left), right: runs(right) };
+  }, [showEdges, line, deck, measure, tins]);
+  return { line, options, axis, drawing, edgeTerrain };
 }
