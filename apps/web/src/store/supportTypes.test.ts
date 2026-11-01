@@ -27,11 +27,13 @@ const sources: SupportSource[] = [
   {
     key: 'builtin',
     title: 'Šablóny',
+    short: 'Šablóny',
     entries: SUPPORT_TEMPLATES.map((t) => ({ id: t.key, name: t.name, support: t.support })),
   },
   {
     key: 'project',
-    title: 'Projekt',
+    title: 'Podpery projektu',
+    short: 'Projekt',
     entries: projectSupportEntries(
       [pier],
       [{ support: pier, height: { min: 6.25, max: 6.3 } } as SupportResult],

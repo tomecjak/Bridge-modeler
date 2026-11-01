@@ -17,6 +17,8 @@ export const supportTypeKey = (source: SupportSourceKey, id: string) => `${sourc
 export interface SupportSource {
   key: SupportSourceKey;
   title: string;
+  /** krátky názov zdroja vo výberoch typu */
+  short: string;
   entries: readonly SupportLibraryEntry[];
 }
 
@@ -55,7 +57,7 @@ export function supportTypeOptions(
     ...sources.flatMap((s) =>
       s.entries
         .filter((e) => e.support.kind === kind)
-        .map((e) => ({ value: supportTypeKey(s.key, e.id), label: `${e.name} · ${s.title}` })),
+        .map((e) => ({ value: supportTypeKey(s.key, e.id), label: `${e.name} · ${s.short}` })),
     ),
   ];
 }

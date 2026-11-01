@@ -410,8 +410,10 @@ export const sk = {
     sources: {
       builtin: 'Šablóny',
       project: 'Podpery projektu',
+      projectShort: 'Projekt',
       file: (name: string) => `Súbor ${name}`,
       cloud: (email: string) => `Firemná knižnica (prihlásený ${email})`,
+      cloudShort: 'Firemná knižnica',
     },
     kinds: { abutment: 'opora', pier: 'pilier' },
     useInTool: 'Použiť v nástroji',

@@ -57,12 +57,28 @@ export function useSupportSources(projectEntries: readonly SupportLibraryEntry[]
 
   const sources = useMemo(
     (): SupportSource[] => [
-      { key: 'builtin', title: t.builtin, entries: builtinEntries },
+      { key: 'builtin', title: t.builtin, short: t.builtin, entries: builtinEntries },
       ...(cloud
-        ? [{ key: 'cloud' as const, title: t.cloud(cloud.email), entries: cloudEntries }]
+        ? [
+            {
+              key: 'cloud' as const,
+              title: t.cloud(cloud.email),
+              short: t.cloudShort,
+              entries: cloudEntries,
+            },
+          ]
         : []),
-      { key: 'project', title: t.project, entries: projectEntries },
-      ...(file ? [{ key: 'file' as const, title: t.file(file.name), entries: file.entries }] : []),
+      { key: 'project', title: t.project, short: t.projectShort, entries: projectEntries },
+      ...(file
+        ? [
+            {
+              key: 'file' as const,
+              title: t.file(file.name),
+              short: file.name,
+              entries: file.entries,
+            },
+          ]
+        : []),
     ],
     [t, builtinEntries, cloud, cloudEntries, projectEntries, file],
   );
