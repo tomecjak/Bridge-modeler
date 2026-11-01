@@ -98,7 +98,7 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('8');
+      expect(r.project.schemaVersion).toBe('9');
       expect(r.project.bearingLines).toEqual([]);
       expect(r.project.studyArea).toBeNull();
       expect(r.project.brief.roadCategory).toBe('');
@@ -116,12 +116,12 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '8', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '9', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '8', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '9', name: 'Starý most', parameters: [] },
     });
   });
 
@@ -157,6 +157,72 @@ describe('migrateProject', () => {
     expect(r.project.supports[0]).toMatchObject({ id: 'o1', bearingLine: 'bl-o1' });
     expect(r.project.supports[0]).not.toHaveProperty('station');
     expect(r.project.supports[0]).not.toHaveProperty('superstructure');
+  });
+
+  it('measures version 8 abutment dimensions along the bridge axis and derives the deck ends', () => {
+    const abutment = (id: string, line: string, front: string) => ({
+      id,
+      name: id,
+      kind: 'abutment',
+      bearingLine: line,
+      offset: '0',
+      geometry: {
+        type: 'abutment',
+        length: '20',
+        seatLength: '1.807',
+        seatHeight: '1.1',
+        frontOffset: front,
+        stemThickness: '1.2',
+        backwallThickness: '0.5',
+        gap: '0.08',
+        wings: { angle: '0', length: '4', thickness: '0.6', support: 'hung', endHeight: '1.5' },
+      },
+      footing: { length: '0', width: '0', thickness: '0' },
+      connection: 'bearing',
+      bearingHeight: '0.45',
+      bearings: ['-1.25', '1.25'],
+      foundationTop: '315',
+    });
+    const v8 = {
+      ...createEmptyProject('Most v8'),
+      schemaVersion: '8',
+      superstructures: [
+        {
+          id: 'nk',
+          name: 'NK',
+          bridgeAxis: 'ax',
+          from: 9307.31,
+          to: 9363.31,
+          profile: 'p',
+          parameterLaws: {},
+          orientation: 'vertical',
+        },
+      ],
+      bearingLines: [
+        { id: 'l1', name: '1', superstructure: 'nk', station: 9307.81, crossingAngle: '30' },
+        { id: 'l2', name: '2', superstructure: 'nk', station: 9335, crossingAngle: '90' },
+        { id: 'l3', name: '3', superstructure: 'nk', station: 9362.81, crossingAngle: 'alfa' },
+      ],
+      supports: [abutment('o1', 'l1', '0.45'), abutment('o2', 'l3', '0.9')],
+    };
+    const r = openProject(JSON.stringify(v8));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.superstructures[0]?.ends).toEqual({ start: 'abutment', end: 'abutment' });
+    const [o1, o2] = r.project.supports.map((s) => s.geometry);
+    // kolmo na os opory → v osi mosta: ÷ sin 30° = × 2
+    expect(o1).toMatchObject({
+      construction: 'bearing',
+      frontOffset: '0.9',
+      backwallThickness: '1',
+      stemThickness: '2.4',
+      endOffset: '0.5',
+      gap: '0.08',
+      wallThickness: '1.2',
+    });
+    expect(o1).not.toHaveProperty('seatLength');
+    // uhol zadaný výrazom → výraz
+    expect(o2).toMatchObject({ frontOffset: '(0.9) / sin(alfa)', endOffset: '0.5' });
   });
 
   it('adds an empty brief and no study area to version 6 files', () => {
@@ -205,7 +271,7 @@ describe('migrateProject', () => {
     const [abutment, pier] = r.project.supports;
     expect(abutment?.geometry).toMatchObject({
       type: 'abutment',
-      seatLength: '1.5',
+      construction: 'bearing',
       stemThickness: '1.2',
       length: '12',
       gap: '0.08',

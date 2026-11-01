@@ -38,45 +38,96 @@ const expr = (label: string, value: string, onCommit: (value: string) => void): 
   onCommit,
 });
 
-/** Rozmery opory po častiach (ADR 0010): prah, driek, záverný múrik, krídla. */
+/**
+ * Rozmery opory po častiach (ADR 0018): konštrukcia (s prahom / monolitická), pri opore s prahom prah, driek a záverný
+ * múrik, pri monolitickej stena; krídla. Pozdĺžne rozmery sú v osi mosta, písmená zodpovedajú náčrtu.
+ */
 function abutmentGroups(
   g: AbutmentGeometry,
-  set: (geometry: AbutmentGeometry) => void,
+  set: (changes: Partial<Support>) => void,
 ): PropertyGroup[] {
   const dims = sk.supports.dimensions;
   const t = sk.supports.abutment;
   const d = (key: string) => dims[key] ?? key;
+  const geometry = (changes: Partial<AbutmentGeometry>) => set({ geometry: { ...g, ...changes } });
   const wing = (k: 'angle' | 'length' | 'thickness' | 'endHeight') => (v: string) =>
-    set({ ...g, wings: { ...g.wings, [k]: v } });
+    geometry({ wings: { ...g.wings, [k]: v } });
+  const construction: PropertyRow = {
+    kind: 'select',
+    label: t.construction,
+    value: g.construction,
+    options: (['bearing', 'monolithic'] as const).map((v) => ({
+      value: v,
+      label: t.constructions[v],
+    })),
+    // monolitická opora je votknutá bez ložísk
+    onChange: (v) =>
+      set(
+        v === 'monolithic'
+          ? {
+              geometry: { ...g, construction: 'monolithic' },
+              connection: 'fixed',
+              bearingHeight: '0',
+            }
+          : {
+              geometry: { ...g, construction: 'bearing' },
+              connection: 'bearing',
+              bearingHeight: '0.35',
+            },
+      ),
+  };
+  const body: PropertyGroup[] =
+    g.construction === 'monolithic'
+      ? [
+          {
+            id: 'abutment-wall',
+            title: t.wall,
+            rows: [
+              construction,
+              expr(d('length'), g.length, (length) => geometry({ length })),
+              expr(d('wallThickness'), g.wallThickness, (wallThickness) =>
+                geometry({ wallThickness }),
+              ),
+              { kind: 'note', text: t.wallHint },
+            ],
+          },
+        ]
+      : [
+          {
+            id: 'abutment-seat',
+            title: t.seat,
+            rows: [
+              construction,
+              expr(d('length'), g.length, (length) => geometry({ length })),
+              expr(d('frontOffset'), g.frontOffset, (frontOffset) => geometry({ frontOffset })),
+              expr(d('endOffset'), g.endOffset, (endOffset) => geometry({ endOffset })),
+              expr(d('seatHeight'), g.seatHeight, (seatHeight) => geometry({ seatHeight })),
+              { kind: 'note', text: t.seatHint },
+            ],
+          },
+          {
+            id: 'abutment-stem',
+            title: t.stem,
+            rows: [
+              expr(d('stemThickness'), g.stemThickness, (stemThickness) =>
+                geometry({ stemThickness }),
+              ),
+              { kind: 'note', text: t.stemHint },
+            ],
+          },
+          {
+            id: 'abutment-backwall',
+            title: t.backwall,
+            rows: [
+              expr(d('gap'), g.gap, (gap) => geometry({ gap })),
+              expr(d('backwallThickness'), g.backwallThickness, (backwallThickness) =>
+                geometry({ backwallThickness }),
+              ),
+            ],
+          },
+        ];
   return [
-    {
-      id: 'abutment-seat',
-      title: t.seat,
-      rows: [
-        expr(d('length'), g.length, (length) => set({ ...g, length })),
-        expr(d('seatLength'), g.seatLength, (seatLength) => set({ ...g, seatLength })),
-        expr(d('seatHeight'), g.seatHeight, (seatHeight) => set({ ...g, seatHeight })),
-        expr(d('frontOffset'), g.frontOffset, (frontOffset) => set({ ...g, frontOffset })),
-      ],
-    },
-    {
-      id: 'abutment-stem',
-      title: t.stem,
-      rows: [
-        expr(d('stemThickness'), g.stemThickness, (stemThickness) => set({ ...g, stemThickness })),
-        { kind: 'note', text: t.stemHint },
-      ],
-    },
-    {
-      id: 'abutment-backwall',
-      title: t.backwall,
-      rows: [
-        expr(d('backwallThickness'), g.backwallThickness, (backwallThickness) =>
-          set({ ...g, backwallThickness }),
-        ),
-        expr(d('gap'), g.gap, (gap) => set({ ...g, gap })),
-      ],
-    },
+    ...body,
     {
       id: 'abutment-wings',
       title: t.wings,
@@ -90,10 +141,7 @@ function abutmentGroups(
             label: t.wingSupports[v],
           })),
           onChange: (v) =>
-            set({
-              ...g,
-              wings: { ...g.wings, support: v as AbutmentGeometry['wings']['support'] },
-            }),
+            geometry({ wings: { ...g.wings, support: v as AbutmentGeometry['wings']['support'] } }),
         },
         expr(d('wingAngle'), g.wings.angle, wing('angle')),
         expr(d('wingLength'), g.wings.length, wing('length')),
@@ -326,7 +374,7 @@ export function supportSheet(input: {
     ...(dimensionRows.length > 0
       ? [{ id: 'support-dimensions', title: sk.properties.dimensions, rows: dimensionRows }]
       : []),
-    ...(g.type === 'abutment' ? abutmentGroups(g, (geometry) => set({ geometry })) : []),
+    ...(g.type === 'abutment' ? abutmentGroups(g, set) : []),
     {
       id: 'support-founding',
       title: sk.properties.founding,

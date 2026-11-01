@@ -225,12 +225,13 @@ export const sk = {
     dimensions: {
       thickness: 'hrúbka (kolmo na os podpery)',
       length: 'dĺžka (pozdĺž osi podpery)',
-      seatLength: 'šírka úložného prahu',
-      seatHeight: 'výška úložného prahu',
-      frontOffset: 'predná líca od osi ložísk',
-      stemThickness: 'hrúbka drieku',
-      backwallThickness: 'hrúbka záverného múrika',
-      gap: 'medzera NK – múrik (v osi mosta)',
+      seatHeight: 'h_p — výška úložného prahu',
+      frontOffset: 'a — predsadenie prahu pred os uloženia (v osi mosta)',
+      endOffset: 'e — odsadenie konca NK za os uloženia (v osi mosta)',
+      stemThickness: 'hrúbka drieku (v osi mosta)',
+      backwallThickness: 't — hrúbka záverného múrika (v osi mosta)',
+      gap: 'g — medzera NK – múrik (v osi mosta)',
+      wallThickness: 't_s — hrúbka steny (v osi mosta)',
       wingAngle: 'uhol krídla od osi mosta [°]',
       wingLength: 'dĺžka krídla',
       wingThickness: 'hrúbka krídla',
@@ -245,7 +246,17 @@ export const sk = {
       'footing.thickness': 'hrúbka základu',
     } as Record<string, string>,
     abutment: {
+      construction: 'Konštrukcia',
+      constructions: {
+        bearing: 's prahom a ložiskami',
+        monolithic: 'monolitická (integrovaná, rámová)',
+      },
       seat: 'Úložný prah',
+      seatHint:
+        'Prah siaha od zadnej líce múrika po prednú lícu (t + g + e + a); koniec NK je e za osou uloženia.',
+      wall: 'Stena',
+      wallHint:
+        'Stena so stredom na osi uloženia od spodku NK po základ; NK končí na jej zadnej líci, uloženie je votknuté (integrovaná opora bez základu, rámová na pätke).',
       stem: 'Driek',
       stemHint: 'Driek vznikne, len ak je horná hrana základu nižšie ako spodok prahu.',
       backwall: 'Záverný múrik',

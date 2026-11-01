@@ -62,9 +62,9 @@ export function supportPlan(r: SupportResult): SupportPlan | undefined {
   if (g.type === 'wall' && dim.length && dim.thickness) {
     body = [rectangle(c, d, n, dim.length / 2, dim.thickness / 2)];
   } else if (parts) {
-    body = parts.filter((p) => p.name !== 'stem').map((p) => p.plan);
-  } else if (g.type === 'abutment' && dim.length && dim.seatLength) {
-    body = [rectangle(c, d, n, dim.length / 2, dim.seatLength / 2)];
+    // driek opory s prahom je pod prahom; stena monolitickej opory je jej telo
+    const monolithic = g.type === 'abutment' && g.construction === 'monolithic';
+    body = parts.filter((p) => monolithic || p.name !== 'stem').map((p) => p.plan);
   } else if (g.type === 'columns' && dim.count && dim.spacing !== undefined) {
     body = columnOffsets(dim.count, dim.spacing).map((o) => {
       const p = vec2(c.x + o * d.x, c.y + o * d.y);

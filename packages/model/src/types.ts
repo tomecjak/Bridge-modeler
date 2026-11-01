@@ -120,13 +120,23 @@ export const ProfileLawSchema = z.discriminatedUnion('kind', [
 ]);
 export type ProfileLaw = z.infer<typeof ProfileLawSchema>;
 
+/**
+ * Koniec NK (ADR 0018): `abutment` = odvodený z opory na krajnej osi uloženia (bez opory platí od / do),
+ * `manual` = zadané od / do.
+ */
+export const DeckEndModeSchema = z.enum(['abutment', 'manual']);
+export type DeckEndMode = z.infer<typeof DeckEndModeSchema>;
+
 /** Nosná konštrukcia: prierez vedený po osi mosta v rozsahu from–to (zobrazované staničenie). */
 export const SuperstructureSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   bridgeAxis: z.string(),
+  /** začiatok a koniec NK; pri koncoch odvodených z opory ich aplikácia udržiava v súlade s oporami */
   from: z.number(),
   to: z.number(),
+  /** režim koncov NK (ADR 0018); chýba = oba odvodené z opory */
+  ends: z.object({ start: DeckEndModeSchema, end: DeckEndModeSchema }).optional(),
   profile: z.string(),
   /** priebehy parametrov profilu po staničení; chýbajúce = predvolená hodnota profilu */
   parameterLaws: z.record(z.string(), ProfileLawSchema),
@@ -149,25 +159,29 @@ export const SupportGeometrySchema = z.discriminatedUnion('type', [
     spacing: ExprSchema,
   }),
   /**
-   * Opora (ADR 0010): úložný prah, voliteľný driek, záverný múrik a krídla. Hrúbky a šírky kolmo na os podpery,
-   * vzdialenosti od osi ložísk kladné smerom do poľa.
+   * Opora (ADR 0018): s úložným prahom a ložiskami (prah od zadnej líce múrika po prednú lícu, voliteľný driek,
+   * záverný múrik) alebo monolitická stena (integrovaná, rámová); krídla. Pozdĺžne rozmery sa merajú v osi mosta
+   * od osi uloženia, kladne smerom do poľa; obe skupiny polí sú vždy uložené.
    */
   z.object({
     type: z.literal('abutment'),
+    construction: z.enum(['bearing', 'monolithic']),
     /** dĺžka pozdĺž osi podpery (medzi vonkajšími lícami krídel) */
     length: ExprSchema,
-    /** šírka úložného prahu */
-    seatLength: ExprSchema,
-    /** výška prahu pod hornou hranou podpery */
-    seatHeight: ExprSchema,
-    /** predná líca prahu od osi ložísk */
+    /** a — predná líca prahu pred osou uloženia */
     frontOffset: ExprSchema,
-    /** hrúbka drieku pod prahom (driek vznikne, len ak je základ nižšie ako spodok prahu) */
-    stemThickness: ExprSchema,
-    /** hrúbka záverného múrika */
-    backwallThickness: ExprSchema,
-    /** medzera medzi koncom NK a záverným múrikom, meraná v osi mosta */
+    /** e — koniec NK za osou uloženia (odsadenie konca NK) */
+    endOffset: ExprSchema,
+    /** g — medzera medzi koncom NK a záverným múrikom */
     gap: ExprSchema,
+    /** t — hrúbka záverného múrika */
+    backwallThickness: ExprSchema,
+    /** h_p — výška prahu pod hornou hranou podpery */
+    seatHeight: ExprSchema,
+    /** hrúbka drieku pod prednou lícou prahu (driek vznikne, len ak je základ nižšie ako spodok prahu) */
+    stemThickness: ExprSchema,
+    /** t_s — hrúbka steny monolitickej opory, stred na osi uloženia */
+    wallThickness: ExprSchema,
     wings: z.object({
       /** uhol od osi mosta [°], + roztvorené von; 0 = rovnobežné s osou mosta */
       angle: ExprSchema,
@@ -184,17 +198,19 @@ export const SupportGeometrySchema = z.discriminatedUnion('type', [
 export type SupportGeometry = z.infer<typeof SupportGeometrySchema>;
 export type AbutmentGeometry = Extract<SupportGeometry, { type: 'abutment' }>;
 
-/** Predvolená opora podľa vzorového mosta 212-00 (ADR 0010); `length` doplní volajúci podľa šírky NK. */
+/** Predvolená opora s prahom podľa vzorového mosta 212-00 (ADR 0018); `length` doplní volajúci podľa šírky NK. */
 export function defaultAbutmentGeometry(length = '12'): AbutmentGeometry {
   return {
     type: 'abutment',
+    construction: 'bearing',
     length,
-    seatLength: '2.05',
-    seatHeight: '1.1',
     frontOffset: '0.9',
-    stemThickness: '1.2',
-    backwallThickness: '0.5',
+    endOffset: '0.5',
     gap: '0.08',
+    backwallThickness: '0.5',
+    seatHeight: '1.1',
+    stemThickness: '1.2',
+    wallThickness: '1.2',
     wings: { angle: '0', length: '4', thickness: '0.6', support: 'hung', endHeight: '1.5' },
   };
 }
@@ -211,6 +227,11 @@ export const BearingLineSchema = z.object({
   station: z.number(),
   /** uhol kríženia [°], 90 = kolmá; od osi mosta v smere staničenia proti smeru hodín (ADR 0008) */
   crossingAngle: ExprSchema,
+  /**
+   * priečnik (ADR 0018): v páse rovnobežnom s osou má NK prierez `profile`; šírka v osi mosta [m], vnútorný
+   * priečnik symetricky okolo osi, koncový od čela NK
+   */
+  crossbeam: z.object({ profile: z.string(), width: ExprSchema }).optional(),
 });
 export type BearingLine = z.infer<typeof BearingLineSchema>;
 

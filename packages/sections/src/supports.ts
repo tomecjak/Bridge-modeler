@@ -382,12 +382,17 @@ function evaluateDimensions(
       : g.type === 'abutment'
         ? {
             length: g.length,
-            seatLength: g.seatLength,
-            seatHeight: g.seatHeight,
-            frontOffset: g.frontOffset,
-            stemThickness: g.stemThickness,
-            backwallThickness: g.backwallThickness,
-            gap: g.gap,
+            // vyhodnotia sa len rozmery zvolenej konštrukcie (ADR 0018)
+            ...(g.construction === 'monolithic'
+              ? { wallThickness: g.wallThickness }
+              : {
+                  frontOffset: g.frontOffset,
+                  endOffset: g.endOffset,
+                  gap: g.gap,
+                  backwallThickness: g.backwallThickness,
+                  seatHeight: g.seatHeight,
+                  stemThickness: g.stemThickness,
+                }),
             wingAngle: g.wings.angle,
             wingLength: g.wings.length,
             wingThickness: g.wings.thickness,
@@ -411,7 +416,9 @@ const DIMENSION_RULES: Record<string, (v: number) => boolean> = {
   count: (v) => Number.isInteger(v) && v >= 1,
   spacing: (v) => v >= 0,
   frontOffset: () => true,
+  endOffset: (v) => v >= 0,
   gap: (v) => v >= 0,
+  backwallThickness: (v) => v >= 0,
   wingLength: (v) => v >= 0,
   wingAngle: (v) => Math.abs(v) < 85,
 };

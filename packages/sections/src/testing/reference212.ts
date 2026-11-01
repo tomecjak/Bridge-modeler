@@ -86,13 +86,13 @@ export function reference212Project(): ProjectFile {
       geometry: abutment
         ? {
             ...defaultAbutmentGeometry('20'),
-            // dĺžka prahu 2,05, predsadenie 0,90 a 0,84 m od múrika po zadnú lícu sú kótované v osi mosta
-            // → rozmery kolmo na os opory (ADR 0010)
-            seatLength: String(2.05 * SIN),
-            seatHeight: '1.1',
-            frontOffset: String(0.9 * SIN),
-            backwallThickness: String(0.84 * SIN),
+            // kóty výkresu v osi mosta (ADR 0018): predsadenie 0,90, koniec NK 0,50, medzera 0,08, múrik 0,84;
+            // prah od zadnej líce múrika = 2,32 v osi mosta = 2,05 kolmo na os opory
+            frontOffset: '0.9',
+            endOffset: '0.5',
             gap: '0.08',
+            backwallThickness: '0.84',
+            seatHeight: '1.1',
           }
         : { type: 'wall', thickness: '1.2', length: '7.5' },
       footing: abutment

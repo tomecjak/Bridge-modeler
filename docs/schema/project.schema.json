@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "8"
+      "const": "9"
     },
     "name": {
       "type": "string"
@@ -995,6 +995,30 @@
           "to": {
             "type": "number"
           },
+          "ends": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "enum": [
+                  "abutment",
+                  "manual"
+                ]
+              },
+              "end": {
+                "type": "string",
+                "enum": [
+                  "abutment",
+                  "manual"
+                ]
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false
+          },
           "profile": {
             "type": "string"
           },
@@ -1204,6 +1228,22 @@
           },
           "crossingAngle": {
             "type": "string"
+          },
+          "crossbeam": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "string"
+              },
+              "width": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "width"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -1312,25 +1352,35 @@
                     "type": "string",
                     "const": "abutment"
                   },
+                  "construction": {
+                    "type": "string",
+                    "enum": [
+                      "bearing",
+                      "monolithic"
+                    ]
+                  },
                   "length": {
-                    "type": "string"
-                  },
-                  "seatLength": {
-                    "type": "string"
-                  },
-                  "seatHeight": {
                     "type": "string"
                   },
                   "frontOffset": {
                     "type": "string"
                   },
-                  "stemThickness": {
+                  "endOffset": {
+                    "type": "string"
+                  },
+                  "gap": {
                     "type": "string"
                   },
                   "backwallThickness": {
                     "type": "string"
                   },
-                  "gap": {
+                  "seatHeight": {
+                    "type": "string"
+                  },
+                  "stemThickness": {
+                    "type": "string"
+                  },
+                  "wallThickness": {
                     "type": "string"
                   },
                   "wings": {
@@ -1368,13 +1418,15 @@
                 },
                 "required": [
                   "type",
+                  "construction",
                   "length",
-                  "seatLength",
-                  "seatHeight",
                   "frontOffset",
-                  "stemThickness",
-                  "backwallThickness",
+                  "endOffset",
                   "gap",
+                  "backwallThickness",
+                  "seatHeight",
+                  "stemThickness",
+                  "wallThickness",
                   "wings"
                 ],
                 "additionalProperties": false
@@ -1648,6 +1700,6 @@
     "planLines"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-8.json",
-  "title": "Projekt modelára mostov (schemaVersion 8)"
+  "$id": "https://bridge-modeler.local/schema/project-9.json",
+  "title": "Projekt modelára mostov (schemaVersion 9)"
 }

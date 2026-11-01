@@ -111,6 +111,8 @@ export function planDrawing(input: PlanInput): Drawing {
     const across = vec2(d.y, -d.x);
     const h = BEARING_PLAN_SIZE / 2;
     for (const b of r.bearings) {
+      // votknutie (monolitická opora) nemá ložiská, body uloženia slúžia len na výšku spodku NK
+      if (!(b.soffit - b.seat > 0)) continue;
       const c = b.plan;
       const corner = (su: number, sv: number) =>
         vec2(c.x + su * h * d.x + sv * h * across.x, c.y + su * h * d.y + sv * h * across.y);

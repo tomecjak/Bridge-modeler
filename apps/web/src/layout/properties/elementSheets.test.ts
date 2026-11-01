@@ -124,6 +124,47 @@ describe('supportSheet', () => {
     ).toContain('výška krídla na konci');
   });
 
+  it('labels the abutment dimensions with the sketch letters and switches to a fixed monolithic wall', () => {
+    const commands: Command[] = [];
+    const abutment: Support = {
+      ...pier,
+      kind: 'abutment',
+      geometry: defaultAbutmentGeometry('12'),
+    };
+    const sheet = support(abutment, commands);
+    expect(labels(sheet, 'abutment-seat')).toEqual([
+      'Konštrukcia',
+      'dĺžka (pozdĺž osi podpery)',
+      'a — predsadenie prahu pred os uloženia (v osi mosta)',
+      'e — odsadenie konca NK za os uloženia (v osi mosta)',
+      'h_p — výška úložného prahu',
+      'note',
+    ]);
+    const row = sheet.groups.find((g) => g.id === 'abutment-seat')?.rows?.[0];
+    if (row?.kind === 'select') row.onChange('monolithic');
+    expect(commands[0]).toMatchObject({
+      collection: 'supports',
+      changes: {
+        geometry: { construction: 'monolithic' },
+        connection: 'fixed',
+        bearingHeight: '0',
+      },
+    });
+    const monolithic = support({
+      ...abutment,
+      geometry: { ...defaultAbutmentGeometry('12'), construction: 'monolithic' },
+    });
+    expect(groupIds(monolithic)).toEqual([
+      'support-identity',
+      'support-position',
+      'abutment-wall',
+      'abutment-wings',
+      'support-founding',
+      'support-bearings',
+    ]);
+    expect(labels(monolithic, 'abutment-wall')).toContain('t_s — hrúbka steny (v osi mosta)');
+  });
+
   it('writes the station and crossing angle to its bearing line, other changes to the support', () => {
     const commands: Command[] = [];
     const sheet = support(pier, commands);

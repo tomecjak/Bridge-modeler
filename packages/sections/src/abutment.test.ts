@@ -9,7 +9,13 @@ import {
   type Support,
 } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
-import { abutmentParts, overallLength, type SolidPart, transverseOffset } from './abutment.ts';
+import {
+  abutmentParts,
+  overallLength,
+  type SolidPart,
+  seatFrontLine,
+  transverseOffset,
+} from './abutment.ts';
 import { supportPlan } from './supportGeometry.ts';
 import { deckTopAt, evaluateSupport, type SupportContext, type SupportResult } from './supports.ts';
 import { singleDeckExample } from './templates/singleBeamHaunched.ts';
@@ -92,12 +98,15 @@ describe('abutmentParts — kolmá opora', () => {
     expect(stem.top(p)).toBeCloseTo(part(abutmentParts(r), 'seat').bottom(p), 12);
   });
 
-  it('places the seat between its back face and the front face 0.9 m into the span', () => {
+  // zadná líca opory = zadná líca múrika: koniec NK 0,5 m za osou, medzera 0,08, múrik 0,5 (ADR 0018)
+  const back = -0.5 - 0.08 - 0.5;
+
+  it('places the seat from the backwall rear face to the front face 0.9 m into the span', () => {
     const r = shallow();
     const seat = part(abutmentParts(r), 'seat');
     const ws = seat.plan.map((p) => along(r, p));
     expect(Math.max(...ws)).toBeCloseTo(0.9, 9);
-    expect(Math.min(...ws)).toBeCloseTo(0.9 - 2.05, 9);
+    expect(Math.min(...ws)).toBeCloseTo(back, 9);
     const xs = seat.plan.map((p) => transverseOffset(r, p));
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(16, 9);
     // vrch prahu = horná hrana podpery pri ložisku
@@ -123,8 +132,8 @@ describe('abutmentParts — kolmá opora', () => {
     const r = shallow();
     const wing = part(abutmentParts(r), 'wing');
     const [r0, r1] = wing.plan as [Vec2, Vec2];
-    expect(along(r, r0)).toBeCloseTo(0.9 - 2.05, 9);
-    expect(along(r, r1)).toBeCloseTo(0.9 - 2.05 - 4, 9);
+    expect(along(r, r0)).toBeCloseTo(back, 9);
+    expect(along(r, r1)).toBeCloseTo(back - 4, 9);
     expect(transverseOffset(r, r1)).toBeCloseTo(transverseOffset(r, r0), 9);
     expect(wing.bottom(r1)).toBeCloseTo(wing.top(r1) - 1.5, 9);
     expect(wing.bottom(r0)).toBeCloseTo(part(abutmentParts(r), 'seat').bottom(r0), 9);
@@ -156,7 +165,7 @@ describe('abutmentParts — kolmá opora', () => {
     const r = shallow();
     const s = (station: number) => alignment.stationing.fromDisplay(station) as number;
     const total = overallLength([r], { sFrom: s(1020), sTo: s(1045) });
-    expect(total).toBeCloseTo(s(1045) - (s(1020.5) - 1.15 - 4), 9);
+    expect(total).toBeCloseTo(s(1045) - (s(1020.5) + back - 4), 9);
   });
 
   it('shows the seat, backwall and wings in the plan and drops the footing when its thickness is 0', () => {
@@ -181,11 +190,47 @@ describe('abutmentParts — šikmá opora', () => {
     expect(along(r, front) + transverseOffset(r, front) * cot).toBeCloseTo(-0.5 - 0.08, 9);
   });
 
+  it('measures the longitudinal dimensions along the bridge axis', () => {
+    const angle = 61.84;
+    const r = abutment(angle, { frontOffset: '0.9', backwallThickness: '0.84' });
+    const sin = Math.sin((angle * Math.PI) / 180);
+    const seat = part(abutmentParts(r), 'seat');
+    // kolmo na os opory: (0,84 + 0,08 + 0,50 + 0,90) · sin α ≈ 2,05 (212-00)
+    const f = vec2(r.direction.y, -r.direction.x);
+    const ws = seat.plan.map((p) => p.x * f.x + p.y * f.y);
+    expect(Math.max(...ws) - Math.min(...ws)).toBeCloseTo(2.32 * sin, 9);
+    expect(2.32 * sin).toBeCloseTo(2.05, 2);
+  });
+
   it('keeps parallel wings parallel to the bridge axis', () => {
     const r = abutment(61.84);
     const [r0, r1] = part(abutmentParts(r), 'wing').plan as [Vec2, Vec2];
     expect(transverseOffset(r, r1)).toBeCloseTo(transverseOffset(r, r0), 9);
     expect(along(r, r0) - along(r, r1)).toBeCloseTo(4, 9);
+  });
+
+  it('builds a monolithic wall centred on the bearing line from the deck soffit to the foundation', () => {
+    const r = abutment(
+      90,
+      { construction: 'monolithic', wallThickness: '1.0' },
+      { connection: 'fixed', bearingHeight: '0', foundationTop: '230' },
+    );
+    expect(r.issues).toEqual([]);
+    const parts = abutmentParts(r);
+    expect(parts?.map((p) => p.name)).toEqual(['stem', 'wing', 'wing']);
+    const wall = part(parts, 'stem');
+    const ws = wall.plan.map((p) => along(r, p));
+    expect(Math.min(...ws)).toBeCloseTo(-0.5, 9);
+    expect(Math.max(...ws)).toBeCloseTo(0.5, 9);
+    const b = r.bearings[0];
+    expect(b && wall.top(b.plan)).toBeCloseTo(b?.soffit ?? Number.NaN, 9);
+    expect(wall.bottom(wall.plan[0] as Vec2)).toBeCloseTo(230 - alignment.origin.z, 9);
+    // krídlo začína na zadnej líci steny, predná líca steny určuje premostenie
+    expect(along(r, part(parts, 'wing').plan[0] as Vec2)).toBeCloseTo(-0.5, 9);
+    const front = seatFrontLine(r);
+    expect(front && along(r, front.point)).toBeCloseTo(0.5, 9);
+    // telo v pôdoryse je stena
+    expect(supportPlan(r)?.body).toHaveLength(3);
   });
 
   it('is undefined for a pier', () => {

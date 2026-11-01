@@ -18,47 +18,50 @@ export function transverseOffset(r: SupportResult, p: Vec2): number {
   return (p.x - axis.point.x) * axis.frame.normal.x + (p.y - axis.point.y) * axis.frame.normal.y;
 }
 
-/** Rámec opory: os podpery `d`, smer do poľa `f` (kolmo na os podpery), smer staničenia `t`. */
+/**
+ * Rámec opory: os podpery `d`, smer do poľa `f` (kolmo na os podpery), smer staničenia `t` a `k` = sin α, ktorým sa
+ * rozmer v osi mosta prevedie na vzdialenosť kolmo na os podpery (ADR 0018).
+ */
 function frame(r: SupportResult, end: DeckEnd) {
   const d = r.direction;
   const t = end.tangent;
   const into = end.side === 'start' ? 1 : -1;
   let f = vec2(d.y, -d.x);
   if ((f.x * t.x + f.y * t.y) * into < 0) f = vec2(-f.x, -f.y);
-  return { d, f, t, into };
+  const k = Math.abs(t.x * f.x + t.y * f.y);
+  return { d, f, t, into, k };
 }
 
+/** Rozmery opory potrebné podľa konštrukcie (ADR 0018). */
+const NEEDED = {
+  bearing: ['frontOffset', 'gap', 'backwallThickness', 'seatHeight', 'stemThickness'],
+  monolithic: ['wallThickness'],
+} as const;
+const WINGS = ['length', 'wingAngle', 'wingLength', 'wingThickness', 'wingEndHeight'] as const;
+
 /**
- * Časti opory (ADR 0010): úložný prah, driek (ak je základ nižšie ako spodok prahu), záverný múrik a krídla.
- * `undefined`, ak podpera nie je opora, nie je vyhodnotená alebo jej NK nemá koniec pri opore.
+ * Časti opory (ADR 0018). Opora s prahom: úložný prah od zadnej líce múrika po prednú lícu (a pred osou uloženia),
+ * driek pod prednou lícou (ak je základ nižšie ako spodok prahu), záverný múrik za koncom NK (medzera g, hrúbka t).
+ * Monolitická opora: stena hrúbky t_s so stredom na osi uloženia od spodku NK po základ. Krídla zo zadnej líce opory.
+ * Pozdĺžne rozmery sú v osi mosta. `undefined`, ak podpera nie je opora, nie je vyhodnotená alebo jej NK nemá koniec
+ * pri opore.
  */
 export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
   const g = r.support.geometry;
   const end = r.deckEnd;
   const dim = r.dimensions;
   if (g.type !== 'abutment' || !end || !r.axis || r.bearings.length === 0) return undefined;
-  const need = ['length', 'seatLength', 'seatHeight', 'frontOffset', 'stemThickness'];
-  const more = [
-    'backwallThickness',
-    'gap',
-    'wingAngle',
-    'wingLength',
-    'wingThickness',
-    'wingEndHeight',
-  ];
-  if (![...need, ...more].every((k) => Number.isFinite(dim[k]))) return undefined;
+  if (![...NEEDED[g.construction], ...WINGS].every((key) => Number.isFinite(dim[key])))
+    return undefined;
   const L = dim.length as number;
-  const seatLength = dim.seatLength as number;
-  const seatHeight = dim.seatHeight as number;
-  const front = dim.frontOffset as number;
-  const { d, f, t, into } = frame(r, end);
+  const { d, f, t, into, k } = frame(r, end);
   const c = r.center;
   const n = vec2(r.axis.frame.normal.x, r.axis.frame.normal.y);
   const dn = d.x * n.x + d.y * n.y;
   const fn = f.x * n.x + f.y * n.y;
   const x = (p: Vec2) => transverseOffset(r, p);
   // bočné líca opory sú rovnobežné s osou mosta cez konce opory na osi ložísk (krídla pod okrajmi NK)
-  const ends = [-1, 1].map((k) => x(vec2(c.x + ((k * L) / 2) * d.x, c.y + ((k * L) / 2) * d.y)));
+  const ends = [-1, 1].map((s) => x(vec2(c.x + ((s * L) / 2) * d.x, c.y + ((s * L) / 2) * d.y)));
   const xc = x(c);
   /** bod na priamke vo vzdialenosti `w` od osi ložísk s priečnou polohou `xs` */
   const at = (w: number, xs: number) => {
@@ -74,51 +77,65 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
   ];
   const wOf = (p: Vec2) => (p.x - c.x) * f.x + (p.y - c.y) * f.y;
   const seatTop = (p: Vec2) => seatAt(r, x(p));
-  const seatBottom = (p: Vec2) => seatTop(p) - seatHeight;
   // horný povrch NK predĺžený v sklone nivelety (bod na šikmom konci leží na inom staničení ako os)
   const deckTop = (p: Vec2) =>
     deckTopAt(end, x(p)) + end.grade * ((p.x - end.point.x) * t.x + (p.y - end.point.y) * t.y);
 
-  const parts: SolidPart[] = [
-    {
+  const parts: SolidPart[] = [];
+  /** zadná líca opory (koreň krídel) a spodok koreňa zaveseného krídla */
+  let root: number;
+  let rootBottom: (p: Vec2) => number;
+  if (g.construction === 'monolithic') {
+    const half = ((dim.wallThickness as number) * k) / 2;
+    root = -half;
+    rootBottom = () => r.foundationTop;
+    parts.push({
+      name: 'stem',
+      plan: rect(-half, half),
+      bottom: () => r.foundationTop,
+      top: seatTop,
+      foldsAtBearings: true,
+    });
+  } else {
+    const front = (dim.frontOffset as number) * k;
+    const seatHeight = dim.seatHeight as number;
+    const seatBottom = (p: Vec2) => seatTop(p) - seatHeight;
+    // múrik za skutočným koncom NK (aj pri ručnom konci); medzera a hrúbka v osi mosta
+    const backwallFront = wOf(end.point) - (dim.gap as number) * k;
+    const backwallBack = backwallFront - (dim.backwallThickness as number) * k;
+    root = Math.min(backwallBack, front - 1e-3);
+    rootBottom = seatBottom;
+    parts.push({
       name: 'seat',
-      plan: rect(front - seatLength, front),
+      plan: rect(root, front),
       bottom: seatBottom,
       top: seatTop,
       foldsAtBearings: true,
-    },
-  ];
-
-  const lowestSeatBottom = Math.min(...r.bearings.map((b) => b.seat)) - seatHeight;
-  if (lowestSeatBottom - r.foundationTop > 1e-3) {
-    parts.push({
-      name: 'stem',
-      plan: rect(front - (dim.stemThickness as number), front),
-      bottom: () => r.foundationTop,
-      top: seatBottom,
-      foldsAtBearings: true,
     });
-  }
-
-  // predná líca múrika rovnobežne s osou podpery za koncom NK; medzera je meraná v osi mosta
-  const deckEndW = wOf(end.point);
-  const alongAxis = Math.abs(t.x * f.x + t.y * f.y);
-  const backwallFront = deckEndW - (dim.gap as number) * alongAxis;
-  const backwallBack = backwallFront - (dim.backwallThickness as number);
-  if ((dim.backwallThickness as number) > 0) {
-    parts.push({
-      name: 'backwall',
-      plan: rect(backwallBack, backwallFront),
-      bottom: seatBottom,
-      top: deckTop,
-      foldsAtBearings: false,
-    });
+    const lowestSeatBottom = Math.min(...r.bearings.map((b) => b.seat)) - seatHeight;
+    if (lowestSeatBottom - r.foundationTop > 1e-3) {
+      parts.push({
+        name: 'stem',
+        plan: rect(front - (dim.stemThickness as number) * k, front),
+        bottom: () => r.foundationTop,
+        top: seatBottom,
+        foldsAtBearings: true,
+      });
+    }
+    if (backwallFront - backwallBack > 1e-9) {
+      parts.push({
+        name: 'backwall',
+        plan: rect(backwallBack, backwallFront),
+        bottom: seatBottom,
+        top: deckTop,
+        foldsAtBearings: false,
+      });
+    }
   }
 
   const wingLength = dim.wingLength as number;
   const thickness = dim.wingThickness as number;
   if (wingLength > 0) {
-    const root = Math.min(front - seatLength, backwallBack);
     const angle = ((dim.wingAngle as number) * Math.PI) / 180;
     // od poľa = proti smeru do poľa pozdĺž osi mosta; bočne von = od osi mosta
     const away = vec2(-into * t.x, -into * t.y);
@@ -139,7 +156,7 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
       const lambda = (root - wOf(inner0)) / (dir.x * f.x + dir.y * f.y);
       const i0 = vec2(inner0.x + lambda * dir.x, inner0.y + lambda * dir.y);
       const distance = (p: Vec2) => (p.x - r0.x) * dir.x + (p.y - r0.y) * dir.y;
-      const rootBottom = seatBottom(r0);
+      const bottom0 = rootBottom(r0);
       const endBottom = deckTop(r1) - (dim.wingEndHeight as number);
       parts.push({
         name: 'wing',
@@ -149,8 +166,8 @@ export function abutmentParts(r: SupportResult): SolidPart[] | undefined {
           g.wings.support === 'founded'
             ? () => r.foundationTop
             : (p) => {
-                const k = Math.max(0, Math.min(1, distance(p) / wingLength));
-                return rootBottom + k * (endBottom - rootBottom);
+                const s = Math.max(0, Math.min(1, distance(p) / wingLength));
+                return bottom0 + s * (endBottom - bottom0);
               },
         foldsAtBearings: false,
       });
@@ -202,13 +219,20 @@ export function overallLength(
   return Math.max(to.left - from.left, to.right - from.right);
 }
 
-/** Predná líca úložného prahu opory v pôdoryse: bod a smer (rovnobežne s osou podpery). */
+/**
+ * Predná líca úložného prahu (monolitická opora: steny) v pôdoryse: bod a smer rovnobežne s osou podpery (ADR 0018,
+ * dĺžka premostenia).
+ */
 export function seatFrontLine(r: SupportResult): { point: Vec2; direction: Vec2 } | undefined {
   const g = r.support.geometry;
   const end = r.deckEnd;
-  const front = r.dimensions.frontOffset;
-  if (g.type !== 'abutment' || !end || !r.axis || front === undefined || !Number.isFinite(front))
-    return undefined;
-  const { d, f } = frame(r, end);
-  return { point: vec2(r.center.x + front * f.x, r.center.y + front * f.y), direction: d };
+  if (g.type !== 'abutment' || !end || !r.axis) return undefined;
+  const value =
+    g.construction === 'monolithic'
+      ? (r.dimensions.wallThickness ?? Number.NaN) / 2
+      : r.dimensions.frontOffset;
+  if (value === undefined || !Number.isFinite(value)) return undefined;
+  const { d, f, k } = frame(r, end);
+  const w = value * k;
+  return { point: vec2(r.center.x + w * f.x, r.center.y + w * f.y), direction: d };
 }
