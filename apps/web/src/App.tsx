@@ -271,9 +271,14 @@ export function App() {
     : displayRange;
   const sectionAt =
     sectionStation ?? (sectionRange ? (sectionRange.from + sectionRange.to) / 2 : 0);
-  const sections = useSectionResults(alignmentMap, parameterState.set, sectionAt);
   const axisLengths = useAxisLengths(alignmentMap, parameterState.set);
   const supportState = useSupportState(alignmentMap, parameterState.set, axisLengths);
+  const sections = useSectionResults(
+    alignmentMap,
+    parameterState.set,
+    sectionAt,
+    supportState.crossbeams,
+  );
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
 
@@ -358,6 +363,7 @@ export function App() {
     parameterState.set,
     supportState.supports,
     supportState.lines,
+    supportState.crossbeams,
   );
   const roadDecks = deckDrawings.filter((d) => d.road === item?.data.name);
   const profileDeck =

@@ -11,6 +11,7 @@ import {
   type ProfileDefinition,
   type Superstructure,
 } from '@bridge/model';
+import type { CrossbeamBand } from './crossbeams.ts';
 import { edgeDistance } from './edge.ts';
 import {
   type EdgeResolver,
@@ -27,6 +28,8 @@ export interface SectionContext {
   profiles: readonly ProfileDefinition[];
   /** čiary v pôdoryse (okraje NK podľa krivky) */
   planLines: readonly PlanLine[];
+  /** pásy priečnikov podľa id NK (ADR 0018); v páse má NK prierez priečnika */
+  crossbeams?: ReadonlyMap<string, readonly CrossbeamBand[]>;
 }
 
 export interface BridgeAxisPoint {
@@ -120,6 +123,8 @@ export function evaluateSuperstructure(
   ctx: SectionContext,
   sup: Superstructure,
   s: number,
+  /** prierez úseku NK (vzorky úsekov, ADR 0018); bez neho prierez NK, v páse priečnika prierez priečnika */
+  profileOverride?: ProfileDefinition,
 ): SuperstructureSection {
   const owner: IssueOwner = { kind: 'superstructure', name: sup.name };
   const empty = (station: number, issues: ModelIssue[]): SuperstructureSection => ({
@@ -147,8 +152,21 @@ export function evaluateSuperstructure(
       },
     ]);
   }
-  const profile = ctx.profiles.find((p) => p.id === sup.profile);
+  const band = profileOverride
+    ? undefined
+    : ctx.crossbeams?.get(sup.id)?.find((b) => s >= b.sFrom - 1e-9 && s <= b.sTo + 1e-9);
+  const profile =
+    profileOverride ?? band?.profile ?? ctx.profiles.find((p) => p.id === sup.profile);
   if (!profile) return empty(Number.NaN, [{ code: 'UnknownProfile', id: sup.profile }]);
+  // prierez priečnika preberá z NK len parametre s rovnakým menom (ADR 0018)
+  const laws =
+    profile.id === sup.profile
+      ? sup.parameterLaws
+      : Object.fromEntries(
+          Object.entries(sup.parameterLaws).filter(([name]) =>
+            profile.parameters.some((p) => p.name === name),
+          ),
+        );
 
   const station = alignment.stationing.toDisplay(s).station;
   if (station < sup.from - 1e-9 || station > sup.to + 1e-9) {
@@ -173,7 +191,7 @@ export function evaluateSuperstructure(
         );
       }
     : undefined;
-  const params = profileParameterValues(profile, sup.parameterLaws, scope, station, edge);
+  const params = profileParameterValues(profile, laws, scope, station, edge);
   const evaluated = evaluateProfileDefinition(profile, params.values, scope, station);
   const issues: ModelIssue[] = [
     ...params.issues

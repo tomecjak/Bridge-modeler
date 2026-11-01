@@ -7,10 +7,10 @@ import type {
   ProfileDefinition,
   Superstructure,
 } from '@bridge/model';
-import type { AxisLength } from './axisLength.ts';
+import { type AxisLength, bridgeAxisLength } from './axisLength.ts';
 import { evaluateNumber } from './expressions.ts';
 import { globalScope } from './superstructure.ts';
-import type { BearingLineResult } from './supports.ts';
+import type { BearingLineResult, SupportContext } from './supports.ts';
 
 /** Pás priečnika na osi uloženia (ADR 0018): v ňom má NK prierez priečnika. */
 export interface CrossbeamBand {
@@ -100,4 +100,35 @@ export function crossbeamBands(input: {
     bands.push(band);
   }
   return { bands, issues: issues.map((i) => ({ owner, ...i })) };
+}
+
+/**
+ * Pásy priečnikov všetkých NK projektu (pre `SectionContext.crossbeams`); NK bez priečnikov chýba. `measureOf`
+ * môže dĺžku po osi mosta brať z cache.
+ */
+export function deckCrossbeams(
+  ctx: SupportContext,
+  lines: readonly BearingLineResult[],
+  measureOf: (axis: SupportContext['bridgeAxes'][number], alignment: Alignment) => AxisLength = (
+    axis,
+    alignment,
+  ) => bridgeAxisLength(axis, alignment, ctx.parameters),
+): Map<string, CrossbeamBand[]> {
+  const map = new Map<string, CrossbeamBand[]>();
+  for (const deck of ctx.superstructures) {
+    if (!lines.some((l) => l.line.superstructure === deck.id && l.line.crossbeam)) continue;
+    const axis = ctx.bridgeAxes.find((a) => a.id === deck.bridgeAxis);
+    const alignment = axis && ctx.alignments.get(axis.alignment);
+    if (!axis || !alignment) continue;
+    const { bands } = crossbeamBands({
+      deck,
+      lines,
+      profiles: ctx.profiles,
+      parameters: ctx.parameters,
+      alignment,
+      measure: measureOf(axis, alignment),
+    });
+    if (bands.length > 0) map.set(deck.id, bands);
+  }
+  return map;
 }

@@ -1,6 +1,7 @@
 import type { Vec2, Vec3 } from '@bridge/geom';
 import type { ModelIssue, Superstructure } from '@bridge/model';
 import {
+  type DeckSegment,
   type LawRef,
   type SamplingOptions,
   type SectionContext,
@@ -31,9 +32,10 @@ export interface SuperstructureMesh {
 }
 
 /**
- * Teleso NK ako sweep prierezov po osi mosta (Fáza 5). Prierezy rovnakej topológie sa spoja do loftu,
- * pri zmene topológie sa loft uzavrie a začne nový. Konce NK sú rovnobežné s osou krajnej opory (rozhodnutie
- * 2026-10-30): bod prierezu v priečnej polohe x končí na staničení `s_konca − x·cot α` (ADR 0008, lokálne priamy úsek).
+ * Teleso NK ako sweep prierezov po osi mosta (Fáza 5) po úsekoch NK a priečnikov (ADR 0018). Prierezy rovnakej
+ * topológie sa spoja do loftu, pri zmene topológie sa loft uzavrie a začne nový. Hranice úsekov sú rovnobežné s osou
+ * krajnej opory alebo osou uloženia (rozhodnutie 2026-10-30): bod prierezu v priečnej polohe x končí na staničení
+ * `s_hranice − x·cot α` (ADR 0008, lokálne priamy úsek).
  */
 export function superstructureMesh<S>(
   kernel: GeometryKernel<S>,
@@ -44,15 +46,20 @@ export function superstructureMesh<S>(
     const endAngles = { start: Math.PI / 2, end: Math.PI / 2 };
     return { mesh: mergeMeshes([]), stations: [], endAngles, issues: samples.issues };
   }
-  const { stations, sections, endAngles, issues, sFrom, sTo } = samples;
+  const { stations, endAngles, issues } = samples;
+  const meshes = samples.segments.flatMap((segment) => segmentMeshes(kernel, segment));
+  return { mesh: mergeMeshes(meshes), stations, endAngles, issues };
+}
+
+/** Lofty jedného úseku NK so šikmými hranicami (prierezy za hranicou sa pritiahnu na hraničnú plochu). */
+function segmentMeshes<S>(kernel: GeometryKernel<S>, segment: DeckSegment): TriangleMesh[] {
+  const { sections, sFrom, sTo } = segment;
   const first = sections[0];
   const last = sections[sections.length - 1];
-  if (!first?.axis || !last?.axis) {
-    return { mesh: mergeMeshes([]), stations, endAngles, issues };
-  }
+  if (!first?.axis || !last?.axis) return [];
 
-  const cot0 = cot(endAngles.start);
-  const cot1 = cot(endAngles.end);
+  const cot0 = cot(segment.startAngle);
+  const cot1 = cot(segment.endAngle);
   const startFace = endFace(first, (x) => -x * cot0);
   const endFace_ = endFace(last, (x) => -x * cot1);
 
@@ -88,7 +95,7 @@ export function superstructureMesh<S>(
     if (ls) run.push(ls);
   });
   flush();
-  return { mesh: mergeMeshes(meshes), stations, endAngles, issues };
+  return meshes;
 }
 
 const cot = (a: number) => Math.cos(a) / Math.sin(a);

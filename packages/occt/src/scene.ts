@@ -10,6 +10,8 @@ import {
 import { buildParameterSet, type ModelIssue, type ProjectFile } from '@bridge/model';
 import {
   BEARING_PLAN_SIZE,
+  deckCrossbeams,
+  evaluateBearingLine,
   evaluateSupport,
   type LawRef,
   type SuperstructureSection,
@@ -44,7 +46,7 @@ const END_OVERRUN = 0.5;
 export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): ExactObject[] {
   const origin = project.crs.origin;
   if (!origin) return [];
-  const ctx: SupportContext = {
+  const base: SupportContext = {
     alignments: new Map(
       project.alignments.map((a) => [a.name, createAlignment(a, origin).alignment]),
     ),
@@ -55,6 +57,9 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     bearingLines: project.bearingLines,
     planLines: project.planLines,
   };
+  // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
+  const lines = project.bearingLines.map((l) => evaluateBearingLine(base, l));
+  const ctx: SupportContext = { ...base, crossbeams: deckCrossbeams(base, lines) };
   const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
   const results = project.supports.map((s) => evaluateSupport(ctx, s));
 
@@ -68,7 +73,11 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
       objects.push(empty('superstructure', sup.id, sup.name, samples.issues));
       continue;
     }
-    const solid = deckSolid(kernel, samples.sections, samples.endAngles);
+    // úseky NK a priečnikov (ADR 0018) zjednotené do jedného telesa
+    const pieces = samples.segments.flatMap(
+      (g) => deckSolid(kernel, g.sections, { start: g.startAngle, end: g.endAngle }) ?? [],
+    );
+    const solid = pieces.length > 1 ? kernel.union(pieces) : pieces[0];
     if (!solid) {
       objects.push(empty('superstructure', sup.id, sup.name, samples.issues));
       continue;

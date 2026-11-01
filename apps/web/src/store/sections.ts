@@ -2,6 +2,7 @@ import type { Alignment } from '@bridge/alignment';
 import { type DrawnSection, projectSection } from '@bridge/drawing';
 import type { ModelIssue, ParameterSet, Superstructure } from '@bridge/model';
 import {
+  type CrossbeamBand,
   evaluateSuperstructure,
   type SectionContext,
   type SuperstructureSection,
@@ -16,11 +17,15 @@ export interface SectionResult {
   issues: ModelIssue[];
 }
 
-/** Prierezy všetkých NK na zobrazovanom staničení a čas výpočtu (cieľ < 100 ms, PLAN.md Fáza 3). */
+/**
+ * Prierezy všetkých NK na zobrazovanom staničení (v páse priečnika prierez priečnika, ADR 0018) a čas výpočtu
+ * (cieľ < 100 ms, PLAN.md Fáza 3).
+ */
 export function useSectionResults(
   alignments: ReadonlyMap<string, Alignment>,
   parameters: ParameterSet,
   station: number,
+  crossbeams: ReadonlyMap<string, readonly CrossbeamBand[]>,
 ): { results: SectionResult[]; elapsed: number } {
   const bridgeAxes = useProject((s) => s.project.bridgeAxes);
   const profiles = useProject((s) => s.project.profiles);
@@ -28,7 +33,14 @@ export function useSectionResults(
   const planLines = useProject((s) => s.project.planLines);
   return useMemo(() => {
     const start = performance.now();
-    const ctx: SectionContext = { alignments, parameters, bridgeAxes, profiles, planLines };
+    const ctx: SectionContext = {
+      alignments,
+      parameters,
+      bridgeAxes,
+      profiles,
+      planLines,
+      crossbeams,
+    };
     const results = superstructures.map((sup): SectionResult => {
       const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
       const road = axis ? alignments.get(axis.alignment) : undefined;
@@ -55,5 +67,14 @@ export function useSectionResults(
       };
     });
     return { results, elapsed: performance.now() - start };
-  }, [alignments, parameters, bridgeAxes, profiles, planLines, superstructures, station]);
+  }, [
+    alignments,
+    parameters,
+    bridgeAxes,
+    profiles,
+    planLines,
+    superstructures,
+    station,
+    crossbeams,
+  ]);
 }

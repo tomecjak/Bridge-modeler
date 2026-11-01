@@ -9,6 +9,7 @@ import {
   bridgeLengths,
   type CrossbeamBand,
   crossbeamBands,
+  deckCrossbeams,
   evaluateBearingLine,
   evaluateSpans,
   evaluateSupport,
@@ -47,6 +48,8 @@ export function useAxisLengths(
 export interface SupportState {
   /** osi uloženia (ADR 0017) */
   lines: BearingLineResult[];
+  /** pásy priečnikov podľa id NK (ADR 0018) */
+  crossbeams: ReadonlyMap<string, readonly CrossbeamBand[]>;
   supports: SupportResult[];
   /** polia podľa id NK */
   spans: Map<string, DeckSpans>;
@@ -61,7 +64,7 @@ export function useSupportState(
   const project = useProject((s) => s.project);
   const { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines } = project;
   return useMemo(() => {
-    const ctx = {
+    const base = {
       alignments,
       parameters,
       bridgeAxes,
@@ -70,7 +73,14 @@ export function useSupportState(
       bearingLines,
       planLines,
     };
-    const lines = bearingLines.map((l) => evaluateBearingLine(ctx, l));
+    const lines = bearingLines.map((l) => evaluateBearingLine(base, l));
+    // pásy priečnikov (ADR 0018) menia prierez NK, a tým aj spodok NK nad ložiskami
+    const crossbeams = deckCrossbeams(
+      base,
+      lines,
+      (axis, road) => axisLengths.get(axis.id) ?? bridgeAxisLength(axis, road, parameters),
+    );
+    const ctx = { ...base, crossbeams };
     const byId = new Map(lines.map((l) => [l.line.id, l]));
     const results = supports.map((s) => evaluateSupport(ctx, s, byId.get(s.bearingLine)));
     const spans = new Map<string, DeckSpans>();
@@ -113,7 +123,7 @@ export function useSupportState(
       }
       spans.set(sup.id, result);
     }
-    return { lines, supports: results, spans };
+    return { lines, supports: results, spans, crossbeams };
   }, [
     alignments,
     parameters,

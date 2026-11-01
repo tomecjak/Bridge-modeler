@@ -1,5 +1,12 @@
 import type { Alignment } from '@bridge/alignment';
-import type { BridgeAxis, IssueOwner, ModelIssue, Superstructure } from '@bridge/model';
+import type {
+  BridgeAxis,
+  IssueOwner,
+  ModelIssue,
+  ProfileDefinition,
+  Superstructure,
+} from '@bridge/model';
+import type { CrossbeamBand } from './crossbeams.ts';
 import { edgeBreaks } from './edge.ts';
 import { DEFAULT_SAMPLING, type LawRef, type SamplingOptions, sampleStations } from './sampling.ts';
 import {
@@ -26,7 +33,26 @@ export interface DeckSamples {
   sections: SuperstructureSection[];
   /** uhly kríženia koncov [rad] (π/2 = kolmý koniec) */
   endAngles: { start: number; end: number };
+  /**
+   * úseky NK (ADR 0018): NK a priečniky so šikmými hranicami rovnobežnými s osou uloženia; bez priečnikov jeden úsek
+   * = celá NK
+   */
+  segments: DeckSegment[];
   issues: ModelIssue[];
+}
+
+/** Úsek NK s jedným prierezom medzi hranicami pod uhlom kríženia (koniec NK, hranica pásu priečnika). */
+export interface DeckSegment {
+  /** priečnik úseku; bez neho prierez NK */
+  crossbeam?: CrossbeamBand;
+  /** spojité staničenie hraníc v osi mosta */
+  sFrom: number;
+  sTo: number;
+  /** uhly kríženia hraníc [rad] */
+  startAngle: number;
+  endAngle: number;
+  stations: number[];
+  sections: SuperstructureSection[];
 }
 
 /**
@@ -73,8 +99,10 @@ export function sampleSuperstructure(
       ),
     ),
   );
+  const bands = ctx.crossbeams?.get(sup.id) ?? [];
   const breaks = [
     ...supports.flatMap((r) => [r.s, ...r.bearings.map((b) => b.s)]),
+    ...bands.flatMap((b) => [b.sFrom, b.sTo]),
     ...Object.values(sup.parameterLaws).flatMap((law) =>
       law.kind === 'edge' ? edgeBreaks(ctx, law.curve, alignment) : [],
     ),
@@ -94,7 +122,16 @@ export function sampleSuperstructure(
     },
     options.sampling ?? DEFAULT_SAMPLING,
   );
-  const sections = stations.map((s) => evaluateSuperstructure(ctx, sup, s));
+  // hlavné vzorky majú vždy prierez NK (obrys, okraje, rezy čiarami); priečniky sú v úsekoch
+  const sections = stations.map((s) => evaluateSuperstructure(ctx, sup, s, profile));
+  const endAngles = endCrossingAngles(supports, sFrom, sTo);
+  const segments = deckSegments(
+    ctx,
+    sup,
+    profile,
+    { sFrom, sTo, endAngles, stations, sections },
+    bands,
+  );
   return {
     alignment,
     axis,
@@ -102,9 +139,84 @@ export function sampleSuperstructure(
     sTo,
     stations,
     sections,
-    endAngles: endCrossingAngles(supports, sFrom, sTo),
-    issues: unique(sections.flatMap((s) => s.issues)),
+    endAngles,
+    segments,
+    issues: unique(segments.flatMap((g) => g.sections.flatMap((s) => s.issues))),
   };
+}
+
+/**
+ * Úseky NK medzi koncami NK a hranicami pásov priečnikov (ADR 0018). Úsek NK použije hlavné vzorky vnútri úseku
+ * a doplní hranice; úsek priečnika vyhodnotí prierez priečnika vo vzorkách vnútri pásu (aspoň v strede).
+ */
+function deckSegments(
+  ctx: SectionContext,
+  sup: Superstructure,
+  profile: ProfileDefinition,
+  main: {
+    sFrom: number;
+    sTo: number;
+    endAngles: { start: number; end: number };
+    stations: readonly number[];
+    sections: readonly SuperstructureSection[];
+  },
+  bands: readonly CrossbeamBand[],
+): DeckSegment[] {
+  const { sFrom, sTo, endAngles } = main;
+  if (bands.length === 0)
+    return [
+      {
+        sFrom,
+        sTo,
+        startAngle: endAngles.start,
+        endAngle: endAngles.end,
+        stations: [...main.stations],
+        sections: [...main.sections],
+      },
+    ];
+  const segment = (
+    a: number,
+    b: number,
+    startAngle: number,
+    endAngle: number,
+    crossbeam?: CrossbeamBand,
+  ): DeckSegment => {
+    const inside = main.stations
+      .map((s, k) => ({ s, k }))
+      .filter((x) => x.s > a + 1e-6 && x.s < b - 1e-6);
+    const stations = [a, ...inside.map((x) => x.s), b];
+    if (crossbeam && inside.length === 0) stations.splice(1, 0, (a + b) / 2);
+    const sections = stations.map((s, i) => {
+      const k = inside[i - 1]?.k;
+      return !crossbeam && k !== undefined && i > 0 && i <= inside.length
+        ? (main.sections[k] as SuperstructureSection)
+        : evaluateSuperstructure(ctx, sup, s, crossbeam?.profile ?? profile);
+    });
+    return {
+      ...(crossbeam ? { crossbeam } : {}),
+      sFrom: a,
+      sTo: b,
+      startAngle,
+      endAngle,
+      stations,
+      sections,
+    };
+  };
+  const out: DeckSegment[] = [];
+  let cursor = sFrom;
+  let angle = endAngles.start;
+  for (const band of bands) {
+    const a = Math.max(band.sFrom, cursor);
+    if (a > cursor + 1e-6) out.push(segment(cursor, a, angle, band.angle));
+    const startAngle = band.end === 'start' ? endAngles.start : band.angle;
+    const endAngle = band.end === 'end' ? endAngles.end : band.angle;
+    const b = Math.min(band.sTo, sTo);
+    if (b > a + 1e-6) out.push(segment(a, b, startAngle, endAngle, band));
+    cursor = b;
+    angle = endAngle;
+  }
+  if (sTo > cursor + 1e-6) out.push(segment(cursor, sTo, angle, endAngles.end));
+  return out;
 }
 
 /** Uhly kríženia koncov NK: krajná podpera, ak je to opora bližšie k danému koncu; inak kolmý koniec. */

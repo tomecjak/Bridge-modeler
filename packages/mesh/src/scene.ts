@@ -8,6 +8,8 @@ import {
   type Superstructure,
 } from '@bridge/model';
 import {
+  deckCrossbeams,
+  evaluateBearingLine,
   evaluateSupport,
   type LawRef,
   type SupportContext,
@@ -64,8 +66,8 @@ export function buildScene(
   if (origin) {
     const alignments = lazy(() => buildAlignments(project, origin));
     const parameters = lazy(() => buildParameterSet(project.parameters));
-    const ctx = lazy(
-      (): SupportContext => ({
+    const ctx = lazy((): SupportContext => {
+      const base: SupportContext = {
         alignments: alignments(),
         parameters: parameters(),
         bridgeAxes: project.bridgeAxes,
@@ -73,8 +75,19 @@ export function buildScene(
         superstructures: project.superstructures,
         bearingLines: project.bearingLines,
         planLines: project.planLines,
-      }),
-    );
+      };
+      if (!project.bearingLines.some((l) => l.crossbeam)) return base;
+      // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
+      const lines = project.bearingLines.map((l) => evaluateBearingLine(base, l));
+      return { ...base, crossbeams: deckCrossbeams(base, lines) };
+    });
+    /** vstupy priečnikov NK (osi a ich prierezy) pre kľúč cache; bez priečnikov prázdne */
+    const crossbeamInputs = (sup: Superstructure | undefined) => {
+      const own = project.bearingLines.filter((l) => l.superstructure === sup?.id);
+      return own.some((l) => l.crossbeam)
+        ? [own, own.map((l) => project.profiles.find((p) => p.id === l.crossbeam?.profile))]
+        : [];
+    };
     /** NK podľa id osi uloženia (podpera patrí NK cez os, ADR 0017) */
     const lineDeck = new Map(project.bearingLines.map((l) => [l.id, l.superstructure]));
     const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
@@ -116,7 +129,7 @@ export function buildScene(
       const deckInputs = project.supports.some((s) => lineDeck.get(s.bearingLine) === sup.id)
         ? own().map((r) => [r.support.kind, r.s, r.crossingAngle, r.bearings.map((b) => b.s)])
         : [];
-      const key = JSON.stringify([sup, ...base(sup), deckInputs]);
+      const key = JSON.stringify([sup, ...base(sup), deckInputs, crossbeamInputs(sup)]);
       reuse('superstructure', sup.id, key, () => {
         const r = superstructureMesh(kernel, {
           ctx: ctx(),
@@ -136,7 +149,7 @@ export function buildScene(
     project.supports.forEach((support, i) => {
       const line = project.bearingLines.find((l) => l.id === support.bearingLine);
       const sup = project.superstructures.find((s) => s.id === line?.superstructure);
-      const key = JSON.stringify([support, line, sup, ...base(sup)]);
+      const key = JSON.stringify([support, line, sup, ...base(sup), crossbeamInputs(sup)]);
       reuse('support', support.id, key, () => {
         const r = results()[i] as SupportResult;
         return {

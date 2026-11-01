@@ -95,9 +95,13 @@ export function profileCuts(
 ): { deck: DeckLongitudinal; supports: ProfileSupportCut[]; lines: ProfileBearingLine[] } {
   let cut: DeckLongitudinal;
   if (line.kind === 'bridgeAxis' && measure) {
-    const exact = deckLongitudinal(deck.samples);
+    // úseky NK a priečnikov vedľa seba (ADR 0018)
+    const parts = deck.samples.segments.map((g) => deckLongitudinal(g));
     const map = (poly: Polygon2D) => poly.map((p) => vec2(measure.lengthAt(p.x), p.y));
-    cut = { outer: exact.outer.map(map), voids: exact.voids.map(map) };
+    cut = {
+      outer: parts.flatMap((part) => part.outer.map(map)),
+      voids: parts.flatMap((part) => part.voids.map(map)),
+    };
   } else {
     cut = deckCutAlong(deck.samples, line.points);
   }

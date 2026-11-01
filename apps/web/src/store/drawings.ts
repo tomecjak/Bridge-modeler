@@ -1,7 +1,7 @@
 import type { Alignment } from '@bridge/alignment';
 import { type DeckDrawingData, deckDrawingData } from '@bridge/drawing';
 import type { ParameterSet } from '@bridge/model';
-import type { BearingLineResult, SupportResult } from '@bridge/sections';
+import type { BearingLineResult, CrossbeamBand, SupportResult } from '@bridge/sections';
 import { useMemo } from 'react';
 import { useProject } from './projectStore.ts';
 
@@ -14,12 +14,13 @@ export function useDeckDrawings(
   parameters: ParameterSet,
   supports: readonly SupportResult[],
   lines: readonly BearingLineResult[],
+  crossbeams: ReadonlyMap<string, readonly CrossbeamBand[]>,
 ): DeckDrawingData[] {
   const project = useProject((s) => s.project);
   const { bridgeAxes, profiles, superstructures, planLines } = project;
   const globals = project.parameters;
   return useMemo(() => {
-    const ctx = { alignments, parameters, bridgeAxes, profiles, planLines };
+    const ctx = { alignments, parameters, bridgeAxes, profiles, planLines, crossbeams };
     const globalLaws = globals.map((p) => ({ law: p.law, unit: p.unit }));
     return superstructures.flatMap(
       (sup) => deckDrawingData(ctx, sup, supports, { globalLaws }, lines) ?? [],
@@ -33,6 +34,7 @@ export function useDeckDrawings(
     superstructures,
     supports,
     lines,
+    crossbeams,
     globals,
   ]);
 }
