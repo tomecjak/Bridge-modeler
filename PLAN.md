@@ -446,12 +446,15 @@ Rozhodnutia 2026-11-01 (workshop v plan mode): rozmery opory v osi mosta od osi 
 
 **Hotové, keď:** 212-00 dá z parametrov opory NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 (test) a posun opory posunie koniec NK. — *2026-11-01:* overené testami (`bridgeLengths`, `resolveDeckEnds`, normalizácia v store) aj v prehliadači (Chrome bez okna): 212-00 so starším súborom (migrácia 7 → 9), kóty 4,00 · 0,84 · 0,08 / 56,00 / 53,20 / 65,84, ťahanie opory posúva koniec NK, odomknutie, monolitická opora, náčrt v oboch témach, priečniky na osiach 1 a 2 v 3D, reze a pozdĺžnom reze; SO 171-11-01 v tmavej téme vrátane exportu DXF.
 
-#### 10e — Podpery: založenie podľa terénu, firemná knižnica
-- [ ] režimy založenia: podľa terénu (predvolený pre piliere; horná hrana základu = terén v osi podpery − krytie 0,5 m) / výška podpery / kóta základovej škáry; pri oporách volí režim projektant (plošné alebo hlbinné založenie); terén do `evaluateSupport` ako čistá funkcia, bez terénu dnešné pravidlo s upozornením; migrácia `foundationTop` → kóta
-- [ ] upozornenie, keď je základ nad terénom
-- [ ] predvolené ložiská odvodené od prierezu NK: v 1/4 šírky spodnej plochy od okraja (spodok 4 m → 1 m od okraja, ložiská 2 m od seba; odpoveď 20, 2026-11-01); viac trámov a komora upresniť v plan mode 10e
-- [ ] firemná knižnica podpier: pomenované typy (geometria, základ, ložiská, uloženie) s náhľadom; šablóny, projekt, súbor, D1 (formát `bridge-modeler/support-library` v1, doplnok ADR 0008 a 0015)
-- [ ] šablóny: stenový pilier, jeden stĺp, dva stĺpy, opora na pilótach (212-00), masívna opora — rozmery potvrdí projektant
+#### 10e — Podpery: založenie, ložiská z prierezu, firemná knižnica (ADR 0019)
+Rozhodnutia 2026-11-01 (plan mode): terén pre založenie v strede podpery (os uloženia + posun), horná hrana základu = terén − krytie; výška podpery = od hornej hrany základu po hornú hranu pod najnižším ložiskom; nová opora v režime výška podpery, pilier podľa terénu s krytím 0,5 m; ložiská: jedna spodná plocha → 2 ložiská v 1/4 šírky od okrajov, viac spodných plôch (trámov) → jedno pod stredom každej; typ podpery sa pri vložení skopíruje (ako prierez z knižnice), ložiská sa v type neukladajú, typ sa vyberá v kontextovej karte nástroja Podpera.
+- [ ] režimy založenia v schéme v10 (`foundation`: podľa terénu s krytím / výška podpery / kóta základovej škáry), migrácia `foundationTop` → kóta základovej škáry; nový pilier podľa terénu, nová opora výškou podpery
+- [ ] terén v strede podpery: aplikácia ho po každom príkaze navzorkuje a zapíše do modelu v tom istom kroku späť (3D worker terén nedostáva, ADR 0011); bez terénu dnešné pravidlo s upozornením; upozornenie, keď je základ nad terénom
+- [ ] predvolené ložiská z prierezu NK: spodné plochy hlavného prierezu na osi uloženia, 1/4 šírky od okrajov alebo stred každého trámu (spodok 4 m → ±1,00 m; 212-00 → ±1,25 m); pri vložení podpery a tlačidlom „Podľa prierezu NK“
+- [ ] knižnica podpier v modeli: typ podpery (geometria, základ, založenie, uloženie; bez ložísk), formát `bridge-modeler/support-library` v1, vloženie typu na os, uloženie podpery ako typu
+- [ ] šablóny: stenový pilier, jeden stĺp, dva stĺpy, opora na pilótach (212-00), masívna opora, integrovaná opora — rozmery potvrdí projektant
+- [ ] firemná knižnica podpier v D1 (tabuľka `support_library`, API `/api/support-library`, doplnok ADR 0015)
+- [ ] UI: dialóg Knižnica podpier s náhľadom (šablóny, firemná, projekt, súbor), typ piliera a opory v karte nástroja Podpera, typy v Rozložení polí, použitie typu na vybranú podperu, skupina Založenie vo vlastnostiach podpery
 
 **Hotové, keď:** nový pilier stojí základom v teréne, zmena režimu prepočíta výšku a typ z firemnej knižnice sa vloží jedným klikom.
 
@@ -673,7 +676,7 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Rozsah nivelety | mimo rozsahu nivelety je výška nedefinovaná → typovaná chyba; most musí ležať v rozsahu nivelety |
 | Podklady | `fixtures/inbox/` sa neverzuje, podklady nie sú v histórii gitu |
 | Zdroj terénu | povrch z Civil 3D (LandXML `Surface`) aj DMR 5.0 z ÚGKK |
-| Terén a podpery | v MVP len vizuálny podklad a terénna čiara vo výkresoch; výška podpier ani hĺbka základov sa od terénu neodvíja |
+| Terén a podpery | v MVP len vizuálny podklad a terénna čiara vo výkresoch; výška podpier ani hĺbka základov sa od terénu neodvíja — *zmenené 2026-10-31:* založenie podľa terénu (Fáza 10e, ADR 0019) |
 | Terén v IFC | voliteľný export, rozhodne sa vo fáze 7 |
 | Premenovanie parametra | automaticky prepíše odkazy v ostatných výrazoch (2026-10-30) |
 | `round()` | zaokrúhľuje „od nuly“ ako Revit: round(2,5) = 3, round(−2,5) = −3 (2026-10-30) |
@@ -715,6 +718,9 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Odsadenie NK od opory | priestor pre ložiská medzi úložným prahom a spodkom NK (2026-10-31) |
 | Krytie základov | piliere 0,5 m pod terénom; pri oporách volí projektant (2026-10-31) |
 | Ložiská | predvolene odvodené od prierezu NK (2026-10-31) |
+| Terén pre založenie | v strede podpery (os uloženia + posun); výška podpery od hornej hrany základu po hornú hranu pod najnižším ložiskom; nová opora výškou podpery (2026-11-01) |
+| Ložiská z prierezu | 1/4 šírky spodnej plochy od okrajov; viac trámov → jedno ložisko pod stredom každého (2026-11-01) |
+| Typy podpier | kópia z knižnice pri vložení, ložiská sa v type neukladajú; typ sa vyberá v karte nástroja Podpera (2026-11-01) |
 | Orientačná cena | zástupné hodnoty €/m², skutočné dodá projektant (2026-10-31) |
 | Prekážka na trase | kríženie zadané aj ručne km; v profile šrafovaná čiara so staničením a popisom, voľný prierez cesty alebo železnice (2026-10-31) |
 | Vodný tok | kóta Q100 + rezerva a brehové čiary stačia (2026-10-31) |

@@ -24,6 +24,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0016](0016-rozhranie-cad.md) | Rozhranie v štýle CAD: ribbon, prehliadač projektu, vlastnosti | Prijaté |
 | [0017](0017-osi-ulozenia.md) | Osi uloženia a rozloženie polí | Prijaté |
 | [0018](0018-opora-v-osi-mosta.md) | Opora v osi mosta, koniec NK z opory a priečniky | Prijaté |
+| [0019](0019-zalozenie-a-kniznica-podpier.md) | Založenie podpier, ložiská z prierezu a knižnica podpier | Prijaté |
 
 ## Šablóna
 

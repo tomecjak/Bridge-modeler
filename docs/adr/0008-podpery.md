@@ -1,6 +1,6 @@
 # 0008 — Podpery, uloženie a polia
 
-- Stav: Prijaté
+- Stav: Prijaté, doplnené ADR 0019 (založenie podľa terénu, ložiská z prierezu)
 - Dátum: 2026-10-30
 
 ## Kontext

@@ -1,6 +1,6 @@
 # 0015 — Nasadenie na Cloudflare: Worker so statickými súbormi, D1 a Access
 
-- Stav: Prijaté
+- Stav: Prijaté, doplnené ADR 0019 (firemná knižnica podpier v D1)
 - Dátum: 2026-10-31
 
 ## Kontext
