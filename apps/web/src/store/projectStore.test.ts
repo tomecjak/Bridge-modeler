@@ -121,6 +121,48 @@ describe('project store', () => {
     expect(store.getState().project.planLines).toEqual([]);
   });
 
+  it('moves bearing lines and the deck end in one batch step and removes a line with its support', () => {
+    const store = createProjectStore();
+    const s = store.getState();
+    const line = (id: string, station: number) => ({
+      id,
+      name: id,
+      superstructure: 'n',
+      station,
+      crossingAngle: '90',
+    });
+    s.dispatch({ type: 'addElements', bearingLines: [line('1', 100), line('2', 116)] });
+    const support = {
+      id: 'o1',
+      name: 'O1',
+      kind: 'abutment' as const,
+      bearingLine: '1',
+      offset: '0',
+      geometry: { type: 'wall' as const, thickness: '1', length: '4' },
+      footing: { length: '0', width: '0', thickness: '0' },
+      connection: 'bearing' as const,
+      bearingHeight: '0.35',
+      bearings: ['0'],
+      foundationTop: '240',
+    };
+    s.dispatch({ type: 'addElements', supports: [support] });
+    s.dispatch({
+      type: 'batch',
+      commands: [
+        { type: 'updateElement', collection: 'bearingLines', id: '1', changes: { station: 99 } },
+        { type: 'updateElement', collection: 'bearingLines', id: '2', changes: { station: 117 } },
+      ],
+    });
+    expect(store.getState().project.bearingLines.map((l) => l.station)).toEqual([99, 117]);
+    store.getState().undo();
+    expect(store.getState().project.bearingLines.map((l) => l.station)).toEqual([100, 116]);
+    store.getState().redo();
+    s.dispatch({ type: 'removeElement', collection: 'bearingLines', id: '1' });
+    expect(store.getState().project.supports).toEqual([]);
+    store.getState().undo();
+    expect(store.getState().project.supports.map((x) => x.id)).toEqual(['o1']);
+  });
+
   it('edits the brief and the study area as undoable steps', () => {
     const store = createProjectStore();
     const { dispatch, undo, redo } = store.getState();

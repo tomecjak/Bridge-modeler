@@ -1,6 +1,7 @@
 import type { Superstructure } from '@bridge/model';
 import {
   type AxisLinePoint,
+  type BearingLineResult,
   bridgeAxisPlan,
   type DeckOutline,
   type DeckSamples,
@@ -24,14 +25,17 @@ export interface DeckDrawingData {
   samples: DeckSamples;
   /** vyhodnotené podpery tejto NK */
   own: SupportResult[];
+  /** vyhodnotené osi uloženia tejto NK (ADR 0017) */
+  lines: BearingLineResult[];
 }
 
-/** Vzorky NK, obrys a os mosta v pôdoryse a jej podpery; `undefined`, ak NK nie je vyhodnotiteľná. */
+/** Vzorky NK, obrys a os mosta v pôdoryse, jej podpery a osi uloženia; `undefined`, ak NK nie je vyhodnotiteľná. */
 export function deckDrawingData(
   ctx: SectionContext,
   sup: Superstructure,
   supports: readonly SupportResult[],
   options: DeckSamplingOptions = {},
+  lines: readonly BearingLineResult[] = [],
 ): DeckDrawingData | undefined {
   const own = supports.filter((r) => r.superstructure === sup.id);
   const samples = sampleSuperstructure(ctx, sup, own, options);
@@ -45,5 +49,6 @@ export function deckDrawingData(
     axis: bridgeAxisPlan(axis, alignment, ctx.parameters, sFrom, sTo),
     samples,
     own,
+    lines: lines.filter((l) => l.line.superstructure === sup.id && l.axis),
   };
 }

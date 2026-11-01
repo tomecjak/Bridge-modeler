@@ -64,7 +64,9 @@ export type Command =
   /** odstráni prvok; os uloženia aj s podperami na nej (ADR 0017) */
   | { type: 'removeElement'; collection: ElementCollection; id: string }
   /** nahradí terén novým na tom istom mieste zoznamu (napr. znova stiahnutý DMR) — jeden krok späť/znova */
-  | { type: 'replaceTerrain'; id: string; terrain: TerrainSurface };
+  | { type: 'replaceTerrain'; id: string; terrain: TerrainSurface }
+  /** viac príkazov za sebou ako jeden krok späť/znova (napr. posun osí uloženia a konca NK, ADR 0017) */
+  | { type: 'batch'; commands: Command[] };
 
 /** Aplikuje príkaz na draft projektu (immer). Čistá funkcia nad draftom. */
 export function applyCommand(draft: ProjectFile, command: Command): void {
@@ -139,5 +141,8 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       if (i >= 0) draft.parameters.splice(i, 1);
       return;
     }
+    case 'batch':
+      for (const c of command.commands) applyCommand(draft, c);
+      return;
   }
 }

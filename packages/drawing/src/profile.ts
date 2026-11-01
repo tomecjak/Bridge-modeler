@@ -1,9 +1,10 @@
 import { formatStation } from '@bridge/alignment';
-import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
+import { cross2, type Polygon2D, sub2, type Vec2, vec2 } from '@bridge/geom';
 import {
   type AxisCut,
   type AxisLength,
   type AxisLinePoint,
+  type BearingLineResult,
   cutAlongAxis,
   type DeckLongitudinal,
   deckCutAlong,
@@ -21,9 +22,21 @@ import { sampleProfile, stationTicks } from './sampling.ts';
 export interface ProfileSupportCut {
   id: string;
   name: string;
+  /** id osi uloženia, na ktorej podpera stojí */
+  line: string;
   /** staničenie podpery v km osi cesty */
   station: number;
   cut: AxisCut[];
+}
+
+/** Os uloženia v pozdĺžnom profile (ADR 0017): priesečník s čiarou profilu. */
+export interface ProfileBearingLine {
+  id: string;
+  name: string;
+  /** staničenie osi uloženia v km osi cesty */
+  station: number;
+  /** x v profile = u čiary profilu */
+  u: number;
 }
 
 export interface ProfileInput {
@@ -33,6 +46,8 @@ export interface ProfileInput {
   decks: readonly { id: string; cut: DeckLongitudinal }[];
   /** rezy podperami v čiare profilu (lokálne z) */
   supports: readonly ProfileSupportCut[];
+  /** osi uloženia (zvislica s číslom a staničením) */
+  lines?: readonly ProfileBearingLine[];
   /** terénne čiary (u, výška v m n. m.) */
   terrain: readonly (readonly { u: number; z: number }[])[];
   scale?: number;
@@ -40,16 +55,44 @@ export interface ProfileInput {
 
 /** Presah obdĺžnika okolo pôdorysu podpier pri výbere úsekov čiary [m]. */
 const SUPPORT_PAD = 1;
+/** Najväčšia vzdialenosť priesečníka čiary profilu od osi mosta po osi uloženia [m]. */
+const LINE_REACH = 100;
+
+/**
+ * u priesečníka osi uloženia (priamka cez bod osi mosta) s čiarou profilu, najbližšieho k osi mosta; bez priesečníka
+ * do `LINE_REACH` undefined.
+ */
+function lineCrossing(l: BearingLineResult, line: ProfileLine): number | undefined {
+  if (!l.axis) return undefined;
+  const c = vec2(l.axis.point.x, l.axis.point.y);
+  const d = l.direction;
+  let best: { u: number; along: number } | undefined;
+  for (let i = 0; i + 1 < line.points.length; i++) {
+    const a = line.points[i] as ProfileLine['points'][number];
+    const b = line.points[i + 1] as ProfileLine['points'][number];
+    const e = sub2(b.point, a.point);
+    const denom = cross2(d, e);
+    if (Math.abs(denom) < 1e-12) continue;
+    const w = sub2(a.point, c);
+    const t = cross2(w, d) / denom;
+    if (t < -1e-9 || t > 1 + 1e-9) continue;
+    const along = cross2(w, e) / denom;
+    if (Math.abs(along) > LINE_REACH || (best && Math.abs(along) >= Math.abs(best.along))) continue;
+    best = { u: a.u + t * (b.u - a.u), along };
+  }
+  return best?.u;
+}
 
 /**
  * Rezy NK a jej podperami v čiare profilu (Fáza 10b): v osi mosta presný rez v osi s x = dĺžka po osi mosta,
- * inak rez zvislou plochou cez čiaru (`deckCutAlong`); podpery cez `cutAlongAxis` s x = u.
+ * inak rez zvislou plochou cez čiaru (`deckCutAlong`); podpery cez `cutAlongAxis` s x = u. Osi uloženia v priesečníku
+ * s čiarou profilu (v osi mosta dĺžka po osi mosta v ich staničení).
  */
 export function profileCuts(
   deck: DeckDrawingData,
   line: ProfileLine,
   measure?: AxisLength,
-): { deck: DeckLongitudinal; supports: ProfileSupportCut[] } {
+): { deck: DeckLongitudinal; supports: ProfileSupportCut[]; lines: ProfileBearingLine[] } {
   let cut: DeckLongitudinal;
   if (line.kind === 'bridgeAxis' && measure) {
     const exact = deckLongitudinal(deck.samples);
@@ -65,11 +108,16 @@ export function profileCuts(
     return {
       id: r.support.id,
       name: r.support.name,
+      line: r.support.bearingLine,
       station: r.station,
       cut: runsNear(path, plan, SUPPORT_PAD).flatMap((run) => cutAlongAxis(parts, run)),
     };
   });
-  return { deck: cut, supports };
+  const lines = deck.lines.flatMap((l) => {
+    const u = line.kind === 'bridgeAxis' && measure ? measure.lengthAt(l.s) : lineCrossing(l, line);
+    return u === undefined ? [] : [{ id: l.line.id, name: l.line.name, station: l.station, u }];
+  });
+  return { deck: cut, supports, lines };
 }
 
 /** Súvislé úseky polyline, ktoré zasahujú do obdĺžnika okolo bodov `around` (zrýchlenie rezov dlhou čiarou). */
@@ -244,8 +292,8 @@ export function profileTicks(
 
 /**
  * Rozvinutý pozdĺžny rez v čiare profilu (Fáza 6, 10b), 1 : 1 bez prevýšenia: x = u čiary [m], y = výška [m n. m.].
- * Niveleta, terén, NK a dutiny, rezy podpier (základ zvlášť) a nad každou podperou zvislý text s názvom a staničením
- * v km osi cesty. Bez kót (ADR 0012).
+ * Niveleta, terén, NK a dutiny, rezy podpier (základ zvlášť) a osi uloženia (zvislica cez NK a podperu, nad ňou zvislý
+ * text s číslom osi a staničením v km osi cesty; ADR 0017). Bez kót (ADR 0012).
  */
 export function profileDrawing(input: ProfileInput): Drawing {
   const scale = input.scale ?? 200;
@@ -275,20 +323,34 @@ export function profileDrawing(input: ProfileInput): Drawing {
         polyline(c.part === 'footing' ? 'footing' : 'support', lift(c.outline), true, s.id),
       );
     }
-    const pts = s.cut.flatMap((c) => c.outline);
-    if (pts.length === 0) continue;
-    const top = Math.max(...pts.map((p) => p.y)) + z0;
-    const xs = pts.map((p) => p.x);
-    const x = (Math.min(...xs) + Math.max(...xs)) / 2;
+  }
+  const mm = (v: number) => (v * scale) / 1000;
+  const deckOuter = input.decks.flatMap((d) => d.cut.outer);
+  for (const l of input.lines ?? []) {
+    const x = l.u;
+    // výšky v m n. m.: NK a podpery na osi, bez nich niveleta
+    const local = [
+      highestCrossing(deckOuter, x),
+      lowestCrossing(deckOuter, x),
+      ...input.supports
+        .filter((s) => s.line === l.id)
+        .flatMap((s) => s.cut.flatMap((c) => c.outline.map((p) => p.y))),
+    ].filter((y): y is number => y !== undefined);
+    const ys = local.length > 0 ? local.map((y) => y + z0) : [yOn(grade, x)];
+    const valid = ys.filter((y): y is number => y !== undefined);
+    if (valid.length === 0) continue;
+    const yTop = Math.max(...valid) + mm(3);
+    const yBottom = Math.min(...valid) - mm(3);
+    entities.push(polyline('supportAxis', [vec2(x, yBottom), vec2(x, yTop)], false, l.id));
     entities.push({
       kind: 'text',
       layer: 'label',
-      at: vec2(x + th / 2, top + (3 * scale) / 1000),
-      text: `${s.name}  ${formatStation(s.station, 3)}`,
+      at: vec2(x + th / 2, yTop + mm(1)),
+      text: `${l.name}  ${formatStation(l.station, 3)}`,
       height: th,
       rotation: Math.PI / 2,
       align: 'left',
-      owner: s.id,
+      owner: l.id,
     });
   }
   return { entities, scale };

@@ -321,7 +321,12 @@ export function App() {
     return axis !== undefined && axis.alignment === item?.data.name;
   });
 
-  const deckDrawings = useDeckDrawings(alignmentMap, parameterState.set, supportState.supports);
+  const deckDrawings = useDeckDrawings(
+    alignmentMap,
+    parameterState.set,
+    supportState.supports,
+    supportState.lines,
+  );
   const roadDecks = deckDrawings.filter((d) => d.road === item?.data.name);
   const profileDeck =
     roadDecks.find((d) => d.id === (profileDeckId ?? selectedSuperstructureId)) ?? roadDecks[0];

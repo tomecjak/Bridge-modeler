@@ -135,6 +135,7 @@ export function useProfileView(input: {
       line,
       decks: cuts && deck ? [{ id: deck.id, cut: cuts.deck }] : [],
       supports: cuts?.supports ?? [],
+      lines: cuts?.lines ?? [],
       terrain,
     });
   }, [line, deck, measure, tins]);

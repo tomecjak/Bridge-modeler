@@ -26,7 +26,7 @@ import { sectionDrawing } from './section.ts';
 import { readableText } from './text.ts';
 
 const ref = evaluateReference212();
-const data = deckDrawingData(ref.ctx, ref.deck, ref.results) as DeckDrawingData;
+const data = deckDrawingData(ref.ctx, ref.deck, ref.results, {}, ref.lines) as DeckDrawingData;
 
 describe('deckDrawingData', () => {
   it('collects the outline, the bridge axis over the deck, its samples and supports', () => {
@@ -36,6 +36,7 @@ describe('deckDrawingData', () => {
     expect(data.outline.polygon.length).toBeGreaterThan(4);
     expect(data.samples.sections.length).toBeGreaterThan(10);
     expect(data.own.map((r) => r.support.name)).toEqual(['1', '2', '3', '4']);
+    expect(data.lines.map((l) => l.line.name)).toEqual(['1', '2', '3', '4']);
   });
 });
 
@@ -57,6 +58,14 @@ describe('profileCuts', () => {
       ['3', true],
       ['4', true],
     ]);
+    // osi uloženia v dĺžke po osi mosta: 0,50 + 16 + 23 + 16 od začiatku NK
+    const start = measure.lengthAt(ref.sFrom);
+    expect(cuts.lines.map((l) => [l.name, l.u - start])).toEqual([
+      ['1', expect.closeTo(0.5, 6)],
+      ['2', expect.closeTo(16.5, 6)],
+      ['3', expect.closeTo(39.5, 6)],
+      ['4', expect.closeTo(55.5, 6)],
+    ]);
   });
 
   it('cuts only what the line crosses along the deck edge', () => {
@@ -65,6 +74,13 @@ describe('profileCuts', () => {
     expect(c.deck.outer).toHaveLength(1);
     // stenové piliere (7,5 m) okraj NK nezasiahne, opory (krídla pod okrajmi) áno
     expect(c.supports.map((s) => s.cut.length > 0)).toEqual([true, false, false, true]);
+    // šikmé osi pretnú pravý okraj (8,25 m vpravo) o 8,25 / sin α ďalej po osi uloženia; rozostup ostáva
+    expect(c.lines.map((l) => l.u - (c.lines[0]?.u ?? 0))).toEqual([
+      0,
+      expect.closeTo(16, 6),
+      expect.closeTo(39, 6),
+      expect.closeTo(55, 6),
+    ]);
   });
 });
 
@@ -180,6 +196,7 @@ describe('profileDrawing', () => {
     line: axisLine,
     decks: [{ id: data.id, cut: cuts.deck }],
     supports: cuts.supports,
+    lines: cuts.lines,
     terrain: [
       [
         { u: 40, z: 310 },
@@ -206,7 +223,7 @@ describe('profileDrawing', () => {
     expect(grade.at(-1)?.x).toBeCloseTo(200, 9);
   });
 
-  it('labels each support vertically with its name and station', () => {
+  it('draws each bearing line through the deck and support and labels it with its number and station', () => {
     const labels = texts(profile).filter((t) => t.layer === 'label');
     expect(labels.map((t) => t.text)).toEqual([
       '1  km 9,307 810',
@@ -215,6 +232,27 @@ describe('profileDrawing', () => {
       '4  km 9,362 810',
     ]);
     for (const t of labels) expect(t.rotation).toBeCloseTo(Math.PI / 2, 12);
+    const axes = on(profile, 'supportAxis');
+    expect(axes.map((e) => e.owner)).toEqual(['l1', 'l2', 'l3', 'l4']);
+    // os piliera siaha nad NK a pod základ
+    const pier = axes[1];
+    const ys = pier?.kind === 'polyline' ? pier.points.map((p: Vec2) => p.y) : [];
+    expect(Math.max(...ys)).toBeGreaterThan(318);
+    expect(Math.min(...ys)).toBeLessThan(309.6);
+  });
+
+  it('draws a bearing line without a support through the deck only', () => {
+    const free = profileDrawing({
+      line: axisLine,
+      decks: [{ id: data.id, cut: cuts.deck }],
+      supports: [],
+      lines: cuts.lines.slice(1, 2),
+      terrain: [],
+    });
+    const axis = on(free, 'supportAxis')[0];
+    const ys = axis?.kind === 'polyline' ? axis.points.map((p: Vec2) => p.y) : [];
+    // výška NK + presah 3 mm na papieri hore aj dole (1 : 200 → 2 × 0,6 m)
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(1.29 + 1.2 + 1e-6);
   });
 });
 

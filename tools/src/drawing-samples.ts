@@ -29,7 +29,7 @@ mkdirSync(dir, { recursive: true });
 
 const ref = evaluateReference212();
 const origin = ref.p.crs.origin ?? { x: 0, y: 0, z: 0 };
-const deck = deckDrawingData(ref.ctx, ref.deck, ref.results) as DeckDrawingData;
+const deck = deckDrawingData(ref.ctx, ref.deck, ref.results, {}, ref.lines) as DeckDrawingData;
 const pier = ref.results[1] as (typeof ref.results)[number];
 const axis = ref.p.bridgeAxes[0];
 if (!axis) throw new Error('chýba os mosta');
@@ -59,6 +59,7 @@ const drawings: Record<string, Drawing> = {
     line,
     decks: [{ id: deck.id, cut: cuts.deck }],
     supports: cuts.supports,
+    lines: cuts.lines,
     terrain: [],
   }),
   'priecny-rez': sectionDrawing({
