@@ -22,6 +22,8 @@ export interface SpanLayoutPlan {
   toDisplay: (s: number) => number;
   /** uhol kríženia všetkých osí (výraz v °) */
   angle: string;
+  /** odsadenie konca NK e krajných opôr s prahom (ADR 0018) [m]; bez neho sa nemení */
+  endOffset?: number;
   newSupport: SupportFactory;
   newId: (prefix: string) => string;
 }
@@ -32,7 +34,8 @@ const round = (station: number) => Math.round(station * 1e4) / 1e4;
 /**
  * Rozloženie polí NK jedným krokom späť (ADR 0017, rozhodnutie 2026-11-01): osi sa prečíslujú 1 … n od začiatku
  * a dostanú spoločný uhol kríženia; existujúce podpery sa zachovajú a presunú (opory na krajné osi, piliere na
- * vnútorné podľa poradia), chýbajúce sa doplnia z `newSupport`, nadbytočné sa odstránia; NK dostane nový rozsah.
+ * vnútorné podľa poradia), chýbajúce sa doplnia z `newSupport`, nadbytočné sa odstránia. NK dostane nový rozsah
+ * a krajné opory s prahom odsadenie konca NK `endOffset` (konce odvodené z opôr zosúladí store, ADR 0018).
  * Osi s podperami si nechajú id, takže podpery ostanú na svojich osiach.
  */
 export function planSpanLayout(p: SpanLayoutPlan): Command {
@@ -101,12 +104,22 @@ export function planSpanLayout(p: SpanLayoutPlan): Command {
   assigned.forEach((s, i) => {
     const id = ids[i] as string;
     if (s) {
-      if (s.bearingLine !== id)
+      const g = s.geometry;
+      const atEnd = i === 0 || i === n - 1;
+      const endOffset =
+        atEnd &&
+        p.endOffset !== undefined &&
+        g.type === 'abutment' &&
+        g.construction === 'bearing' &&
+        Number(g.endOffset) !== p.endOffset
+          ? { geometry: { ...g, endOffset: String(p.endOffset) } }
+          : {};
+      if (s.bearingLine !== id || 'geometry' in endOffset)
         commands.push({
           type: 'updateElement',
           collection: 'supports',
           id: s.id,
-          changes: { bearingLine: id },
+          changes: { ...(s.bearingLine !== id ? { bearingLine: id } : {}), ...endOffset },
         });
       return;
     }

@@ -1,6 +1,8 @@
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import type { Parameter } from '@bridge/model';
+import { reference212Project } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
+import { syncDeckEnds } from './deckEnds.ts';
 import { createProjectStore } from './projectStore.ts';
 
 const param = (id: string, name: string, value: string): Parameter => ({
@@ -161,6 +163,42 @@ describe('project store', () => {
     expect(store.getState().project.supports).toEqual([]);
     store.getState().undo();
     expect(store.getState().project.supports.map((x) => x.id)).toEqual(['o1']);
+  });
+
+  it('keeps the deck ends on the abutments in the same undoable step', () => {
+    const ref = reference212Project();
+    const store = createProjectStore(
+      { ...ref, superstructures: ref.superstructures.map((d) => ({ ...d, from: 9300, to: 9370 })) },
+      syncDeckEnds,
+    );
+    const deck = () => store.getState().project.superstructures[0];
+    // otvorenie zosúladí rozsah NK s oporami
+    expect(deck()).toMatchObject({ from: expect.closeTo(9307.31, 9), to: 9363.31 });
+    store.getState().dispatch({
+      type: 'updateElement',
+      collection: 'bearingLines',
+      id: 'l4',
+      changes: { station: 9364.81 },
+    });
+    expect(deck()?.to).toBeCloseTo(9365.31, 9);
+    store.getState().undo();
+    expect(deck()?.to).toBeCloseTo(9363.31, 9);
+    store.getState().redo();
+    expect(deck()?.to).toBeCloseTo(9365.31, 9);
+    // odomknutý koniec ostáva
+    store.getState().dispatch({
+      type: 'updateElement',
+      collection: 'superstructures',
+      id: 'nk',
+      changes: { ends: { start: 'abutment', end: 'manual' } },
+    });
+    store.getState().dispatch({
+      type: 'updateElement',
+      collection: 'bearingLines',
+      id: 'l4',
+      changes: { station: 9362.81 },
+    });
+    expect(deck()?.to).toBeCloseTo(9365.31, 9);
   });
 
   it('edits the brief and the study area as undoable steps', () => {

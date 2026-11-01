@@ -23,6 +23,7 @@ import {
   type AxisLength,
   bridgeAxisPlan,
   type DeckRange,
+  deckEndSources,
   evaluateSuperstructure,
   globalScope,
   layoutStations,
@@ -141,6 +142,13 @@ const Viewer3D = lazy(() => import('./viewer/Viewer3D.tsx'));
 interface LastImport {
   issues: AlignmentIssue[];
   fileIssues: AlignmentIssue[];
+}
+
+/** Geometria opory s prahom s odsadením konca NK `endOffset` (rozloženie polí); ostatné bez zmeny. */
+function withEndOffset(geometry: Support['geometry'], endOffset: number): Support['geometry'] {
+  return geometry.type === 'abutment' && geometry.construction === 'bearing'
+    ? { ...geometry, endOffset: String(endOffset) }
+    : geometry;
 }
 
 export function App() {
@@ -714,7 +722,7 @@ export function App() {
       plan: linePlan(data, measure, sNew, target.crossingAngle),
       ...(u === undefined ? {} : { u }),
       frame: planFrame(road, data.outline, measure.offsetAt, (sFrom + sTo) / 2),
-      moves: { lines: changed.map((c) => ({ id: c.x.line.id, s: c.s })), deck: moved.deck },
+      moves: { lines: changed.map((c) => ({ id: c.x.line.id, s: c.s })) },
       extra: changed
         .filter((c) => c.x.line.id !== lineId)
         .map((c) => {
@@ -727,40 +735,25 @@ export function App() {
     };
   }
 
-  /** Zapíše posun osí z ťahania a koniec NK jedným krokom späť. */
+  /** Zapíše posun osí z ťahania jedným krokom späť. */
   function commitLineMove(preview: LinePreview) {
     if (!preview.moves) return;
-    commitMoves(preview.deckId, preview.moves.lines, preview.moves.deck, preview.lineId);
+    commitMoves(preview.moves.lines, preview.lineId);
   }
 
   /**
-   * Nové staničenia osí uloženia a rozsah NK (spojité staničenie) jedným krokom späť (staničenia na 0,1 mm);
-   * prierez sa presunie na os `focus`.
+   * Nové staničenia osí uloženia (spojité staničenie) jedným krokom späť (staničenia na 0,1 mm); koniec NK odvodený
+   * z opory ide s ňou (zosúladenie v store, ADR 0018), ručný koniec ostáva. Prierez sa presunie na os `focus`.
    */
-  function commitMoves(
-    deckId: string,
-    lines: readonly { id: string; s: number }[],
-    range: DeckRange,
-    focus?: string,
-  ) {
-    const deck = project.superstructures.find((d) => d.id === deckId);
-    if (!road || !deck || lines.length === 0) return;
+  function commitMoves(lines: readonly { id: string; s: number }[], focus?: string) {
+    if (!road || lines.length === 0) return;
     const display = (s: number) => Math.round(road.stationing.toDisplay(s).station * 1e4) / 1e4;
-    const from = display(range.sFrom);
-    const to = display(range.sTo);
     const commands: Command[] = lines.map((m) => ({
       type: 'updateElement',
       collection: 'bearingLines',
       id: m.id,
       changes: { station: display(m.s) },
     }));
-    if (Math.abs(from - deck.from) > 1e-6 || Math.abs(to - deck.to) > 1e-6)
-      commands.push({
-        type: 'updateElement',
-        collection: 'superstructures',
-        id: deck.id,
-        changes: { from, to },
-      });
     projectStore.getState().dispatch({ type: 'batch', commands });
     const moved = lines.find((m) => m.id === focus);
     if (moved) setSectionStation(display(moved.s));
@@ -768,7 +761,7 @@ export function App() {
 
   /**
    * Zadanie rozpätia na kóte (rozhodnutie 2026-10-31): zmení sa len pole `span`; posunú sa osi na strane vzdialenejšej
-   * od vybranej podpery alebo osi tejto NK, bez výberu osi za poľom (smerom ku koncu), a koniec NK s nimi.
+   * od vybranej podpery alebo osi tejto NK, bez výberu osi za poľom (smerom ku koncu), a odvodený koniec NK s nimi.
    */
   function setSpan(deckId: string | undefined, span: number, length: number) {
     const deck = project.superstructures.find((d) => d.id === (deckId ?? profileDeck?.id));
@@ -795,11 +788,9 @@ export function App() {
       side: selected > span ? 'before' : 'after',
     });
     commitMoves(
-      deck.id,
       own.flatMap((x, i) =>
         r.stations[i] === x.s ? [] : [{ id: x.line.id, s: r.stations[i] as number }],
       ),
-      r.deck,
     );
   }
 
@@ -958,7 +949,10 @@ export function App() {
               bearings: [...template.bearings],
             }
           : {}),
-        geometry: JSON.parse(JSON.stringify(geometry)) as Support['geometry'],
+        geometry: withEndOffset(
+          JSON.parse(JSON.stringify(geometry)) as Support['geometry'],
+          form.overhang,
+        ),
         id: newId('sup'),
         name,
         bearingLine: lineId,
@@ -973,6 +967,7 @@ export function App() {
         range: r.layout.deck,
         toDisplay,
         angle: form.angle,
+        endOffset: form.overhang,
         newSupport,
         newId,
       }),
@@ -1774,6 +1769,14 @@ export function App() {
                     )?.name ?? sk.edgeLaw.missing),
               spans: supportState.spans.get(deck.id),
               lines: project.bearingLines.filter((l) => l.superstructure === deck.id),
+              abutmentAt: (() => {
+                const sources = deckEndSources(
+                  { ...deck, ends: { start: 'abutment', end: 'abutment' } },
+                  project.bearingLines,
+                  project.supports,
+                );
+                return { start: sources.start !== undefined, end: sources.end !== undefined };
+              })(),
               result: sections.results.find((r) => r.superstructure.id === deck.id),
               station: sectionAt,
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),

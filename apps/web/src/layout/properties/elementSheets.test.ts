@@ -277,6 +277,7 @@ describe('deckSheet', () => {
       curveName: () => '',
       spans,
       lines,
+      abutmentAt: { start: true, end: false },
       result: undefined,
       station: 1120,
       onEditLaw: () => {},
@@ -315,6 +316,27 @@ describe('deckSheet', () => {
     ).toMatchObject({ value: '76' });
     expect(sheetOf().groups.some((g) => g.id === 'deck-lines')).toBe(false);
     expect(sheet.actions?.[0]?.label).toBe('Rozloženie polí');
+  });
+
+  it('derives the deck start from the abutment and lets it be unlocked', () => {
+    const commands: Command[] = [];
+    const sheet = sheetOf([], commands);
+    const rows = sheet.groups.find((g) => g.id === 'deck-range')?.rows ?? [];
+    expect(rows.map((r) => (r.kind === 'note' ? 'note' : `${r.kind}:${r.label}`))).toEqual([
+      'select:Os mosta',
+      'toggle:Začiatok podľa opory',
+      'readonly:Od',
+      'toggle:Koniec podľa opory',
+      'station:Do',
+      'select:Rovina prierezu',
+    ]);
+    // koniec bez opory sa nedá zamknúť
+    expect(rows[3]).toMatchObject({ kind: 'toggle', disabled: true });
+    const toggle = rows[1];
+    if (toggle?.kind === 'toggle') toggle.onChange(false);
+    expect(commands[0]).toMatchObject({
+      changes: { ends: { start: 'manual', end: 'abutment' } },
+    });
   });
 
   it('lists profile parameters with their laws and flags unknown ones', () => {

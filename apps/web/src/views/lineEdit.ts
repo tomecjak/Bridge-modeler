@@ -1,6 +1,5 @@
 import type { DimensionSegment } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
-import type { DeckRange } from '@bridge/sections';
 import { SNAP_PX } from './measure.ts';
 
 /** Návrh polohy osi uloženia pod kurzorom (nástroje Os uloženia a Podpera) alebo pri ťahaní (ADR 0017). */
@@ -22,8 +21,8 @@ export interface LinePreview {
     side: 1 | -1;
     reach: number;
   };
-  /** ťahanie: nové staničenia posunutých osí a rozsah NK (spojité staničenie osi cesty) */
-  moves?: { lines: { id: string; s: number }[]; deck: DeckRange };
+  /** ťahanie: nové staničenia posunutých osí (spojité staničenie osi cesty) */
+  moves?: { lines: { id: string; s: number }[] };
   /** ťahanie s Ctrl: ďalšie posunuté osi (náhľad) */
   extra?: { plan: readonly Vec2[]; u?: number }[];
 }

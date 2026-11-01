@@ -449,6 +449,9 @@ export const sk = {
     noIssues: 'Bez upozornení.',
     edit: 'Upraviť…',
     identity: 'Identita',
+    deckEnds: {
+      fromAbutment: { start: 'Začiatok podľa opory', end: 'Koniec podľa opory' },
+    },
     alignment: 'Os cesty',
     alignmentKind: 'Os cesty (LandXML)',
     geometry: 'Geometria',
@@ -535,7 +538,7 @@ export const sk = {
     },
     station: 'Staničenie ukotvenia',
     angle: 'Uhol kríženia všetkých osí [°]',
-    overhang: 'Presah konca NK za krajnú os [m]',
+    overhang: 'e — odsadenie konca NK za krajnú os [m]',
     pier: 'Typ nových pilierov',
     abutment: 'Typ nových opôr',
     summary: (n: number, total: string) =>

@@ -470,6 +470,8 @@ export function deckSheet(input: {
   spans: DeckSpans | undefined;
   /** osi uloženia NK (spoločná šikmosť, ADR 0017) */
   lines: readonly Pick<BearingLine, 'id' | 'crossingAngle'>[];
+  /** na krajnej osi stojí opora, z ktorej sa dá odvodiť koniec NK (ADR 0018) */
+  abutmentAt: { start: boolean; end: boolean };
   result: SectionResult | undefined;
   station: number;
   onEditLaw: (parameter: string) => void;
@@ -479,6 +481,31 @@ export function deckSheet(input: {
   dispatch: Dispatch;
 }): PropertySheet {
   const { deck, spans, lines } = input;
+  const ends = { start: deck.ends?.start ?? 'abutment', end: deck.ends?.end ?? 'abutment' };
+  /** koniec NK: prepínač „podľa opory“ a staničenie (pri odvodenom konci len na čítanie, ADR 0018) */
+  const endRows = (side: 'start' | 'end'): PropertyRow[] => {
+    const t = sk.properties.deckEnds;
+    const locked = ends[side] === 'abutment' && input.abutmentAt[side];
+    const value = side === 'start' ? deck.from : deck.to;
+    const label = side === 'start' ? sk.stationFunction.from : sk.stationFunction.to;
+    return [
+      {
+        kind: 'toggle',
+        label: t.fromAbutment[side],
+        value: ends[side] === 'abutment',
+        disabled: !input.abutmentAt[side],
+        onChange: (v) => set({ ends: { ...ends, [side]: v ? 'abutment' : 'manual' } }),
+      },
+      locked
+        ? { kind: 'readonly', label, value: formatStation(value, 3) }
+        : {
+            kind: 'station',
+            label,
+            value,
+            onCommit: (station) => set(side === 'start' ? { from: station } : { to: station }),
+          },
+    ];
+  };
   const angles = new Set(lines.map((l) => l.crossingAngle));
   const common = angles.size === 1 ? (lines[0]?.crossingAngle ?? '') : '';
   const lineRowsOfDeck: PropertyRow[] = [
@@ -582,18 +609,8 @@ export function deckSheet(input: {
             options: input.axes.map((a) => ({ value: a.id, label: a.name })),
             onChange: (bridgeAxis) => set({ bridgeAxis }),
           },
-          {
-            kind: 'station',
-            label: sk.stationFunction.from,
-            value: deck.from,
-            onCommit: (from) => set({ from }),
-          },
-          {
-            kind: 'station',
-            label: sk.stationFunction.to,
-            value: deck.to,
-            onCommit: (to) => set({ to }),
-          },
+          ...endRows('start'),
+          ...endRows('end'),
           {
             kind: 'select',
             label: sk.elements.orientation,
