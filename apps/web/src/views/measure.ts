@@ -45,12 +45,11 @@ export function profileMeasure(a: Vec2, b: Vec2) {
   return { length, height, slope: Math.abs(length) > 1e-9 ? height / length : undefined };
 }
 
-/** Meranie v pôdoryse: vzdialenosť, ΔE, ΔN a azimut od severu v smere hodinových ručičiek [rad]. */
+/** Meranie v pôdoryse: vzdialenosť, ΔE a ΔN (smer sa neukazuje, rozhodnutie 2026-11-01). */
 export function planMeasure(a: Vec2, b: Vec2) {
   const dE = b.x - a.x;
   const dN = b.y - a.y;
-  const azimuth = (Math.atan2(dE, dN) + 2 * Math.PI) % (2 * Math.PI);
-  return { distance: Math.hypot(dE, dN), dE, dN, azimuth };
+  return { distance: Math.hypot(dE, dN), dE, dN };
 }
 
 export function formatProfileMeasure(a: Vec2, b: Vec2): string {
@@ -71,7 +70,6 @@ export function formatPlanMeasure(a: Vec2, b: Vec2): string {
     `${t.distance} ${formatNumber(m.distance, 3)} m`,
     `ΔE ${formatNumber(m.dE, 3)}`,
     `ΔN ${formatNumber(m.dN, 3)}`,
-    `${t.azimuth} ${formatNumber((m.azimuth * 180) / Math.PI, 4)}°`,
   ].join('  ·  ');
 }
 

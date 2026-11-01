@@ -564,7 +564,6 @@ export const sk = {
     height: 'Δh',
     slope: 'sklon',
     distance: 'vzdialenosť',
-    azimuth: 'azimut od S',
   },
   profileAxes: {
     road: (name: string) => `Os cesty ${name}`,

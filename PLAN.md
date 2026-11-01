@@ -397,8 +397,8 @@ Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do p�
   - `profileEdgeLines` (okraje z obrysu NK, za koncami +30 m rovnobežne), prekrytie s legendou (len na obrazovke), prepínač „Terén na okrajoch“ v ribbone a vo vlastnostiach pohľadu. Overené na 125-00 s povrchom z LandXML.
 - [x] odčítanie pod kurzorom v profile: niveleta, horný povrch a spodok NK, terén (v osi aj na okrajoch), výška spodku NK nad terénom
   - `profileReadout` (pri viacerých povrchoch najvyšší terén), značky v profile a čiarkovaná výška spodku NK nad terénom; stavový riadok má odčítanie vľavo a hlásenia vpravo.
-- [x] nástroj „Merať“: v profile Δ dĺžka, Δ výška, sklon (skutočné hodnoty pri prevýšení), v pôdoryse vzdialenosť, ΔE, ΔN, smerník; prichytávanie na vrcholy, Shift bez prichytávania; dočasné
-  - Upraviť → Merať (`views/measure.ts`, test); smer v pôdoryse ako azimut od severu v smere hodinových ručičiek (predpoklad, viď Otvorené otázky).
+- [x] nástroj „Merať“: v profile Δ dĺžka, Δ výška, sklon (skutočné hodnoty pri prevýšení), v pôdoryse vzdialenosť, ΔE, ΔN; prichytávanie na vrcholy, Shift bez prichytávania; dočasné
+  - Upraviť → Merať (`views/measure.ts`, test); smer (azimut, smerník) sa v pôdoryse neukazuje (rozhodnutie 2026-11-01).
 - [x] zapínateľné kóty len na obrazovke (rozpätia, dĺžka NK, premostenie, celková, neskôr voľná výška) v profile a pôdoryse, rozloženie ako na výkrese 212-00; do DXF nejdú (ADR 0012 platí)
   - `bridgeDimensions` (test na 212-00), `views/Dimensions.tsx`; v profile nad NK rozpätia, dĺžka NK a celková, pod NK premostenie (v osi cesty a osi mosta); v pôdoryse reťazce rovnobežné s osou mosta na vonkajšej strane. Prepínač „Kóty“ (Pohľad, vlastnosti pohľadu), predvolene zapnuté.
   - *Ostáva:* čiastkové kóty presahu opory (krídlo 4,00 · múrik 0,84 · medzera 0,08) sú zatiaľ jedna hodnota 4,92 — rozdelia sa s novou parametrizáciou opory v 10d; pri malom priblížení sa texty krátkych úsekov prekrývajú.
@@ -457,6 +457,7 @@ Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do p�
 - [ ] rímsa (`edgeBeam`) ako samostatný prvok na okraji NK (rozhodnutie 2026-10-30): parametrický prierez z knižnice (šírka, výška, sklon 4 % k vozovke), vedená po okraji NK v rozsahu NK; schéma + ADR
 - [ ] zobrazenie v priečnom reze, pôdoryse, pozdĺžnom reze a 3D; export DXF (hladina `RIMSY`) a STEP
 - [ ] voľná šírka na moste medzi rímsami a kontrola voči zadaniu (kategória cesty, krok 1)
+- [ ] šírka mosta po vonkajšie okraje ríms (pre plocha mosta v 10h); šírka NK ostáva po okraj prierezu NK (rozhodnutie 2026-11-01); v pozdĺžnom profile ponúknuť aj okraj mosta (vonkajší okraj rímsy)
 - [ ] parameter prierezu NK naviazaný na voľnú šírku zo zadania (vstavané meno vo výrazoch, napr. `freeWidth`; odpoveď 22, 2026-11-01)
 
 **Hotové, keď:** dvojica NK z rezu E–E má rímsy podľa výkresu (`Dvojica NK.png`) a voľná šírka medzi rímsami sedí s kótami (test).
@@ -520,7 +521,7 @@ Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do p�
 - Šablóny prierezov (Fáza 8b, ADR 0013), *predpoklady:* tvary podľa schém VŠB bez kót, spodok rovnobežný s vrchom, priečny sklon 2,5 %. Predvolené rozmery [m]: doska h 1,0 / spodok 7,0 / koniec 0,30; vyľahčená doska h 1,2 / spodok 9,0 / 6 dutín ⌀ 0,8 po 1,3; doskotrám h 1,2 / doska 0,30 / 2 rebrá 2,4 po 5,6; jednotrám h 2,0 / spodok trámu 4,0 / steny 5 : 1 / konzola 0,25 → 0,45; dvojtrám h 2,5 / trámy 1,1 → 0,8 po 6,0 / doska 0,30; komora h 3,5 / 7,0 hore / 5,0 dole / steny 0,45 / dosky 0,28 a 0,25; komora s nábehmi h 4,0 / nábehy 1,2 × 0,3 hore a 0,6 × 0,2 dole. Šírky NK 12 – 14 m. Opravte podľa firemných zvyklostí.
 - Premenovanie globálneho parametra dnes prepíše odkazy len v ostatných globálnych parametroch, nie v priebehoch NK, posunoch osi mosta, predvolených hodnotách profilu ani v podperách (zistené 2026-10-31). Doplniť?
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
-- Fáza 10b, *predpoklady:* (1) smer v nástroji Merať je azimut od severu v smere hodinových ručičiek, nie geodetický smerník S-JTSK — treba smerník? (2) okraj NK pre profil a terén na okrajoch = krajný bod prierezu NK; po pridaní ríms (10i) sa môže brať vonkajší okraj rímsy. (3) odčítanie terénu pri viacerých povrchoch berie najvyšší. (4) čiara v pôdoryse a okraj NK sa v profile popisujú km osi cesty v päte kolmice.
+- Fáza 10b, *predpoklady:* (1) odčítanie terénu pri viacerých povrchoch berie najvyšší. (2) čiara v pôdoryse a okraj NK sa v profile popisujú km osi cesty v päte kolmice. *Vyriešené 2026-11-01:* Merať v pôdoryse smer neukazuje; okraj NK = krajný bod prierezu NK (šírka NK), okraj rímsy = šírka mosta (10i).
 - **TODO (statik): štíhlosť NK** pre kontrolu vo Fáze 10g. Kým nebudú potvrdené hodnoty, platia orientačné
   (*predpoklad:* spojité predpäté NK, h = výška v osi, len upozornenie): doska L/25 – L/30; vyľahčená doska
   L/22 – L/28; doskotrám, jednotrám, dvojtrám L/15 – L/20; jednotrám s nábehmi v poli L/20 – L/25; komora
@@ -704,4 +705,5 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Voľná šírka v priereze | parameter prierezu NK sa dá naviazať na voľnú šírku zo zadania (2026-11-01) |
 | Meračka | len 2D podklad, bez TIN; ortofoto a mapa aj v pôdoryse (2026-11-01) |
 | Dĺžky po osi mosta | vodorovne, priemet do pôdorysu (2026-11-01) |
-| Merať | v profile aj v pôdoryse, dočasné (2026-11-01) |
+| Merať | v profile aj v pôdoryse, dočasné; v pôdoryse bez smeru (azimut ani smerník netreba) (2026-11-01) |
+| Šírka NK a šírka mosta | okraj NK (krajný bod prierezu NK) určuje šírku NK, vonkajší okraj rímsy šírku mosta (2026-11-01) |

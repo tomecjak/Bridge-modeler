@@ -47,10 +47,10 @@ describe('measure', () => {
     );
   });
 
-  it('measures distance, coordinate differences and azimuth from north in plan', () => {
-    expect(planMeasure(vec2(0, 0), vec2(-1, 0)).azimuth).toBeCloseTo((3 * Math.PI) / 2, 12);
+  it('measures distance and coordinate differences in plan', () => {
+    expect(planMeasure(vec2(1, 1), vec2(-2, 5))).toEqual({ distance: 5, dE: -3, dN: 4 });
     expect(formatPlanMeasure(vec2(0, 0), vec2(3, 4))).toBe(
-      'vzdialenosť 5,000 m  ·  ΔE 3,000  ·  ΔN 4,000  ·  azimut od S 36,8699°',
+      'vzdialenosť 5,000 m  ·  ΔE 3,000  ·  ΔN 4,000',
     );
   });
 });
