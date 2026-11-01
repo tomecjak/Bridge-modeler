@@ -1361,7 +1361,8 @@ text.dw-stationing {
   border-radius: 4px;
 }
 
-.profile-thumb path {
+.profile-thumb path,
+.support-thumb rect {
   fill: color-mix(in srgb, var(--series) 30%, transparent);
   stroke: var(--text);
   stroke-width: 1;

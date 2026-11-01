@@ -18,6 +18,8 @@ import {
   createEmptyProject,
   openProject,
   type Support,
+  type SupportLibraryEntry,
+  supportFromType,
   type TerrainSurface,
 } from '@bridge/model';
 import {
@@ -89,6 +91,7 @@ import { AppMenu, type MenuSection } from './layout/ribbon/AppMenu.tsx';
 import {
   type ContextualKind,
   contextualTab,
+  placementTab,
   ribbonTabs,
   type View3dState,
 } from './layout/ribbon/appRibbon.tsx';
@@ -99,7 +102,9 @@ import {
   SpanLayoutDialog,
   type SpanLayoutForm,
 } from './layout/SpanLayoutDialog.tsx';
+import { SupportLibraryDialog } from './layout/SupportLibraryDialog.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
+import { useSupportSources } from './layout/useSupportSources.ts';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
@@ -115,12 +120,13 @@ import { type ProfileAxisKey, useProfileView } from './store/profile.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
 import { planSpanLayout, type SupportFactory } from './store/spanLayout.ts';
+import { defaultSupport, useAxisLengths, useSupportState } from './store/supports.ts';
 import {
-  defaultGeometry,
-  defaultSupport,
-  useAxisLengths,
-  useSupportState,
-} from './store/supports.ts';
+  applySupportType,
+  findSupportType,
+  projectSupportEntries,
+  supportTypeOptions,
+} from './store/supportTypes.ts';
 import {
   terrainCrossSections,
   terrainProfiles,
@@ -185,6 +191,12 @@ export function App() {
   const [dimensionsOn, setDimensionsOn] = useState(true);
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [supportLibraryOpen, setSupportLibraryOpen] = useState(false);
+  /** typ piliera a opory pre nástroj Podpera (kľúč typu, prázdny = predvolená podpera; ADR 0019) */
+  const [supportTypeKeys, setSupportTypeKeys] = useState<Record<Support['kind'], string>>({
+    pier: '',
+    abutment: '',
+  });
   const [deckDialog, setDeckDialog] = useState(false);
   /** dialóg Rozloženie polí pre NK (id) */
   const [spanLayoutDeck, setSpanLayoutDeck] = useState<string>();
@@ -274,6 +286,12 @@ export function App() {
     sectionStation ?? (sectionRange ? (sectionRange.from + sectionRange.to) / 2 : 0);
   const axisLengths = useAxisLengths(alignmentMap, parameterState.set);
   const supportState = useSupportState(alignmentMap, parameterState.set, axisLengths);
+  // typy podpier (ADR 0019): podpery projektu ako typy, šablóny, firemná knižnica a súbor
+  const projectSupportTypes = useMemo(
+    () => projectSupportEntries(project.supports, supportState.supports),
+    [project.supports, supportState.supports],
+  );
+  const supportLibrary = useSupportSources(projectSupportTypes);
   const sections = useSectionResults(
     alignmentMap,
     parameterState.set,
@@ -491,38 +509,20 @@ export function App() {
   }
 
   /**
-   * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0017): opora pri konci NK (do 2 m), na existujúcej osi
-   * aj na krajnej z aspoň dvoch osí NK, inak pilier. Nová os z kliku sa za krajnú neberie — inak by sa koniec NK
-   * odvodený z opory (ADR 0018) stiahol k osi v strede NK. `lines` = osi projektu vrátane novej osi.
+   * NK na osi uloženia pre novú podperu: spojité staničenie, odhad spodku NK z nivelety, šírka NK (opora na šírku NK,
+   * krídla pod okrajmi) a ložiská zo spodných plôch prierezu NK (ADR 0019).
    */
-  function newSupportOn(
-    line: BearingLine,
-    lines: readonly BearingLine[],
-    forceKind?: Support['kind'],
-    newLine = false,
-  ) {
+  function deckAtLine(line: BearingLine) {
     const road = item?.alignment;
     const deck = project.superstructures.find((d) => d.id === line.superstructure);
     const s = road?.stationing.fromDisplay(line.station);
     if (!road || !deck || s === undefined) return undefined;
-    const own = lines
-      .filter((l) => l.superstructure === deck.id)
-      .sort((a, b) => a.station - b.station);
-    const atEnd =
-      !newLine && own.length >= 2 && (own[0]?.id === line.id || own.at(-1)?.id === line.id);
-    const nearEnd = line.station - deck.from < 2 || deck.to - line.station < 2;
-    const kind = forceKind ?? (nearEnd || atEnd ? 'abutment' : 'pier');
-    const prefix = kind === 'abutment' ? 'O' : 'P';
-    const existing = new Set(project.supports.map((x) => x.name));
-    let n = 1;
-    while (existing.has(`${prefix}${n}`)) n++;
     let soffit = 0;
     try {
       soffit = road.elevation(s).z + road.origin.z - 1.8;
     } catch {
       soffit = 0;
     }
-    // opora na šírku NK (krídla pod okrajmi NK), ložiská zo spodných plôch prierezu NK (ADR 0019)
     const ctx = {
       alignments: alignmentMap,
       parameters: parameterState.set,
@@ -535,8 +535,71 @@ export function App() {
       .filter((l) => l.role === 'outer')
       .flatMap((l) => l.polygon.map((p) => p.x));
     const width = xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : undefined;
-    const bearings = deckBearingsAt(ctx, deck, s);
-    return defaultSupport(newId('sup'), `${prefix}${n}`, kind, line.id, soffit, width, bearings);
+    return { deck, soffit, width, bearings: deckBearingsAt(ctx, deck, s) };
+  }
+
+  /**
+   * Nová podpera na osi uloženia (ADR 0017, 0019): opora pri konci NK (do 2 m), na existujúcej osi aj na krajnej
+   * z aspoň dvoch osí NK, inak pilier. Nová os z kliku sa za krajnú neberie — inak by sa koniec NK odvodený z opory
+   * (ADR 0018) stiahol k osi v strede NK. Typ podľa `typeKey`, inak podľa výberu v karte nástroja Podpera; bez typu
+   * predvolená podpera. `lines` = osi projektu vrátane novej osi.
+   */
+  function newSupportOn(
+    line: BearingLine,
+    lines: readonly BearingLine[],
+    forceKind?: Support['kind'],
+    newLine = false,
+    typeKey?: string,
+  ) {
+    const at = deckAtLine(line);
+    if (!at) return undefined;
+    const { deck } = at;
+    const own = lines
+      .filter((l) => l.superstructure === deck.id)
+      .sort((a, b) => a.station - b.station);
+    const atEnd =
+      !newLine && own.length >= 2 && (own[0]?.id === line.id || own.at(-1)?.id === line.id);
+    const nearEnd = line.station - deck.from < 2 || deck.to - line.station < 2;
+    const kind = forceKind ?? (nearEnd || atEnd ? 'abutment' : 'pier');
+    const prefix = kind === 'abutment' ? 'O' : 'P';
+    const existing = new Set(project.supports.map((x) => x.name));
+    let n = 1;
+    while (existing.has(`${prefix}${n}`)) n++;
+    const base = defaultSupport(
+      newId('sup'),
+      `${prefix}${n}`,
+      kind,
+      line.id,
+      at.soffit,
+      at.width,
+      at.bearings,
+    );
+    const type = findSupportType(supportLibrary.sources, typeKey ?? supportTypeKeys[kind])?.support;
+    if (!type || type.kind !== kind) return base;
+    return supportFromType(type, {
+      id: base.id,
+      name: base.name,
+      bearingLine: line.id,
+      bearings: at.bearings,
+      ...(at.width === undefined ? {} : { deckWidth: at.width }),
+      level: base.foundation.level,
+    });
+  }
+
+  /** Typ z knižnice na vybranú podperu (ADR 0019), jeden krok späť. */
+  function applyTypeToSelected(entry: SupportLibraryEntry) {
+    const support = project.supports.find((x) => x.id === selectedElement?.id);
+    const line = project.bearingLines.find((l) => l.id === support?.bearingLine);
+    if (!support || selectedElement?.collection !== 'supports') return;
+    const at = line && deckAtLine(line);
+    const { id: _id, ...changes } = applySupportType(support, entry.support, {
+      bearings: at?.bearings ?? [],
+      width: at?.width,
+    });
+    projectStore
+      .getState()
+      .dispatch({ type: 'updateElement', collection: 'supports', id: support.id, changes });
+    setMessage(sk.supportLibrary.applied(entry.name, support.name));
   }
 
   /** Priečnik na osi z novej kópie šablóny „Priečnik – plný blok“ (prierez a priečnik jedným krokom späť). */
@@ -886,6 +949,20 @@ export function App() {
       }
     : undefined;
 
+  /**
+   * Typy nových podpier v Rozložení polí (ADR 0019): podpery projektu navrchu (predvolený výber ako doteraz), potom
+   * predvolená podpera, šablóny, firemná knižnica a súbor.
+   */
+  function spanLayoutTypes(kind: Support['kind']) {
+    const options = supportTypeOptions(
+      supportLibrary.sources,
+      kind,
+      kind === 'pier' ? sk.spanLayout.defaultWall : sk.spanLayout.defaultAbutment,
+    );
+    const own = options.filter((o) => o.value.startsWith('project:'));
+    return [...own, ...options.filter((o) => !o.value.startsWith('project:'))];
+  }
+
   /** Dialóg Rozloženie polí pre vybranú NK (podpera, os → jej NK), inak NK profilu. */
   function openSpanLayout() {
     const lineOf = (id: string) => project.bearingLines.find((l) => l.id === id);
@@ -962,27 +1039,13 @@ export function App() {
         station: Math.round(toDisplay(s) * 1e4) / 1e4,
         crossingAngle: form.angle,
       };
-      const base =
-        newSupportOn(draft, project.bearingLines, kind) ??
-        defaultSupport('', name, kind, lineId, 0);
       const choice = kind === 'abutment' ? form.abutment : form.pier;
-      const template = project.supports.find((x) => x.id === choice);
-      const geometry =
-        template?.geometry ?? (choice === 'columns' ? defaultGeometry('columns') : base.geometry);
+      const base =
+        newSupportOn(draft, project.bearingLines, kind, false, choice) ??
+        defaultSupport('', name, kind, lineId, 0);
       return {
         ...base,
-        ...(template
-          ? {
-              offset: template.offset,
-              footing: { ...template.footing },
-              connection: template.connection,
-              bearingHeight: template.bearingHeight,
-            }
-          : {}),
-        geometry: withEndOffset(
-          JSON.parse(JSON.stringify(geometry)) as Support['geometry'],
-          form.overhang,
-        ),
+        geometry: withEndOffset(base.geometry, form.overhang),
         id: newId('sup'),
         name,
         bearingLine: lineId,
@@ -1347,61 +1410,85 @@ export function App() {
     terrains: 'terrain',
     bridgeAxes: 'bridgeAxis',
   };
+  const placing =
+    tool === 'support'
+      ? placementTab({
+          pier: {
+            value: supportTypeKeys.pier,
+            options: supportTypeOptions(
+              supportLibrary.sources,
+              'pier',
+              sk.supportLibrary.automatic.pier,
+            ),
+          },
+          abutment: {
+            value: supportTypeKeys.abutment,
+            options: supportTypeOptions(
+              supportLibrary.sources,
+              'abutment',
+              sk.supportLibrary.automatic.abutment,
+            ),
+          },
+          onChange: (kind, value) => setSupportTypeKeys((k) => ({ ...k, [kind]: value })),
+          onOpenLibrary: () => setSupportLibraryOpen(true),
+        })
+      : undefined;
   const contextual =
-    selectedElement &&
-    contextualTab({
-      kind: contextualKinds[selectedElement.collection],
-      label: sk.elements.titles[selectedElement.collection],
-      onDelete: deleteSelected,
-      onDuplicate:
-        selectedElement.collection !== 'terrains' ? () => duplicate(selectedElement) : undefined,
-      onRename: renameSelected,
-      onShowInSection: () => {
-        const station = targetStation({ type: 'element', ...selectedElement });
-        if (station !== undefined) setSectionStation(station);
-        setMode('section');
-      },
-      onAddSupport: () => {
-        setMode('2d');
-        setTool('support');
-      },
-      onSpanLayout: openSpanLayout,
-      onSupportOnLine:
-        selectedElement.collection === 'bearingLines' &&
-        !project.supports.some((s) => s.bearingLine === selectedElement.id)
-          ? () => addSupportOnLine(selectedElement.id)
-          : undefined,
-      onEditProfile: () => {
-        const deck = project.superstructures.find((d) => d.id === selectedElement.id);
-        if (!deck) return;
-        setSelectedElement({ collection: 'profiles', id: deck.profile });
-        setMode('section');
-      },
-      onVertices: () => setPlanLineVertices(selectedElement.id),
-      onRedownload:
-        project.terrains.find((t) => t.id === selectedElement.id)?.source === 'zbgis'
-          ? () => void downloadDmrTerrain(selectedElement.id)
-          : undefined,
-      onAxisOffset: (which) => setAxisOffset({ axisId: selectedElement.id, which }),
-      onProfileHere: () => {
-        if (selectedElement.collection === 'superstructures') {
-          setProfileDeckId(selectedElement.id);
-          setProfileAxisKey('bridgeAxis');
-        } else {
-          setProfileAxisKey(`line:${selectedElement.id}`);
-        }
-        setMode('2d');
-      },
-      profileTool,
-      setProfileTool: (next) => {
-        setMode('section');
-        setProfileTool(next);
-        setMessage(undefined);
-      },
-      loopRole,
-      setLoopRole,
-      onProfileTables: () => setProfileTables(selectedElement.id),
-    });
+    placing ??
+    (selectedElement &&
+      contextualTab({
+        kind: contextualKinds[selectedElement.collection],
+        label: sk.elements.titles[selectedElement.collection],
+        onDelete: deleteSelected,
+        onDuplicate:
+          selectedElement.collection !== 'terrains' ? () => duplicate(selectedElement) : undefined,
+        onRename: renameSelected,
+        onShowInSection: () => {
+          const station = targetStation({ type: 'element', ...selectedElement });
+          if (station !== undefined) setSectionStation(station);
+          setMode('section');
+        },
+        onAddSupport: () => {
+          setMode('2d');
+          setTool('support');
+        },
+        onSpanLayout: openSpanLayout,
+        onSupportOnLine:
+          selectedElement.collection === 'bearingLines' &&
+          !project.supports.some((s) => s.bearingLine === selectedElement.id)
+            ? () => addSupportOnLine(selectedElement.id)
+            : undefined,
+        onEditProfile: () => {
+          const deck = project.superstructures.find((d) => d.id === selectedElement.id);
+          if (!deck) return;
+          setSelectedElement({ collection: 'profiles', id: deck.profile });
+          setMode('section');
+        },
+        onVertices: () => setPlanLineVertices(selectedElement.id),
+        onRedownload:
+          project.terrains.find((t) => t.id === selectedElement.id)?.source === 'zbgis'
+            ? () => void downloadDmrTerrain(selectedElement.id)
+            : undefined,
+        onAxisOffset: (which) => setAxisOffset({ axisId: selectedElement.id, which }),
+        onProfileHere: () => {
+          if (selectedElement.collection === 'superstructures') {
+            setProfileDeckId(selectedElement.id);
+            setProfileAxisKey('bridgeAxis');
+          } else {
+            setProfileAxisKey(`line:${selectedElement.id}`);
+          }
+          setMode('2d');
+        },
+        profileTool,
+        setProfileTool: (next) => {
+          setMode('section');
+          setProfileTool(next);
+          setMessage(undefined);
+        },
+        loopRole,
+        setLoopRole,
+        onProfileTables: () => setProfileTables(selectedElement.id),
+      }));
 
   const tabs = ribbonTabs({
     mode,
@@ -1410,6 +1497,8 @@ export function App() {
     setTool: (next) => {
       setTool(next);
       if (next !== 'none') setMessage(undefined);
+      // nástroj Podpera ukáže kartu s výberom typu (ADR 0019)
+      if (next === 'support') setRibbonTab('contextual');
     },
     hasRoad,
     hasOrigin: project.crs.origin !== null,
@@ -1430,6 +1519,7 @@ export function App() {
       dmrCancel.current = true;
     },
     onOpenLibrary: () => setLibraryOpen(true),
+    onOpenSupportLibrary: () => setSupportLibraryOpen(true),
     onInsertTwinExample: insertTwinExample,
     onDelete: deleteSelected,
     onDuplicate:
@@ -2163,6 +2253,28 @@ export function App() {
         {message && <span className="status-message">{message}</span>}
       </footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}
+      {supportLibraryOpen && (
+        <SupportLibraryDialog
+          projectName={project.name}
+          library={supportLibrary}
+          selected={
+            selectedElement?.collection === 'supports'
+              ? project.supports.find((x) => x.id === selectedElement.id)
+              : undefined
+          }
+          onUseInTool={(entry, key) => {
+            setSupportTypeKeys((k) => ({ ...k, [entry.support.kind]: key }));
+            setSupportLibraryOpen(false);
+            setMode('2d');
+            setTool('support');
+            setRibbonTab('contextual');
+            setMessage(sk.supportLibrary.usedInTool(entry.name));
+          }}
+          onApply={applyTypeToSelected}
+          onMessage={setMessage}
+          onClose={() => setSupportLibraryOpen(false)}
+        />
+      )}
       {libraryOpen && (
         <ProfileLibraryDialog
           onClose={() => setLibraryOpen(false)}
@@ -2229,19 +2341,8 @@ export function App() {
             )
           }
           templates={{
-            pier: [
-              ...project.supports
-                .filter((s) => s.kind === 'pier')
-                .map((s) => ({ value: s.id, label: sk.spanLayout.like(s.name, deckNameOf(s)) })),
-              { value: '', label: sk.spanLayout.defaultWall },
-              { value: 'columns', label: sk.spanLayout.defaultColumns },
-            ],
-            abutment: [
-              ...project.supports
-                .filter((s) => s.kind === 'abutment')
-                .map((s) => ({ value: s.id, label: sk.spanLayout.like(s.name, deckNameOf(s)) })),
-              { value: '', label: sk.spanLayout.defaultAbutment },
-            ],
+            pier: spanLayoutTypes('pier'),
+            abutment: spanLayoutTypes('abutment'),
           }}
           onApply={applySpanLayout}
           onClose={() => setSpanLayoutDeck(undefined)}

@@ -36,6 +36,8 @@ export interface RibbonContext {
   onDownloadDmr: () => void;
   onCancelDmr: () => void;
   onOpenLibrary: () => void;
+  /** knižnica podpier (ADR 0019) */
+  onOpenSupportLibrary: () => void;
   onInsertTwinExample: () => void;
   onDelete: () => void;
   /** kópia vybraného prvku; undefined = vybraný prvok sa nedá kopírovať */
@@ -460,11 +462,66 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               icon: 'library',
               onClick: c.onOpenLibrary,
             },
+            {
+              kind: 'button',
+              id: 'support-library-manage',
+              label: t.supportLibraryManage,
+              icon: 'pier',
+              title: sk.supportLibrary.libraryTitle,
+              onClick: c.onOpenSupportLibrary,
+            },
           ],
         },
       ],
     },
   ];
+}
+
+/** Výber typu pre nástroj Podpera: hodnota a možnosti pre pilier a oporu. */
+export interface PlacementContext {
+  pier: { value: string; options: readonly { value: string; label: string }[] };
+  abutment: { value: string; options: readonly { value: string; label: string }[] };
+  onChange: (kind: 'pier' | 'abutment', value: string) => void;
+  onOpenLibrary: () => void;
+}
+
+/**
+ * Kontextová karta nástroja Podpera „Umiestniť | Podpera“ (ako „Modify | Place …“ v Revite, ADR 0019): typ piliera
+ * a opory, ktorý vloží klik na os, a knižnica podpier.
+ */
+export function placementTab(c: PlacementContext): RibbonTab {
+  const t = sk.supportLibrary;
+  return {
+    id: 'contextual',
+    label: t.placeTab(sk.ribbon.support),
+    contextual: true,
+    groups: [
+      {
+        label: t.types,
+        items: (['pier', 'abutment'] as const).map((kind) => ({
+          kind: 'select' as const,
+          id: `place-${kind}`,
+          label: kind === 'pier' ? t.pierType : t.abutmentType,
+          value: c[kind].value,
+          options: c[kind].options,
+          onChange: (v: string) => c.onChange(kind, v),
+        })),
+      },
+      {
+        label: sk.ribbon.groups.library,
+        items: [
+          {
+            kind: 'button',
+            id: 'place-library',
+            label: t.library,
+            icon: 'library',
+            title: t.libraryTitle,
+            onClick: c.onOpenLibrary,
+          },
+        ],
+      },
+    ],
+  };
 }
 
 /** Druh vybraného prvku pre kontextovú kartu „Upraviť | …“. */
