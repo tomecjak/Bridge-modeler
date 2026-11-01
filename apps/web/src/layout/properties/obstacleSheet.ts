@@ -8,7 +8,7 @@ import {
   type ObstacleKind,
   type PlanLine,
 } from '@bridge/model';
-import type { ObstacleResult } from '@bridge/sections';
+import type { ClearanceCheck, ObstacleResult } from '@bridge/sections';
 import { formatNumber } from '../../format/number.ts';
 import { formatModelIssue } from '../../i18n/modelIssues.ts';
 import { sk } from '../../i18n/sk.ts';
@@ -53,6 +53,8 @@ export function presetOf(clearance: Clearance): string {
 export function obstacleSheet(input: {
   obstacle: Obstacle;
   result: ObstacleResult | undefined;
+  /** voľná výška pod NK a kontroly (ADR 0020) */
+  check?: ClearanceCheck | undefined;
   alignments: readonly { name: string }[];
   planLines: readonly Pick<PlanLine, 'id' | 'name'>[];
   bridgeAxes: readonly Pick<BridgeAxis, 'id' | 'name'>[];
@@ -185,7 +187,8 @@ export function obstacleSheet(input: {
 
   const axisName = (id: string) => input.bridgeAxes.find((a) => a.id === id)?.name ?? id;
   const crossings = result?.crossings ?? [];
-  const issues = result?.issues ?? [];
+  const issues = [...(result?.issues ?? []), ...(input.check?.issues ?? [])];
+  const minimum = input.check?.minimum;
 
   return {
     heading: { icon: 'obstacle', label: sk.elements.titles.obstacles },
@@ -219,13 +222,28 @@ export function obstacleSheet(input: {
         rows:
           crossings.length === 0
             ? [{ kind: 'note', text: t.noCrossing, tone: 'muted' }]
-            : crossings.map(
-                (x): PropertyRow => ({
-                  kind: 'readonly',
-                  label: axisName(x.bridgeAxis),
-                  value: t.crossing(formatStation(x.station), formatNumber(x.angle, 2)),
-                }),
-              ),
+            : [
+                ...crossings.map(
+                  (x): PropertyRow => ({
+                    kind: 'readonly',
+                    label: axisName(x.bridgeAxis),
+                    value: t.crossing(formatStation(x.station), formatNumber(x.angle, 2)),
+                  }),
+                ),
+                ...(minimum
+                  ? [
+                      {
+                        kind: 'readonly' as const,
+                        label: t.freeHeight,
+                        value: t.freeHeightValue(
+                          formatNumber(minimum.free, 2),
+                          formatNumber(minimum.required, 2),
+                          formatStation(minimum.station),
+                        ),
+                      },
+                    ]
+                  : []),
+              ],
       },
       ...(issues.length > 0
         ? [

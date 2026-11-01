@@ -124,6 +124,7 @@ import {
   obstacleName,
   planObstacles,
   sectionClearances,
+  useClearanceChecks,
   useObstacleState,
 } from './store/obstacles.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
@@ -310,6 +311,16 @@ export function App() {
   );
   const supportLibrary = useSupportSources(projectSupportTypes);
   const obstacleState = useObstacleState(alignmentMap, parameterState.set);
+  const checkContext = useMemo(
+    () => sectionContext && { ...sectionContext, crossbeams: supportState.crossbeams },
+    [sectionContext, supportState.crossbeams],
+  );
+  const clearanceChecks = useClearanceChecks(
+    obstacleState,
+    checkContext,
+    project.superstructures,
+    supportState.supports,
+  );
   const sections = useSectionResults(
     alignmentMap,
     parameterState.set,
@@ -1275,7 +1286,12 @@ export function App() {
     for (const r of supportState.supports)
       elementIssues.set(r.support.id, r.issues.filter((i) => i.severity !== 'warning').length);
     for (const r of obstacleState)
-      elementIssues.set(r.obstacle.id, r.issues.filter((i) => i.severity !== 'warning').length);
+      elementIssues.set(
+        r.obstacle.id,
+        [...r.issues, ...(clearanceChecks.get(r.obstacle.id)?.issues ?? [])].filter(
+          (i) => i.severity !== 'warning',
+        ).length,
+      );
     const spans = new Map(
       [...supportState.spans].map(([id, s]) => [id, s.spans.map((x) => x.length)] as const),
     );
@@ -1296,6 +1312,7 @@ export function App() {
     sections.results,
     supportState,
     obstacleState,
+    clearanceChecks,
     lastImport.issues,
     alignments,
     parameterState.issues,
@@ -1929,6 +1946,7 @@ export function App() {
             sheet={obstacleSheet({
               obstacle,
               result: obstacleState.find((r) => r.obstacle.id === obstacle.id),
+              check: clearanceChecks.get(obstacle.id),
               alignments: project.alignments,
               planLines: project.planLines,
               bridgeAxes: project.bridgeAxes,
@@ -2229,6 +2247,7 @@ export function App() {
         onMeasure={setMeasureText}
         planDimensions={deckDimensions}
         profileDimensions={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.chains}
+        profileFreeHeights={dimensionsOn ? profile.freeHeights : undefined}
         parametersView={
           <ParameterTable
             parameters={project.parameters}

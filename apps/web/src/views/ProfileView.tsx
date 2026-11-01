@@ -15,7 +15,8 @@ import type { ProfileLine } from '@bridge/sections';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
-import { ProfileDimensions, SpanInput } from './Dimensions.tsx';
+import type { ProfileFreeHeight } from '../store/obstacles.ts';
+import { FreeHeightDimension, ProfileDimensions, SpanInput } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
@@ -79,6 +80,8 @@ interface Props {
   onMeasure?: (text: string | undefined) => void;
   /** kóty NK v reze (staničenie osi cesty); kreslia sa len v osi cesty a osi mosta */
   dimensions?: readonly DimensionChain[] | undefined;
+  /** voľné výšky prekážok pod NK v krížení (u, výšky v m n. m.; ADR 0020) */
+  freeHeights?: readonly ProfileFreeHeight[] | undefined;
   /** úpravy osí uloženia (nástroje Os uloženia a Podpera; len v osi cesty a osi mosta, ADR 0017) */
   lineEditing?: LineEditing | undefined;
 }
@@ -141,6 +144,7 @@ export function ProfileView({
   goTo,
   onMeasure,
   dimensions,
+  freeHeights,
   lineEditing,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
@@ -622,6 +626,19 @@ export function ProfileView({
               }
             />
           )}
+          {freeHeights?.map((f) => {
+            const a = toScreen({ x: f.u, y: f.bottom });
+            const b = toScreen({ x: f.u, y: f.soffit });
+            return (
+              <FreeHeightDimension
+                key={`${f.id}:${f.u}`}
+                x={a.x}
+                yBottom={a.y}
+                yTop={b.y}
+                value={f.soffit - f.bottom}
+              />
+            );
+          })}
           {[linePreview, ...(linePreview?.extra ?? [])].map((p, i) =>
             p?.u === undefined ? null : (
               <line

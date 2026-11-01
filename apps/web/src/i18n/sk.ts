@@ -460,6 +460,9 @@ export const sk = {
     crossings: 'Kríženie s osou mosta',
     crossing: (station: string, angle: string) => `${station} · ${angle}°`,
     noCrossing: 'Prekážka nekríži os mosta v okolí NK.',
+    freeHeight: 'Voľná výška pod NK (min.)',
+    freeHeightValue: (free: string, required: string, station: string) =>
+      `${free} m (potrebná ${required} m) · ${station}`,
     insert: 'Prekážka',
     insertTitle:
       'Vložiť prekážku pod mostom z osi z LandXML, čiary v pôdoryse alebo ručne na km osi cesty',
@@ -774,6 +777,8 @@ export const sk = {
     deck: 'Dĺžka NK a presahy opôr',
     spans: 'Rozpätia polí po osi mosta',
     bridged: 'Dĺžka premostenia a predsadenie prahov',
+    freeHeight: 'Voľná výška pod NK (spodok voľného prierezu – spodok NK)',
+    freeLabel: (value: string) => `v ${value}`,
     editSpan: 'Rozpätie poľa [m]',
     editSpanTitle:
       'Nové rozpätie poľa po osi mosta [m]: zmení sa len toto pole, osi na strane od vybranej podpery sa posunú (Enter potvrdí, Esc zruší)',

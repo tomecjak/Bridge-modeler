@@ -6,13 +6,21 @@ import {
   type Obstacle,
   type ObstacleKind,
   type ParameterSet,
+  type Superstructure,
 } from '@bridge/model';
 import {
+  type ClearanceCheck,
+  checkClearance,
   clearanceAlong,
+  clearanceAt,
   clearanceFootprint,
   clearanceRegions,
   evaluateObstacle,
+  lowestCrossing,
   type ObstacleResult,
+  type ProfileLine,
+  type SectionContext,
+  type SupportResult,
 } from '@bridge/sections';
 import { useMemo } from 'react';
 import { formatNumber } from '../format/number.ts';
@@ -129,4 +137,49 @@ export function sectionClearances(
     );
     return polygons.length > 0 ? [{ id: r.obstacle.id, polygons }] : [];
   });
+}
+
+/**
+ * Kontroly prekážok (ADR 0020): voľná výška pod NK a podpery vo voľnom priereze, podľa id prekážky; prepočítajú sa
+ * pri zmene prekážok, NK alebo podpier.
+ */
+export function useClearanceChecks(
+  results: readonly ObstacleResult[],
+  ctx: SectionContext | undefined,
+  superstructures: readonly Superstructure[],
+  supports: readonly SupportResult[],
+): ReadonlyMap<string, ClearanceCheck> {
+  return useMemo(() => {
+    const map = new Map<string, ClearanceCheck>();
+    if (!ctx) return map;
+    for (const r of results)
+      map.set(r.obstacle.id, checkClearance({ ...ctx, superstructures }, r, supports));
+    return map;
+  }, [results, ctx, superstructures, supports]);
+}
+
+/** Voľná výška v krížení s čiarou profilu: spodok voľného prierezu a spodok NK (m n. m.) v u osi prekážky. */
+export interface ProfileFreeHeight {
+  id: string;
+  u: number;
+  bottom: number;
+  soffit: number;
+}
+
+/** Voľné výšky prekážok v čiare profilu pod rezom NK (`deckOuter` = obrysy NK v (u, lokálne z)). */
+export function profileFreeHeights(
+  results: readonly ObstacleResult[],
+  line: ProfileLine,
+  deckOuter: readonly (readonly Vec2[])[],
+): ProfileFreeHeight[] {
+  const z0 = line.road.origin.z;
+  return results.flatMap((r) =>
+    clearanceAlong(r, line.points).axis.flatMap((u) => {
+      const at = clearanceAt(r, line.pointAt(u));
+      const soffit = lowestCrossing(deckOuter, u);
+      return at && soffit !== undefined
+        ? [{ id: r.obstacle.id, u, bottom: at.bottom + z0, soffit: soffit + z0 }]
+        : [];
+    }),
+  );
 }

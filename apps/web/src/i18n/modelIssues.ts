@@ -159,6 +159,10 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}na osi uloženia ${issue.line} stojí viac podpier (${issue.supports.join(', ')}).`;
     case 'ObstacleCurveNotFound':
       return `${prefix}os prekážky „${issue.curve}“ v projekte nie je.`;
+    case 'ClearanceViolated':
+      return `${prefix}voľná výška pod NK ${formatNumber(issue.actual, 2)} m je menšia ako potrebná ${formatNumber(issue.required, 2)} m (${formatStation(issue.station)}).`;
+    case 'SupportInClearance':
+      return `${prefix}podpera „${issue.support}“ zasahuje do voľného prierezu.`;
     case 'ObstacleWithoutCrossing':
       return `${prefix}nekríži os mosta v okolí NK.`;
     case 'ObstacleLevelUnavailable':

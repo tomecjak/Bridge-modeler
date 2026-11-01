@@ -20,7 +20,7 @@ import {
 } from '@bridge/sections';
 import { useMemo } from 'react';
 import { sk } from '../i18n/sk.ts';
-import { profileObstacles } from './obstacles.ts';
+import { type ProfileFreeHeight, profileFreeHeights, profileObstacles } from './obstacles.ts';
 import { type TerrainTin, terrainProfilesAlong } from './terrain.ts';
 
 /**
@@ -117,6 +117,8 @@ export function useProfileView(input: {
   drawing: Drawing | undefined;
   /** osi uloženia NK v čiare profilu (x = u) */
   lines: ProfileBearingLine[];
+  /** voľné výšky prekážok pod NK v krížení s čiarou profilu (ADR 0020) */
+  freeHeights: ProfileFreeHeight[];
   /** terén na ľavom a pravom okraji NK (u, výška v m n. m.); len v osi mosta, nejde do exportu */
   edgeTerrain: EdgeTerrain | undefined;
 } {
@@ -146,7 +148,8 @@ export function useProfileView(input: {
       terrain,
       obstacles: profileObstacles(obstacles, line.points, line.road.origin.z),
     });
-    return { drawing, lines: cuts?.lines ?? [] };
+    const freeHeights = cuts ? profileFreeHeights(obstacles, line, cuts.deck.outer) : [];
+    return { drawing, lines: cuts?.lines ?? [], freeHeights };
   }, [line, deck, measure, tins, obstacles]);
   const showEdges = input.edgeTerrain;
   const edgeTerrain = useMemo(() => {
@@ -165,6 +168,7 @@ export function useProfileView(input: {
     axis,
     drawing: view?.drawing,
     lines: view?.lines ?? [],
+    freeHeights: view?.freeHeights ?? [],
     edgeTerrain,
   };
 }

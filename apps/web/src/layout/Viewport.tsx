@@ -5,6 +5,7 @@ import type { PlanLine } from '@bridge/model';
 import type { ProfileLine } from '@bridge/sections';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
+import type { ProfileFreeHeight } from '../store/obstacles.ts';
 import type { EdgeTerrain } from '../store/profile.ts';
 import type { LineEditing } from '../views/lineEdit.ts';
 import { type PlanCursor, type PlanDimensionSet, PlanView } from '../views/PlanView.tsx';
@@ -28,6 +29,8 @@ interface Props {
   /** kóty mosta v pôdoryse a kóty NK v reze profilu (len na obrazovke) */
   planDimensions: readonly PlanDimensionSet[] | undefined;
   profileDimensions: readonly DimensionChain[] | undefined;
+  /** voľné výšky prekážok v profile (ADR 0020), len pri zapnutých kótach */
+  profileFreeHeights: readonly ProfileFreeHeight[] | undefined;
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
@@ -83,6 +86,7 @@ export function Viewport({
   onMeasure,
   planDimensions,
   profileDimensions,
+  profileFreeHeights,
   parametersView,
   sectionView,
   plan,
@@ -181,6 +185,7 @@ export function Viewport({
                 goTo={goTo}
                 onMeasure={onMeasure}
                 dimensions={profileDimensions}
+                freeHeights={profileFreeHeights}
                 lineEditing={lineEditing}
               />
             )}

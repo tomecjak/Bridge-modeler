@@ -89,6 +89,10 @@ export type ModelIssue = {
   | { code: 'InvalidCrossingAngle'; angle: number }
   /** os prekážky (krivka) v projekte nie je (ADR 0020) */
   | { code: 'ObstacleCurveNotFound'; curve: string }
+  /** spodok NK zasahuje do voľného prierezu: potrebná a skutočná voľná výška [m] (ADR 0020) */
+  | { code: 'ClearanceViolated'; required: number; actual: number; station: number }
+  /** pôdorys podpery zasahuje do pásu voľného prierezu */
+  | { code: 'SupportInClearance'; support: string }
   /** prekážka nekríži os mosta v okolí NK */
   | { code: 'ObstacleWithoutCrossing' }
   /** úroveň podľa nivelety potrebuje os z LandXML s niveletou, podľa čiary čiaru meračky */

@@ -314,3 +314,34 @@ export function deckReach(
     );
   return { left: reach(outline.left, -1), right: reach(outline.right, 1) };
 }
+
+/**
+ * Kóta voľnej výšky v pozdĺžnom profile (len na obrazovke, ADR 0012, 0020): zvislá čiara od spodku voľného prierezu
+ * po spodok NK v krížení s osou prekážky, hodnota vedľa čiary.
+ */
+export function FreeHeightDimension({
+  x,
+  yBottom,
+  yTop,
+  value,
+}: {
+  x: number;
+  yBottom: number;
+  yTop: number;
+  value: number;
+}) {
+  const p = vec2(x, yBottom);
+  const q = vec2(x, yTop);
+  if (Math.abs(yBottom - yTop) < 1) return null;
+  return (
+    <g className="dimensions free-height">
+      <title>{sk.dimensions.freeHeight}</title>
+      <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} />
+      {tick(p, q)}
+      {tick(q, p)}
+      <text x={x + 6} y={(yBottom + yTop) / 2} dominantBaseline="middle">
+        {sk.dimensions.freeLabel(label(value))}
+      </text>
+    </g>
+  );
+}
