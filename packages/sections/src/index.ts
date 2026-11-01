@@ -11,6 +11,7 @@ export * from './longitudinal.ts';
 export * from './profile.ts';
 export * from './profileLine.ts';
 export * from './sampling.ts';
+export * from './spanLayout.ts';
 export * from './spans.ts';
 export * from './superstructure.ts';
 export * from './supportGeometry.ts';
