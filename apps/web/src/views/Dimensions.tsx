@@ -1,5 +1,6 @@
-import type { DimensionChain } from '@bridge/drawing';
+import type { DimensionChain, DimensionSegment } from '@bridge/drawing';
 import { type Vec2, vec2 } from '@bridge/geom';
+import { useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 
@@ -11,8 +12,56 @@ const TICK_PX = 4;
 
 const label = (value: number) => formatNumber(value, 2);
 
+/** Úprava rozpätia kliknutím na jeho kótu: úsek a bod textu na obrazovke (ADR 0017). */
+export type EditSpan = (segment: DimensionSegment, at: Vec2) => void;
+
+/** Text kóty; pri úseku poľa s `onEdit` sa dá kliknúť (otvorí zadanie rozpätia). */
+function DimensionText({
+  at,
+  angle,
+  segment,
+  onEdit,
+}: {
+  at: Vec2;
+  angle: number;
+  segment: DimensionSegment;
+  onEdit: EditSpan | undefined;
+}) {
+  const editable = onEdit && segment.span !== undefined;
+  return (
+    <text
+      transform={`translate(${at.x} ${at.y}) rotate(${angle})`}
+      y={-4}
+      textAnchor="middle"
+      className={editable ? 'dim-editable' : undefined}
+      onPointerDown={
+        editable
+          ? (e) => {
+              e.stopPropagation();
+              onEdit(segment, at);
+            }
+          : undefined
+      }
+    >
+      {label(segment.value)}
+    </text>
+  );
+}
+
 /** Kóta medzi bodmi obrazovky p → q so šikmými značkami na koncoch a hodnotou nad čiarou (pozdĺž čiary). */
-function DimensionLine({ p, q, value, title }: { p: Vec2; q: Vec2; value: number; title: string }) {
+function DimensionLine({
+  p,
+  q,
+  segment,
+  title,
+  onEdit,
+}: {
+  p: Vec2;
+  q: Vec2;
+  segment: DimensionSegment;
+  title: string;
+  onEdit: EditSpan | undefined;
+}) {
   if (Math.hypot(q.x - p.x, q.y - p.y) < 1) return null;
   return (
     <g>
@@ -20,14 +69,53 @@ function DimensionLine({ p, q, value, title }: { p: Vec2; q: Vec2; value: number
       <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} />
       {tick(p, q)}
       {tick(q, p)}
-      <text
-        transform={`translate(${(p.x + q.x) / 2} ${(p.y + q.y) / 2}) rotate(${readable(p, q)})`}
-        y={-4}
-        textAnchor="middle"
-      >
-        {label(value)}
-      </text>
+      <DimensionText
+        at={vec2((p.x + q.x) / 2, (p.y + q.y) / 2)}
+        angle={readable(p, q)}
+        segment={segment}
+        onEdit={onEdit}
+      />
     </g>
+  );
+}
+
+/**
+ * Pole na zadanie rozpätia na mieste textu kóty (m, desatinná čiarka aj bodka): Enter potvrdí, Esc a odchod zruší.
+ */
+export function SpanInput({
+  at,
+  value,
+  onCommit,
+  onCancel,
+}: {
+  at: Vec2;
+  value: number;
+  onCommit: (length: number) => void;
+  onCancel: () => void;
+}) {
+  const [text, setText] = useState(formatNumber(value, 2));
+  const length = Number(text.trim().replace(',', '.'));
+  const valid = Number.isFinite(length) && length > 0;
+  return (
+    <input
+      className="dim-input"
+      style={{ left: at.x, top: at.y }}
+      aria-label={sk.dimensions.editSpan}
+      title={sk.dimensions.editSpanTitle}
+      aria-invalid={!valid || undefined}
+      value={text}
+      // biome-ignore lint/a11y/noAutofocus: pole sa otvorí kliknutím na kótu a hneď sa do neho píše
+      autoFocus
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => setText(e.currentTarget.value)}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter' && valid) onCommit(length);
+        if (e.key === 'Escape') onCancel();
+      }}
+      onBlur={onCancel}
+    />
   );
 }
 
@@ -42,12 +130,15 @@ export function ProfileDimensions({
   top,
   bottom,
   height,
+  onEdit,
 }: {
   chains: readonly DimensionChain[];
   toX: (s: number) => number | undefined;
   top: number;
   bottom: number;
   height: number;
+  /** klik na rozpätie (zadanie hodnoty) */
+  onEdit?: EditSpan | undefined;
 }) {
   const rows: Record<DimensionChain['kind'], number> = {
     spans: top - GAP_PX,
@@ -74,8 +165,9 @@ export function ProfileDimensions({
                   <DimensionLine
                     p={vec2(x1, y)}
                     q={vec2(x2, y)}
-                    value={seg.value}
+                    segment={seg}
                     title={sk.dimensions[chain.kind]}
+                    onEdit={onEdit}
                   />
                 </g>
               );
@@ -98,6 +190,7 @@ export function PlanDimensions({
   side,
   reach,
   scale,
+  onEdit,
 }: {
   chains: readonly DimensionChain[];
   pointAt: (s: number, x: number) => Vec2;
@@ -107,6 +200,8 @@ export function PlanDimensions({
   reach: number;
   /** mierka pohľadu [px/m] */
   scale: number;
+  /** klik na rozpätie (zadanie hodnoty) */
+  onEdit?: EditSpan | undefined;
 }) {
   const order: DimensionChain['kind'][] = ['bridged', 'spans', 'deck', 'overall'];
   return (
@@ -135,13 +230,7 @@ export function PlanDimensions({
                     [pts[0], pts[1]],
                     [pts[pts.length - 1], pts[pts.length - 2]],
                   ].map(([e, f]) => (e && f ? tick(e, f) : null))}
-                  <text
-                    transform={`translate(${mid.x} ${mid.y}) rotate(${readable(a, b)})`}
-                    y={-4}
-                    textAnchor="middle"
-                  >
-                    {label(seg.value)}
-                  </text>
+                  <DimensionText at={mid} angle={readable(a, b)} segment={seg} onEdit={onEdit} />
                 </g>
               );
             })}

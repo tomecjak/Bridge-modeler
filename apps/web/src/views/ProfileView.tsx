@@ -15,7 +15,7 @@ import type { ProfileLine } from '@bridge/sections';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
-import { ProfileDimensions } from './Dimensions.tsx';
+import { ProfileDimensions, SpanInput } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
@@ -155,6 +155,8 @@ export function ProfileView({
   }>();
   /** kurzor nad osou uloženia (dá sa ťahať) */
   const [overLine, setOverLine] = useState(false);
+  /** zadanie rozpätia na kóte: pole NK, pôvodná hodnota a poloha textu */
+  const [spanEdit, setSpanEdit] = useState<{ span: number; value: number; at: Vec2 }>();
   const linesEditable = lineEditing && (line.kind === 'road' || line.kind === 'bridgeAxis');
   const lineTool =
     (tool === 'bearingLine' || tool === 'support') &&
@@ -611,6 +613,13 @@ export function ProfileView({
               top={dimensionFrame.top}
               bottom={dimensionFrame.bottom}
               height={size.height}
+              onEdit={
+                linesEditable && tool === 'none'
+                  ? (seg, at) =>
+                      seg.span !== undefined &&
+                      setSpanEdit({ span: seg.span, value: seg.value, at })
+                  : undefined
+              }
             />
           )}
           {[linePreview, ...(linePreview?.extra ?? [])].map((p, i) =>
@@ -676,6 +685,17 @@ export function ProfileView({
             </g>
           )}
         </svg>
+      )}
+      {spanEdit && (
+        <SpanInput
+          at={spanEdit.at}
+          value={spanEdit.value}
+          onCommit={(length) => {
+            lineEditing?.setSpan(undefined, spanEdit.span, length);
+            setSpanEdit(undefined);
+          }}
+          onCancel={() => setSpanEdit(undefined)}
+        />
       )}
     </div>
   );

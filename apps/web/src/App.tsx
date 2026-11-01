@@ -21,11 +21,13 @@ import {
 import {
   type AxisLength,
   bridgeAxisPlan,
+  type DeckRange,
   evaluateSuperstructure,
   globalScope,
   moveLine,
   profileParameterValues,
   SPAN_SNAP,
+  setSpanLength,
   snapToPrevious,
   twinDeckExample,
 } from '@bridge/sections';
@@ -706,14 +708,28 @@ export function App() {
     };
   }
 
-  /** Zapíše posun osí z ťahania a koniec NK jedným krokom späť (staničenia na 0,1 mm). */
+  /** Zapíše posun osí z ťahania a koniec NK jedným krokom späť. */
   function commitLineMove(preview: LinePreview) {
-    const deck = project.superstructures.find((d) => d.id === preview.deckId);
-    if (!road || !deck || !preview.moves || preview.moves.lines.length === 0) return;
+    if (!preview.moves) return;
+    commitMoves(preview.deckId, preview.moves.lines, preview.moves.deck, preview.lineId);
+  }
+
+  /**
+   * Nové staničenia osí uloženia a rozsah NK (spojité staničenie) jedným krokom späť (staničenia na 0,1 mm);
+   * prierez sa presunie na os `focus`.
+   */
+  function commitMoves(
+    deckId: string,
+    lines: readonly { id: string; s: number }[],
+    range: DeckRange,
+    focus?: string,
+  ) {
+    const deck = project.superstructures.find((d) => d.id === deckId);
+    if (!road || !deck || lines.length === 0) return;
     const display = (s: number) => Math.round(road.stationing.toDisplay(s).station * 1e4) / 1e4;
-    const from = display(preview.moves.deck.sFrom);
-    const to = display(preview.moves.deck.sTo);
-    const commands: Command[] = preview.moves.lines.map((m) => ({
+    const from = display(range.sFrom);
+    const to = display(range.sTo);
+    const commands: Command[] = lines.map((m) => ({
       type: 'updateElement',
       collection: 'bearingLines',
       id: m.id,
@@ -727,8 +743,45 @@ export function App() {
         changes: { from, to },
       });
     projectStore.getState().dispatch({ type: 'batch', commands });
-    const moved = preview.moves.lines.find((m) => m.id === preview.lineId);
+    const moved = lines.find((m) => m.id === focus);
     if (moved) setSectionStation(display(moved.s));
+  }
+
+  /**
+   * Zadanie rozpätia na kóte (rozhodnutie 2026-10-31): zmení sa len pole `span`; posunú sa osi na strane vzdialenejšej
+   * od vybranej podpery alebo osi tejto NK, bez výberu osi za poľom (smerom ku koncu), a koniec NK s nimi.
+   */
+  function setSpan(deckId: string | undefined, span: number, length: number) {
+    const deck = project.superstructures.find((d) => d.id === (deckId ?? profileDeck?.id));
+    const measure = deck && axisLengths.get(deck.bridgeAxis);
+    const sFrom = deck && road?.stationing.fromDisplay(deck.from);
+    const sTo = deck && road?.stationing.fromDisplay(deck.to);
+    if (!deck || !measure || sFrom === undefined || sTo === undefined) return;
+    const own = supportState.lines
+      .filter((x) => x.line.superstructure === deck.id && Number.isFinite(x.s))
+      .sort((a, b) => a.s - b.s);
+    const selectedLine =
+      selectedElement?.collection === 'supports'
+        ? project.supports.find((s) => s.id === selectedElement.id)?.bearingLine
+        : selectedElement?.collection === 'bearingLines'
+          ? selectedElement.id
+          : undefined;
+    const selected = own.findIndex((x) => x.line.id === selectedLine);
+    const r = setSpanLength({
+      stations: own.map((x) => x.s),
+      deck: { sFrom, sTo },
+      measure,
+      span,
+      length,
+      side: selected > span ? 'before' : 'after',
+    });
+    commitMoves(
+      deck.id,
+      own.flatMap((x, i) =>
+        r.stations[i] === x.s ? [] : [{ id: x.line.id, s: r.stations[i] as number }],
+      ),
+      r.deck,
+    );
   }
 
   /** Klik na os uloženia v pohľade: podpera na nej, inak os. */
@@ -788,6 +841,7 @@ export function App() {
         drag: dragLine,
         commit: commitLineMove,
         select: selectLine,
+        setSpan,
       }
     : undefined;
 

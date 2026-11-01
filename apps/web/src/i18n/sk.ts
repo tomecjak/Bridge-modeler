@@ -567,6 +567,9 @@ export const sk = {
     deck: 'Dĺžka NK a presahy opôr',
     spans: 'Rozpätia polí po osi mosta',
     bridged: 'Dĺžka premostenia a predsadenie prahov',
+    editSpan: 'Rozpätie poľa [m]',
+    editSpanTitle:
+      'Nové rozpätie poľa po osi mosta [m]: zmení sa len toto pole, osi na strane od vybranej podpery sa posunú (Enter potvrdí, Esc zruší)',
   },
   measure: {
     length: 'Δl',

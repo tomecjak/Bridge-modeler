@@ -10,7 +10,7 @@ import { type Vec2, vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
-import { PlanDimensions } from './Dimensions.tsx';
+import { PlanDimensions, SpanInput } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
@@ -132,6 +132,13 @@ export function PlanView({
   }>();
   /** kurzor nad osou uloženia (dá sa ťahať) */
   const [overLine, setOverLine] = useState(false);
+  /** zadanie rozpätia na kóte: NK, pole, pôvodná hodnota a poloha textu */
+  const [spanEdit, setSpanEdit] = useState<{
+    deckId: string;
+    span: number;
+    value: number;
+    at: Vec2;
+  }>();
   const lineTool = (tool === 'bearingLine' || tool === 'support') && lineEditing ? tool : undefined;
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
@@ -505,6 +512,13 @@ export function PlanView({
               side={d.side}
               reach={d.reach}
               scale={view.sx}
+              onEdit={
+                lineEditing && tool === 'none'
+                  ? (seg, at) =>
+                      seg.span !== undefined &&
+                      setSpanEdit({ deckId: d.deckId, span: seg.span, value: seg.value, at })
+                  : undefined
+              }
             />
           ))}
           {[linePreview, ...(linePreview?.extra ?? [])].map((p, i) =>
@@ -541,6 +555,17 @@ export function PlanView({
             />
           )}
         </svg>
+      )}
+      {spanEdit && (
+        <SpanInput
+          at={spanEdit.at}
+          value={spanEdit.value}
+          onCommit={(length) => {
+            lineEditing?.setSpan(spanEdit.deckId, spanEdit.span, length);
+            setSpanEdit(undefined);
+          }}
+          onCancel={() => setSpanEdit(undefined)}
+        />
       )}
     </div>
   );

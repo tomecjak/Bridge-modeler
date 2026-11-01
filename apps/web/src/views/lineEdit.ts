@@ -66,6 +66,11 @@ export interface LineEditing {
   commit(preview: LinePreview): void;
   /** klik na os: vyberie podperu na nej, inak os */
   select(lineId: string): void;
+  /**
+   * Nové rozpätie poľa `span` NK po osi mosta (bez `deckId` NK profilu): zmení sa len toto pole, osi na strane poľa
+   * vzdialenejšej od vybranej podpery sa posunú (bez výberu tie smerom ku koncu), koniec NK s nimi.
+   */
+  setSpan(deckId: string | undefined, span: number, length: number): void;
 }
 
 /** Vzdialenosť bodu od úsečky [jednotky bodov]. */

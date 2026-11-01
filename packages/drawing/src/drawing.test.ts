@@ -326,6 +326,14 @@ describe('bridgeDimensions', () => {
       spans: [0.5, 16, 23, 16, 0.5],
       bridged: [0.9, 53.2, 0.9],
     });
+    // len skutočné polia sa dajú upraviť zadaním hodnoty
+    expect(chains.find((c) => c.kind === 'spans')?.segments.map((s) => s.span)).toEqual([
+      undefined,
+      0,
+      1,
+      2,
+      undefined,
+    ]);
     // reťazce nadväzujú: koniec úseku = začiatok ďalšieho
     for (const c of chains) {
       c.segments.slice(1).forEach((s, i) => {

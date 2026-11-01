@@ -1163,6 +1163,33 @@ text.dw-stationing {
   paint-order: stroke;
 }
 
+/* rozpätie poľa sa dá zadať kliknutím na kótu (ADR 0017) */
+.dimensions text.dim-editable {
+  pointer-events: auto;
+  cursor: text;
+}
+
+.dimensions text.dim-editable:hover {
+  fill: var(--accent);
+  text-decoration: underline;
+}
+
+.dim-input {
+  position: absolute;
+  z-index: 5;
+  width: 64px;
+  transform: translate(-50%, -100%);
+  padding: 1px 4px;
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+}
+
 /* čiara pozdĺžneho profilu v pôdoryse (Fáza 10b) */
 .profile-axis-plan {
   fill: none;

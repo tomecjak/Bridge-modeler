@@ -5,6 +5,8 @@ export interface DimensionSegment {
   sFrom: number;
   sTo: number;
   value: number;
+  /** poradie poľa NK (len úseky rozpätí; dajú sa upraviť zadaním hodnoty, ADR 0017) */
+  span?: number;
 }
 
 /** Reťazec kót mosta (Fáza 10b): celková dĺžka, dĺžka NK, rozpätia, premostenie. */
@@ -50,7 +52,12 @@ export function bridgeDimensions(
       kind: 'spans',
       segments: [
         ...(first.from.s > deck.sFrom + 1e-6 ? [segment(deck.sFrom, first.from.s)] : []),
-        ...spans.map((sp) => ({ sFrom: sp.from.s, sTo: sp.to.s, value: sp.length })),
+        ...spans.map((sp) => ({
+          sFrom: sp.from.s,
+          sTo: sp.to.s,
+          value: sp.length,
+          span: sp.index,
+        })),
         ...(last.to.s < deck.sTo - 1e-6 ? [segment(last.to.s, deck.sTo)] : []),
       ],
     });
