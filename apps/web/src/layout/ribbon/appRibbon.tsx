@@ -55,6 +55,9 @@ export interface RibbonContext {
   edgeTerrain: boolean;
   setEdgeTerrain: (on: boolean) => void;
   canEdgeTerrain: boolean;
+  /** kóty v pôdoryse a profile */
+  dimensions: boolean;
+  setDimensions: (on: boolean) => void;
   view3d: View3dState;
   setView3d: (changes: Partial<View3dState>) => void;
   onProjectInfo: () => void;
@@ -330,6 +333,17 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               disabled: !in2d || !c.canEdgeTerrain,
               pressed: c.edgeTerrain && c.canEdgeTerrain,
               onClick: () => c.setEdgeTerrain(!c.edgeTerrain),
+            },
+            {
+              kind: 'button',
+              id: 'dimensions',
+              label: t.dimensionsToggle,
+              icon: 'dimensions',
+              title: t.dimensionsTitle,
+              size: 'small',
+              disabled: !in2d || !c.hasDeck,
+              pressed: c.dimensions,
+              onClick: () => c.setDimensions(!c.dimensions),
             },
           ],
         },

@@ -387,15 +387,23 @@ Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Po
 
 #### 10b — Os mosta: dĺžky, profil v ľubovoľnej osi, merania, kóty
 Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do pôdorysu); „Merať“ v profile aj v pôdoryse.
-- [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), κ > 0 oblúk doprava, Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
-- [ ] rozpätia, dĺžka NK, dĺžka premostenia (líca úložných prahov v osi mosta) a celková dĺžka po osi mosta; len vzdialenosti po osi (kolmé a šikmé rieši až výkres, rozhodnutie 2026-10-31); fixtúra 212-00: predsadenie 0,90 a dĺžka prahu 2,05 sú na výkrese v osi mosta → × sin α
-- [ ] pozdĺžny profil v zvolenej osi: os cesty / os mosta / okraj NK / iná os z LandXML / čiara v pôdoryse (neskôr os prekážky); pri osi mosta x = rozvinutá dĺžka, popis v km osi cesty; rez NK z parametrov (priesečník čiary s rovinou prierezu vo vzorkách NK → zvislica v odsadení, šikmé konce), export pozdĺžneho rezu v aktívnej osi, doplnok ADR 0007
-- [ ] terén rezaný na ľavom a pravom okraji NK premietnutý do profilu v osi mosta inými farbami (vidno priečny sklon terénu)
-- [ ] odčítanie pod kurzorom v profile: niveleta, horný povrch a spodok NK, terén (v osi aj na okrajoch), výška spodku NK nad terénom
-- [ ] nástroj „Merať“: v profile Δ dĺžka, Δ výška, sklon (skutočné hodnoty pri prevýšení), v pôdoryse vzdialenosť, ΔE, ΔN, smerník; prichytávanie na vrcholy, Shift bez prichytávania; dočasné
-- [ ] zapínateľné kóty len na obrazovke (rozpätia, dĺžka NK, premostenie, celková, neskôr voľná výška) v profile a pôdoryse, rozloženie ako na výkrese 212-00; do DXF nejdú (ADR 0012 platí)
+- [x] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), κ > 0 oblúk doprava, Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
+  - `packages/sections/src/axisLength.ts` (`bridgeAxisLength`: tabuľka po ≤ 5 m, Newton s bisekciou pre spätný prevod, posun mimo rozsahu priebehu = krajná hodnota); 12 km os ≈ 25 ms. Posun bez odkazov na globálne parametre ich nevyhodnocuje (`lawReferences`).
+- [x] rozpätia, dĺžka NK, dĺžka premostenia (líca úložných prahov v osi mosta) a celková dĺžka po osi mosta; len vzdialenosti po osi (kolmé a šikmé rieši až výkres, rozhodnutie 2026-10-31); fixtúra 212-00: predsadenie 0,90 a dĺžka prahu 2,05 sú na výkrese v osi mosta → × sin α
+  - `bridgeLengths` (NK, premostenie z priesečníka prednej líce prahu s osou mosta, celková = NK + presahy opôr po dotyčnici, v osi okolo stredu strán), `evaluateSpans` s prevodom `measure`; vlastnosti NK majú aj dĺžku premostenia. Testy: 212-00 a os posunutá o 7 m dovnútra oblúka R 300.
+- [x] pozdĺžny profil v zvolenej osi: os cesty / os mosta / okraj NK / iná os z LandXML / čiara v pôdoryse (neskôr os prekážky); pri osi mosta x = rozvinutá dĺžka, popis v km osi cesty; rez NK z parametrov (priesečník čiary s rovinou prierezu vo vzorkách NK → zvislica v odsadení, šikmé konce), export pozdĺžneho rezu v aktívnej osi, doplnok ADR 0007
+  - `ProfileLine` (`packages/sections/src/profileLine.ts`), `deckCutAlong`, `profileCuts` / `profileTicks` / `profileGrade` v `packages/drawing`; „Os profilu“ v ribbone (Pohľad) a vo vlastnostiach pohľadu, kontextová karta NK „Profil v osi mosta“ a čiary „Profil v čiare“, čiara profilu zvýraznená v pôdoryse, kurzor z profilu sa v pôdoryse ukáže na čiare profilu. Predvolená os = os mosta vybranej NK.
+- [x] terén rezaný na ľavom a pravom okraji NK premietnutý do profilu v osi mosta inými farbami (vidno priečny sklon terénu)
+  - `profileEdgeLines` (okraje z obrysu NK, za koncami +30 m rovnobežne), prekrytie s legendou (len na obrazovke), prepínač „Terén na okrajoch“ v ribbone a vo vlastnostiach pohľadu. Overené na 125-00 s povrchom z LandXML.
+- [x] odčítanie pod kurzorom v profile: niveleta, horný povrch a spodok NK, terén (v osi aj na okrajoch), výška spodku NK nad terénom
+  - `profileReadout` (pri viacerých povrchoch najvyšší terén), značky v profile a čiarkovaná výška spodku NK nad terénom; stavový riadok má odčítanie vľavo a hlásenia vpravo.
+- [x] nástroj „Merať“: v profile Δ dĺžka, Δ výška, sklon (skutočné hodnoty pri prevýšení), v pôdoryse vzdialenosť, ΔE, ΔN, smerník; prichytávanie na vrcholy, Shift bez prichytávania; dočasné
+  - Upraviť → Merať (`views/measure.ts`, test); smer v pôdoryse ako azimut od severu v smere hodinových ručičiek (predpoklad, viď Otvorené otázky).
+- [x] zapínateľné kóty len na obrazovke (rozpätia, dĺžka NK, premostenie, celková, neskôr voľná výška) v profile a pôdoryse, rozloženie ako na výkrese 212-00; do DXF nejdú (ADR 0012 platí)
+  - `bridgeDimensions` (test na 212-00), `views/Dimensions.tsx`; v profile nad NK rozpätia, dĺžka NK a celková, pod NK premostenie (v osi cesty a osi mosta); v pôdoryse reťazce rovnobežné s osou mosta na vonkajšej strane. Prepínač „Kóty“ (Pohľad, vlastnosti pohľadu), predvolene zapnuté.
+  - *Ostáva:* čiastkové kóty presahu opory (krídlo 4,00 · múrik 0,84 · medzera 0,08) sú zatiaľ jedna hodnota 4,92 — rozdelia sa s novou parametrizáciou opory v 10d; pri malom priblížení sa texty krátkych úsekov prekrývajú.
 
-**Hotové, keď:** na 212-00 kóty ukazujú 16,00 + 23,00 + 16,00, NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 a na posunutej osi v oblúku sedia rozpätia s dĺžkou po osi mosta (test).
+**Hotové, keď:** na 212-00 kóty ukazujú 16,00 + 23,00 + 16,00, NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 a na posunutej osi v oblúku sedia rozpätia s dĺžkou po osi mosta (test). — *2026-11-01:* overené testami (`bridgeLengths`, `bridgeDimensions`) aj v prehliadači (Chrome bez okna) na 212-00, 125-00 a SO 171-11-01.
 
 #### 10c — Polia v pozdĺžnom profile
 - [ ] osi uloženia (odpoveď 21, 2026-11-01): projektant najprv rozmiestni osi uloženia (rozpätia, šikmosť) a až potom na ne vloží podperu alebo oporu — upresniť v plan mode 10c (samostatný prvok alebo vlastnosť NK, väzba podpery na os uloženia)
@@ -512,6 +520,7 @@ Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do p�
 - Šablóny prierezov (Fáza 8b, ADR 0013), *predpoklady:* tvary podľa schém VŠB bez kót, spodok rovnobežný s vrchom, priečny sklon 2,5 %. Predvolené rozmery [m]: doska h 1,0 / spodok 7,0 / koniec 0,30; vyľahčená doska h 1,2 / spodok 9,0 / 6 dutín ⌀ 0,8 po 1,3; doskotrám h 1,2 / doska 0,30 / 2 rebrá 2,4 po 5,6; jednotrám h 2,0 / spodok trámu 4,0 / steny 5 : 1 / konzola 0,25 → 0,45; dvojtrám h 2,5 / trámy 1,1 → 0,8 po 6,0 / doska 0,30; komora h 3,5 / 7,0 hore / 5,0 dole / steny 0,45 / dosky 0,28 a 0,25; komora s nábehmi h 4,0 / nábehy 1,2 × 0,3 hore a 0,6 × 0,2 dole. Šírky NK 12 – 14 m. Opravte podľa firemných zvyklostí.
 - Premenovanie globálneho parametra dnes prepíše odkazy len v ostatných globálnych parametroch, nie v priebehoch NK, posunoch osi mosta, predvolených hodnotách profilu ani v podperách (zistené 2026-10-31). Doplniť?
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
+- Fáza 10b, *predpoklady:* (1) smer v nástroji Merať je azimut od severu v smere hodinových ručičiek, nie geodetický smerník S-JTSK — treba smerník? (2) okraj NK pre profil a terén na okrajoch = krajný bod prierezu NK; po pridaní ríms (10i) sa môže brať vonkajší okraj rímsy. (3) odčítanie terénu pri viacerých povrchoch berie najvyšší. (4) čiara v pôdoryse a okraj NK sa v profile popisujú km osi cesty v päte kolmice.
 - **TODO (statik): štíhlosť NK** pre kontrolu vo Fáze 10g. Kým nebudú potvrdené hodnoty, platia orientačné
   (*predpoklad:* spojité predpäté NK, h = výška v osi, len upozornenie): doska L/25 – L/30; vyľahčená doska
   L/22 – L/28; doskotrám, jednotrám, dvojtrám L/15 – L/20; jednotrám s nábehmi v poli L/20 – L/25; komora

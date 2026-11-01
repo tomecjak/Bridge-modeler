@@ -1,5 +1,6 @@
 import { type AlignmentIssue, formatStation } from '@bridge/alignment';
 import {
+  bridgeDimensions,
   type Drawing,
   planDrawing,
   profileDrawing,
@@ -9,7 +10,7 @@ import {
   toSvg,
   translate,
 } from '@bridge/drawing';
-import type { Vec2 } from '@bridge/geom';
+import { type Vec2, vec2 } from '@bridge/geom';
 import { createEmptyProject, evaluateLaw, openProject, type TerrainSurface } from '@bridge/model';
 import {
   bridgeAxisPlan,
@@ -92,8 +93,10 @@ import {
   useTerrainTins,
 } from './store/terrain.ts';
 import type { Cut } from './viewer/sceneView.ts';
+import { deckReach } from './views/Dimensions.tsx';
 import { GoToStation } from './views/GoToStation.tsx';
 import { ParameterTable } from './views/ParameterTable.tsx';
+import type { PlanDimensionSet } from './views/PlanView.tsx';
 import { ProfileEditorView, type ProfileTool } from './views/ProfileEditorView.tsx';
 import { SectionView } from './views/SectionView.tsx';
 import { StationControl } from './views/StationControl.tsx';
@@ -135,6 +138,8 @@ export function App() {
   const [edgeTerrainOn, setEdgeTerrainOn] = useState(true);
   /** výsledok nástroja Merať v stavovom riadku */
   const [measureText, setMeasureText] = useState<string>();
+  /** kóty mosta v pôdoryse a profile (len na obrazovke, Fáza 10b) */
+  const [dimensionsOn, setDimensionsOn] = useState(true);
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [deckDialog, setDeckDialog] = useState(false);
@@ -329,6 +334,32 @@ export function App() {
     edgeTerrain: edgeTerrainOn,
   });
   const profileView = profile.drawing;
+  /** kóty NK na zobrazenej osi: reťazce po osi mosta, poloha v pôdoryse a strana mimo obrysu NK */
+  const deckDimensions = useMemo((): PlanDimensionSet[] => {
+    if (!dimensionsOn || !road) return [];
+    return roadDecks.flatMap((d) => {
+      const sup = project.superstructures.find((x) => x.id === d.id);
+      const measure = sup && axisLengths.get(sup.bridgeAxis);
+      const spans = supportState.spans.get(d.id);
+      if (!measure || !spans?.lengths) return [];
+      const mid = (spans.lengths.deck.sFrom + spans.lengths.deck.sTo) / 2;
+      const side: 1 | -1 = measure.offsetAt(mid) > 0.01 ? 1 : -1;
+      const reach = deckReach(d.outline, road, measure.offsetAt);
+      return [
+        {
+          deckId: d.id,
+          chains: bridgeDimensions(spans.spans, spans.lengths, measure.lengthAt),
+          pointAt: (s: number, x: number) => {
+            const r = road.evaluateHorizontal(Math.min(road.length, Math.max(0, s)));
+            const h = measure.offsetAt(s) + x;
+            return vec2(r.point.x + h * Math.cos(r.azimuth), r.point.y - h * Math.sin(r.azimuth));
+          },
+          side,
+          reach: side > 0 ? reach.right : reach.left,
+        },
+      ];
+    });
+  }, [dimensionsOn, road, roadDecks, project.superstructures, axisLengths, supportState.spans]);
   const profileTitle = `${sk.viewport.profile} – ${
     profile.options.find((o) => o.value === profile.axis)?.label ?? ''
   }`;
@@ -906,6 +937,8 @@ export function App() {
     edgeTerrain: edgeTerrainOn,
     setEdgeTerrain: setEdgeTerrainOn,
     canEdgeTerrain: profile.line?.kind === 'bridgeAxis' && tins.length > 0,
+    dimensions: dimensionsOn,
+    setDimensions: setDimensionsOn,
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
@@ -1303,6 +1336,8 @@ export function App() {
           edgeTerrain: edgeTerrainOn,
           setEdgeTerrain: setEdgeTerrainOn,
           canEdgeTerrain: profile.line?.kind === 'bridgeAxis' && tins.length > 0,
+          dimensions: dimensionsOn,
+          setDimensions: setDimensionsOn,
           section: {
             station: sectionAt,
             range: sectionRange,
@@ -1422,6 +1457,8 @@ export function App() {
         }
         planCursorPoint={cursor?.source === 'profile' ? cursor.point : undefined}
         onMeasure={setMeasureText}
+        planDimensions={deckDimensions}
+        profileDimensions={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.chains}
         parametersView={
           <ParameterTable
             parameters={project.parameters}

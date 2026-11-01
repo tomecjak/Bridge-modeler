@@ -364,6 +364,8 @@ export function viewSheet(input: {
   edgeTerrain: boolean;
   setEdgeTerrain: (on: boolean) => void;
   canEdgeTerrain: boolean;
+  dimensions: boolean;
+  setDimensions: (on: boolean) => void;
   section: {
     station: number;
     range: { from: number; to: number } | undefined;
@@ -421,6 +423,13 @@ export function viewSheet(input: {
                 value: input.edgeTerrain && input.canEdgeTerrain,
                 disabled: !input.canEdgeTerrain,
                 onChange: input.setEdgeTerrain,
+              },
+              {
+                kind: 'toggle',
+                label: sk.ribbon.dimensionsToggle,
+                value: input.dimensions,
+                disabled: !input.hasDeck,
+                onChange: input.setDimensions,
               },
               { kind: 'note', text: sk.viewport.exaggerationTitle },
             ],

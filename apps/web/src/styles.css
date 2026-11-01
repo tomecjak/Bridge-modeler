@@ -1122,6 +1122,38 @@ text.dw-stationing {
   paint-order: stroke;
 }
 
+/* kóty len na obrazovke (Fáza 10b, ADR 0012) */
+.dimensions {
+  pointer-events: none;
+}
+
+.dimensions line,
+.dimensions polyline {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 0.8;
+}
+
+.dimensions .dim-tick {
+  stroke-width: 1.4;
+}
+
+.dimensions .dim-extension {
+  stroke: var(--muted);
+  stroke-width: 0.6;
+  stroke-dasharray: 2 2;
+}
+
+.dimensions text {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text);
+  stroke: var(--canvas);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
 /* čiara pozdĺžneho profilu v pôdoryse (Fáza 10b) */
 .profile-axis-plan {
   fill: none;

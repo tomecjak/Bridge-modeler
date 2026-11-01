@@ -1,8 +1,16 @@
 import { type Vec2, vec2 } from '@bridge/geom';
-import { bridgeAxisLength, bridgeAxisProfileLine, polylineProfileLine } from '@bridge/sections';
+import {
+  bridgeAxisLength,
+  bridgeAxisPlan,
+  bridgeAxisProfileLine,
+  bridgeLengths,
+  evaluateSpans,
+  polylineProfileLine,
+} from '@bridge/sections';
 import { evaluateReference212 } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { type DeckDrawingData, deckDrawingData } from './deck.ts';
+import { bridgeDimensions } from './dimensions.ts';
 import { type Drawing, type Entity, type TextEntity, textHeight, translate } from './model.ts';
 import { planDrawing } from './plan.ts';
 import {
@@ -248,6 +256,41 @@ describe('profileReadout', () => {
     expect(r.terrain).toBeUndefined();
     expect(r.clearance).toBeUndefined();
     expect(r.grade).toBeDefined();
+  });
+});
+
+describe('bridgeDimensions', () => {
+  it('gives the dimension chains of the 212-00 drawing', () => {
+    const spans = evaluateSpans(ref.deck, ref.results, { measure: measure.lengthAt }).spans;
+    const lengths = bridgeLengths({
+      measure,
+      supports: ref.results,
+      sFrom: ref.sFrom,
+      sTo: ref.sTo,
+      axisLine: bridgeAxisPlan(
+        axis,
+        ref.alignment,
+        ref.ctx.parameters,
+        ref.sFrom - 30,
+        ref.sTo + 30,
+      ),
+    });
+    const chains = bridgeDimensions(spans, lengths, measure.lengthAt);
+    const values = Object.fromEntries(
+      chains.map((c) => [c.kind, c.segments.map((s) => Math.round(s.value * 100) / 100)]),
+    );
+    expect(values).toEqual({
+      overall: [65.84],
+      deck: [4.92, 56, 4.92],
+      spans: [0.5, 16, 23, 16, 0.5],
+      bridged: [0.9, 53.2, 0.9],
+    });
+    // reťazce nadväzujú: koniec úseku = začiatok ďalšieho
+    for (const c of chains) {
+      c.segments.slice(1).forEach((s, i) => {
+        expect(s.sFrom).toBeCloseTo(c.segments[i]?.sTo ?? Number.NaN, 9);
+      });
+    }
   });
 });
 

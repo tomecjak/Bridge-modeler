@@ -1,9 +1,16 @@
 import { type Alignment, formatStation } from '@bridge/alignment';
-import { type Drawing, type LayerId, sampleHorizontal, stationTicks } from '@bridge/drawing';
+import {
+  type DimensionChain,
+  type Drawing,
+  type LayerId,
+  sampleHorizontal,
+  stationTicks,
+} from '@bridge/drawing';
 import { type Vec2, vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
+import { PlanDimensions } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
 import { drawingVertices, formatPlanMeasure, snapPoint, useMeasure } from './measure.ts';
@@ -62,6 +69,17 @@ interface Props {
   profileLine?: readonly Vec2[] | undefined;
   /** výsledok nástroja Merať (stavový riadok) */
   onMeasure?: (text: string | undefined) => void;
+  /** kóty mosta pozdĺž osí mostov (len na obrazovke) */
+  dimensions?: readonly PlanDimensionSet[] | undefined;
+}
+
+/** Kóty jednej NK v pôdoryse: reťazce, bod v odsadení od osi mosta, strana a vzdialenosť okraja NK. */
+export interface PlanDimensionSet {
+  deckId: string;
+  chains: readonly DimensionChain[];
+  pointAt: (s: number, x: number) => Vec2;
+  side: 1 | -1;
+  reach: number;
 }
 
 /** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
@@ -93,6 +111,7 @@ export function PlanView({
   onMovePlanLineVertex,
   profileLine,
   onMeasure,
+  dimensions,
 }: Props) {
   /** vrcholy rozkreslenej čiary */
   const [sketch, setSketch] = useState<Vec2[]>([]);
@@ -385,6 +404,17 @@ export function PlanView({
               points={polyline(hover ? [...sketch, hover] : sketch)}
             />
           )}
+          {dimensions?.map((d) => (
+            <PlanDimensions
+              key={d.deckId}
+              chains={d.chains}
+              pointAt={d.pointAt}
+              toScreen={toScreen}
+              side={d.side}
+              reach={d.reach}
+              scale={view.sx}
+            />
+          ))}
           {tool === 'measure' && (
             <MeasureOverlay
               a={measure.a}

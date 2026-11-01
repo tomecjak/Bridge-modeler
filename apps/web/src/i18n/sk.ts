@@ -553,6 +553,12 @@ export const sk = {
     renameLabel: (name: string) => `Nový názov pre ${name}`,
     problems: 'Problémy',
   },
+  dimensions: {
+    overall: 'Celková dĺžka mosta (po konce krídel)',
+    deck: 'Dĺžka NK a presahy opôr',
+    spans: 'Rozpätia polí po osi mosta',
+    bridged: 'Dĺžka premostenia a predsadenie prahov',
+  },
   measure: {
     length: 'Δl',
     height: 'Δh',
@@ -640,6 +646,9 @@ export const sk = {
     profileAxisTitle: 'Čiara, v ktorej sa kreslí pozdĺžny profil (x = rozvinutá dĺžka čiary)',
     profileInLine: 'Profil v čiare',
     profileInAxis: 'Profil v osi mosta',
+    dimensionsToggle: 'Kóty',
+    dimensionsTitle:
+      'Kóty rozpätí, dĺžky NK, premostenia a celkovej dĺžky po osi mosta v pôdoryse a profile (len na obrazovke)',
     measure: 'Merať',
     measureTitle:
       'Dočasné meranie v pôdoryse (vzdialenosť, ΔE, ΔN, azimut) a v profile (Δ dĺžka, Δ výška, sklon)',

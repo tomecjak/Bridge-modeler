@@ -1,12 +1,12 @@
 import type { Alignment } from '@bridge/alignment';
-import type { Drawing } from '@bridge/drawing';
+import type { DimensionChain, Drawing } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
 import type { PlanLine } from '@bridge/model';
 import type { ProfileLine } from '@bridge/sections';
 import type { ReactNode } from 'react';
 import { sk } from '../i18n/sk.ts';
 import type { EdgeTerrain } from '../store/profile.ts';
-import { type PlanCursor, PlanView } from '../views/PlanView.tsx';
+import { type PlanCursor, type PlanDimensionSet, PlanView } from '../views/PlanView.tsx';
 import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
@@ -24,6 +24,9 @@ interface Props {
   planCursorPoint: Vec2 | undefined;
   /** výsledok nástroja Merať */
   onMeasure: (text: string | undefined) => void;
+  /** kóty mosta v pôdoryse a kóty NK v reze profilu (len na obrazovke) */
+  planDimensions: readonly PlanDimensionSet[] | undefined;
+  profileDimensions: readonly DimensionChain[] | undefined;
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
@@ -76,6 +79,8 @@ export function Viewport({
   onProfileCursor,
   planCursorPoint,
   onMeasure,
+  planDimensions,
+  profileDimensions,
   parametersView,
   sectionView,
   plan,
@@ -152,6 +157,7 @@ export function Viewport({
                   : undefined
               }
               onMeasure={onMeasure}
+              dimensions={planDimensions}
             />
             {profile && (
               <ProfileView
@@ -172,6 +178,7 @@ export function Viewport({
                 onStudyArea={onStudyArea}
                 goTo={goTo}
                 onMeasure={onMeasure}
+                dimensions={profileDimensions}
               />
             )}
           </div>

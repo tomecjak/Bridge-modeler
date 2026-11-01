@@ -1,5 +1,6 @@
 import { formatStation } from '@bridge/alignment';
 import {
+  type DimensionChain,
   type Drawing,
   drawingBounds,
   type LayerId,
@@ -14,6 +15,7 @@ import type { ProfileLine } from '@bridge/sections';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
+import { ProfileDimensions } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
 import { drawingVertices, formatProfileMeasure, snapPoint, useMeasure } from './measure.ts';
@@ -68,6 +70,8 @@ interface Props {
   goTo?: { s: number; nonce: number } | undefined;
   /** výsledok nástroja Merať (stavový riadok) */
   onMeasure?: (text: string | undefined) => void;
+  /** kóty NK v reze (staničenie osi cesty); kreslia sa len v osi cesty a osi mosta */
+  dimensions?: readonly DimensionChain[] | undefined;
 }
 
 /** niveletu kreslí pohľad sám (s polygónom PVI) */
@@ -125,6 +129,7 @@ export function ProfileView({
   onStudyArea,
   goTo,
   onMeasure,
+  dimensions,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   /** rozťahovaná oblasť mosta (u začiatku a kurzora) */
@@ -317,6 +322,14 @@ export function ProfileView({
     cursorU !== undefined && cursorZ !== undefined
       ? toScreen({ x: cursorU, y: cursorZ })
       : undefined;
+  /** horný povrch a spodok NK na obrazovke (riadky kót nad a pod NK) */
+  const dimensionFrame = (() => {
+    if (!dimensions || (line.kind !== 'road' && line.kind !== 'bridgeAxis')) return undefined;
+    const ys = (drawing?.entities ?? []).flatMap((e) =>
+      e.kind === 'polyline' && e.layer === 'deck' ? e.points.map((p) => toScreen(p).y) : [],
+    );
+    return ys.length > 0 ? { top: Math.min(...ys), bottom: Math.max(...ys) } : undefined;
+  })();
   /** body NK a terénu pod kurzorom (značky a výška spodku NK nad terénom) */
   const readout =
     cursorU === undefined ? undefined : profileReadout(drawing, grade, edgeTerrain, cursorU);
@@ -479,6 +492,18 @@ export function ProfileView({
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />
               <circle className="cursor-marker" cx={cursorPoint.x} cy={cursorPoint.y} r={5} />
             </g>
+          )}
+          {dimensionFrame && dimensions && (
+            <ProfileDimensions
+              chains={dimensions}
+              toX={(s) => {
+                const u = toU(s);
+                return u === undefined ? undefined : toScreen({ x: u, y: 0 }).x;
+              }}
+              top={dimensionFrame.top}
+              bottom={dimensionFrame.bottom}
+              height={size.height}
+            />
           )}
           {tool === 'measure' && (
             <MeasureOverlay
