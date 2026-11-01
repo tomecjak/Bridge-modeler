@@ -1,6 +1,7 @@
 import { type AlignmentIssue, formatStation } from '@bridge/alignment';
 import {
   bridgeDimensions,
+  type DeckDrawingData,
   type Drawing,
   planDrawing,
   profileDrawing,
@@ -22,7 +23,9 @@ import {
   bridgeAxisPlan,
   evaluateSuperstructure,
   globalScope,
+  moveLine,
   profileParameterValues,
+  SPAN_SNAP,
   snapToPrevious,
   twinDeckExample,
 } from '@bridge/sections';
@@ -90,7 +93,7 @@ import { downloadProject, downloadText } from './persistence/fileIO.ts';
 import { drawingFileName } from './persistence/fileName.ts';
 import { nextLineName } from './store/bearingLines.ts';
 import { type BrowserTarget, browserTree } from './store/browserTree.ts';
-import type { ElementCollection } from './store/commands.ts';
+import type { Command, ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
 import { duplicateElement } from './store/duplicate.ts';
@@ -599,8 +602,22 @@ export function App() {
       ...(next ? [{ sFrom: sNew, sTo: next.s, value: measure.lengthAt(next.s) - l }] : []),
     ];
     const alpha = nearestLine(deck.id, l, measure)?.crossingAngle ?? Math.PI / 2;
-    const h = road.evaluateHorizontal(sNew);
-    const offsetH = measure.offsetAt(sNew);
+    const u = profileU(deck.id, sNew);
+    return {
+      deckId: deck.id,
+      s: sNew,
+      spans,
+      plan: linePlan(data, measure, sNew, alpha),
+      ...(u === undefined ? {} : { u }),
+      frame: planFrame(road, data.outline, measure.offsetAt, (sFrom + sTo) / 2),
+    };
+  }
+
+  /** Úsečka osi uloženia v pôdoryse cez šírku NK (náhľad; dotyčnica osi mosta ≈ dotyčnica osi cesty). */
+  function linePlan(data: DeckDrawingData, measure: AxisLength, s: number, alpha: number): Vec2[] {
+    if (!road) return [];
+    const h = road.evaluateHorizontal(s);
+    const offsetH = measure.offsetAt(s);
     const c = vec2(
       h.point.x + offsetH * Math.cos(h.azimuth),
       h.point.y - offsetH * Math.sin(h.azimuth),
@@ -608,19 +625,122 @@ export function App() {
     const dir = azimuthToVector(h.azimuth - alpha);
     const reach = deckReach(data.outline, road, measure.offsetAt);
     const t = (Math.max(reach.left, reach.right) + 1) / Math.max(0.1, Math.sin(alpha));
-    const u =
-      deck.id === profileDeck?.id &&
-      (profile.line?.kind === 'road' || profile.line?.kind === 'bridgeAxis')
-        ? profile.line.lengthAt(sNew)
-        : undefined;
+    return [vec2(c.x - t * dir.x, c.y - t * dir.y), vec2(c.x + t * dir.x, c.y + t * dir.y)];
+  }
+
+  /** x osi uloženia na staničení s v profile NK profilu (len v osi cesty a osi mosta). */
+  function profileU(deckId: string, s: number): number | undefined {
+    const line = profile.line;
+    return deckId === profileDeck?.id && (line?.kind === 'road' || line?.kind === 'bridgeAxis')
+      ? line.lengthAt(s)
+      : undefined;
+  }
+
+  /**
+   * Ťahanie osi uloženia (ADR 0017): posun o rozdiel dĺžok po osi mosta od miesta uchopenia, pole pred osou sa
+   * prichytáva po 0,5 m; bez `following` ostane os medzi susedmi, s ním sa posunú aj ďalšie osi a koniec NK.
+   */
+  function dragLine(
+    lineId: string,
+    sGrab: number,
+    sNow: number,
+    options: { following: boolean; snap: boolean },
+  ): LinePreview | undefined {
+    const target = supportState.lines.find((x) => x.line.id === lineId);
+    const deck = project.superstructures.find((d) => d.id === target?.line.superstructure);
+    const data = roadDecks.find((d) => d.id === deck?.id);
+    const measure = deck && axisLengths.get(deck.bridgeAxis);
+    const sFrom = deck && road?.stationing.fromDisplay(deck.from);
+    const sTo = deck && road?.stationing.fromDisplay(deck.to);
+    if (!road || !target || !deck || !data || !measure || sFrom === undefined || sTo === undefined)
+      return undefined;
+    const own = supportState.lines
+      .filter((x) => x.line.superstructure === deck.id && Number.isFinite(x.s))
+      .sort((a, b) => a.s - b.s);
+    const index = own.findIndex((x) => x.line.id === lineId);
+    const ls = own.map((x) => measure.lengthAt(x.s));
+    let l = (ls[index] as number) + measure.lengthAt(sNow) - measure.lengthAt(sGrab);
+    const others = ls.filter((_, i) => (options.following ? i < index : i !== index));
+    if (options.snap) l = snapToPrevious(others, l);
+    const prevL = ls[index - 1];
+    const nextL = ls[index + 1];
+    if (prevL !== undefined) l = Math.max(l, prevL + SPAN_SNAP);
+    if (nextL !== undefined && !options.following) l = Math.min(l, nextL - SPAN_SNAP);
+    const moved = moveLine({
+      stations: own.map((x) => x.s),
+      deck: { sFrom, sTo },
+      measure,
+      index,
+      l,
+      following: options.following,
+    });
+    const at = (i: number) => moved.stations[i];
+    const sNew = at(index) as number;
+    const spans = [index - 1, index].flatMap((i) => {
+      const a = at(i);
+      const b = at(i + 1);
+      return a === undefined || b === undefined
+        ? []
+        : [{ sFrom: a, sTo: b, value: measure.lengthAt(b) - measure.lengthAt(a) }];
+    });
+    const changed = own.flatMap((x, i) => (at(i) === x.s ? [] : [{ x, s: at(i) as number }]));
+    const u = profileU(deck.id, sNew);
     return {
       deckId: deck.id,
       s: sNew,
+      lineId,
       spans,
-      plan: [vec2(c.x - t * dir.x, c.y - t * dir.y), vec2(c.x + t * dir.x, c.y + t * dir.y)],
+      plan: linePlan(data, measure, sNew, target.crossingAngle),
       ...(u === undefined ? {} : { u }),
       frame: planFrame(road, data.outline, measure.offsetAt, (sFrom + sTo) / 2),
+      moves: { lines: changed.map((c) => ({ id: c.x.line.id, s: c.s })), deck: moved.deck },
+      extra: changed
+        .filter((c) => c.x.line.id !== lineId)
+        .map((c) => {
+          const cu = profileU(deck.id, c.s);
+          return {
+            plan: linePlan(data, measure, c.s, c.x.crossingAngle),
+            ...(cu === undefined ? {} : { u: cu }),
+          };
+        }),
     };
+  }
+
+  /** Zapíše posun osí z ťahania a koniec NK jedným krokom späť (staničenia na 0,1 mm). */
+  function commitLineMove(preview: LinePreview) {
+    const deck = project.superstructures.find((d) => d.id === preview.deckId);
+    if (!road || !deck || !preview.moves || preview.moves.lines.length === 0) return;
+    const display = (s: number) => Math.round(road.stationing.toDisplay(s).station * 1e4) / 1e4;
+    const from = display(preview.moves.deck.sFrom);
+    const to = display(preview.moves.deck.sTo);
+    const commands: Command[] = preview.moves.lines.map((m) => ({
+      type: 'updateElement',
+      collection: 'bearingLines',
+      id: m.id,
+      changes: { station: display(m.s) },
+    }));
+    if (Math.abs(from - deck.from) > 1e-6 || Math.abs(to - deck.to) > 1e-6)
+      commands.push({
+        type: 'updateElement',
+        collection: 'superstructures',
+        id: deck.id,
+        changes: { from, to },
+      });
+    projectStore.getState().dispatch({ type: 'batch', commands });
+    const moved = preview.moves.lines.find((m) => m.id === preview.lineId);
+    if (moved) setSectionStation(display(moved.s));
+  }
+
+  /** Klik na os uloženia v pohľade: podpera na nej, inak os. */
+  function selectLine(lineId: string) {
+    const support = project.supports.find((s) => s.bearingLine === lineId);
+    setSelectedElement(
+      support
+        ? { collection: 'supports', id: support.id }
+        : { collection: 'bearingLines', id: lineId },
+    );
+    const station = lineStationOf(lineId);
+    if (station !== undefined) setSectionStation(station);
   }
 
   /**
@@ -661,7 +781,14 @@ export function App() {
   }
 
   const lineEditing: LineEditing | undefined = road
-    ? { handles: lineHandles, preview: previewLine, place: placeLine }
+    ? {
+        handles: lineHandles,
+        preview: previewLine,
+        place: placeLine,
+        drag: dragLine,
+        commit: commitLineMove,
+        select: selectLine,
+      }
     : undefined;
 
   /** Otvorí vloženie NK výberom typológie; bez osi s niveletou len hláška. */

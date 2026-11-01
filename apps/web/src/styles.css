@@ -1190,6 +1190,11 @@ text.dw-stationing {
   cursor: copy;
 }
 
+/* os uloženia pod kurzorom sa dá ťahať (ADR 0017) */
+.drawing[data-line-drag] {
+  cursor: ew-resize;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

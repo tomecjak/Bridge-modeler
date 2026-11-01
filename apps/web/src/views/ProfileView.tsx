@@ -19,7 +19,13 @@ import { ProfileDimensions } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
-import { drawingVertices, formatProfileMeasure, snapPoint, useMeasure } from './measure.ts';
+import {
+  drawingVertices,
+  formatProfileMeasure,
+  SNAP_PX,
+  snapPoint,
+  useMeasure,
+} from './measure.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import type { FitRequest, ViewTool } from './viewState.ts';
@@ -86,6 +92,8 @@ const BAND_LABELS_INSIDE_PX = 160;
 /** najkratšia oblasť mosta [m]; kratší ťah sa berie ako klik */
 const MIN_AREA = 1;
 const CONTROLS = 'button, input, select, textarea, label';
+/** posun ukazovateľa, od ktorého je stlačenie na osi uloženia ťahaním, nie výberom [px] */
+const DRAG_PX = 3;
 
 /** y lomenej čiary (vzostupné x) v bode x; mimo rozsahu undefined. */
 function yAt(points: readonly Vec2[], x: number): number | undefined {
@@ -136,8 +144,18 @@ export function ProfileView({
   lineEditing,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
-  /** návrh osi uloženia pod kurzorom */
+  /** návrh osi uloženia pod kurzorom alebo pri ťahaní */
   const [linePreview, setLinePreview] = useState<LinePreview>();
+  /** ťahaná os uloženia: id, staničenie a bod obrazovky uchopenia */
+  const [lineDrag, setLineDrag] = useState<{
+    id: string;
+    sGrab: number;
+    start: Vec2;
+    moved: boolean;
+  }>();
+  /** kurzor nad osou uloženia (dá sa ťahať) */
+  const [overLine, setOverLine] = useState(false);
+  const linesEditable = lineEditing && (line.kind === 'road' || line.kind === 'bridgeAxis');
   const lineTool =
     (tool === 'bearingLine' || tool === 'support') &&
     lineEditing &&
@@ -274,8 +292,36 @@ export function ProfileView({
     return Math.min(last, Math.max(first, u));
   }
 
+  /** os uloženia pod bodom obrazovky (do 10 px od zvislice, vo výške jej čiary vo výkrese) */
+  function lineAt(screen: Vec2) {
+    if (!linesEditable || !lineEditing) return undefined;
+    return handleAt(screen, lineEditing.handles, toScreen, 'profile', (h) => {
+      const axis = drawing?.entities.find(
+        (en) => en.kind === 'polyline' && en.layer === 'supportAxis' && en.owner === h.id,
+      );
+      if (axis?.kind !== 'polyline') return false;
+      const ys = axis.points.map((p) => toScreen(p).y);
+      return screen.y >= Math.min(...ys) - SNAP_PX && screen.y <= Math.max(...ys) + SNAP_PX;
+    });
+  }
+
+  function screenOf(e: PointerEvent<HTMLDivElement>): Vec2 {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     const onControl = e.target instanceof Element && e.target.closest(CONTROLS);
+    if (tool === 'none' && e.button === 0 && !onControl && view) {
+      const screen = screenOf(e);
+      const hit = lineAt(screen);
+      const s = hit && line.stationAt(screenToWorld(view, size, screen).x);
+      if (hit && s !== undefined) {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setLineDrag({ id: hit.id, sGrab: s, start: screen, moved: false });
+        return;
+      }
+    }
     if (tool === 'area' && e.button === 0 && !onControl) {
       const u = uAt(e);
       if (u === undefined) return;
@@ -287,6 +333,15 @@ export function ProfileView({
   }
 
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
+    if (lineDrag) {
+      if (e.currentTarget.hasPointerCapture(e.pointerId))
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      if (lineDrag.moved && linePreview) lineEditing?.commit(linePreview);
+      else lineEditing?.select(lineDrag.id);
+      setLineDrag(undefined);
+      setLinePreview(undefined);
+      return;
+    }
     if (!areaDraft) {
       handlers.onPointerUp(e);
       return;
@@ -302,6 +357,23 @@ export function ProfileView({
   }
 
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
+    if (lineDrag && view && lineEditing) {
+      const screen = screenOf(e);
+      const moved =
+        lineDrag.moved ||
+        Math.hypot(screen.x - lineDrag.start.x, screen.y - lineDrag.start.y) > DRAG_PX;
+      if (moved !== lineDrag.moved) setLineDrag({ ...lineDrag, moved });
+      const s = line.stationAt(screenToWorld(view, size, screen).x);
+      if (moved && s !== undefined)
+        setLinePreview(
+          lineEditing.drag(lineDrag.id, lineDrag.sGrab, s, {
+            following: e.ctrlKey || e.metaKey,
+            snap: !e.shiftKey,
+          }),
+        );
+      return;
+    }
+    if (tool === 'none' && view && !e.buttons) setOverLine(lineAt(screenOf(e)) !== undefined);
     if (areaDraft) {
       const u = uAt(e);
       if (u !== undefined) setAreaDraft({ ...areaDraft, u1: u });
@@ -396,6 +468,7 @@ export function ProfileView({
       aria-label={sk.viewport.profile}
       data-area-mode={tool === 'area' ? '' : undefined}
       data-add-mode={tool === 'measure' || lineTool !== undefined || undefined}
+      data-line-drag={overLine || lineDrag !== undefined || undefined}
       {...handlers}
       onClick={() => {
         if (tool === 'measure' && measure.hover && !wasDrag()) measure.click(measure.hover.point);
@@ -540,14 +613,18 @@ export function ProfileView({
               height={size.height}
             />
           )}
-          {linePreview?.u !== undefined && (
-            <line
-              className="line-preview"
-              x1={toScreen({ x: linePreview.u, y: 0 }).x}
-              y1={0}
-              x2={toScreen({ x: linePreview.u, y: 0 }).x}
-              y2={size.height}
-            />
+          {[linePreview, ...(linePreview?.extra ?? [])].map((p, i) =>
+            p?.u === undefined ? null : (
+              <line
+                // biome-ignore lint/suspicious/noArrayIndexKey: náhľad osí je určený poradím
+                key={i}
+                className="line-preview"
+                x1={toScreen({ x: p.u, y: 0 }).x}
+                y1={0}
+                x2={toScreen({ x: p.u, y: 0 }).x}
+                y2={size.height}
+              />
+            ),
           )}
           {linePreview && dimensionFrame && linePreview.spans.length > 0 && (
             <ProfileDimensions

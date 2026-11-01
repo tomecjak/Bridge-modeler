@@ -85,6 +85,8 @@ export interface PlanDimensionSet {
 
 /** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
 const MERGE_PX = 3;
+/** posun ukazovateľa, od ktorého je stlačenie na osi uloženia ťahaním, nie výberom [px] */
+const DRAG_PX = 3;
 
 const MINOR_TICK_PX = 14;
 const LABEL_TICK_PX = 110;
@@ -119,8 +121,17 @@ export function PlanView({
   const [hover, setHover] = useState<Vec2>();
   /** ťahaný vrchol vybranej čiary */
   const [vertexDrag, setVertexDrag] = useState<{ id: string; index: number; point: Vec2 }>();
-  /** návrh osi uloženia pod kurzorom */
+  /** návrh osi uloženia pod kurzorom alebo pri ťahaní */
   const [linePreview, setLinePreview] = useState<LinePreview>();
+  /** ťahaná os uloženia: id, staničenie a bod obrazovky uchopenia */
+  const [lineDrag, setLineDrag] = useState<{
+    id: string;
+    sGrab: number;
+    start: Vec2;
+    moved: boolean;
+  }>();
+  /** kurzor nad osou uloženia (dá sa ťahať) */
+  const [overLine, setOverLine] = useState(false);
   const lineTool = (tool === 'bearingLine' || tool === 'support') && lineEditing ? tool : undefined;
   const [ref, size] = useElementSize<HTMLDivElement>();
   const samples = useMemo(() => sampleHorizontal(alignment, 1), [alignment]);
@@ -217,7 +228,54 @@ export function PlanView({
     return screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
+  const screenOf = (e: { clientX: number; clientY: number }): Vec2 | undefined => {
+    if (!ref.current) return undefined;
+    const rect = ref.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  function onPointerDown(e: PointerEvent<HTMLDivElement>) {
+    const screen = screenOf(e);
+    const hit =
+      tool === 'none' && e.button === 0 && lineEditing && screen
+        ? handleAt(screen, lineEditing.handles, toScreen, 'plan')
+        : undefined;
+    const point = hit && worldAt(e);
+    const s = point && alignment.project(point)?.s;
+    if (hit && screen && s !== undefined) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setLineDrag({ id: hit.id, sGrab: s, start: screen, moved: false });
+      return;
+    }
+    handlers.onPointerDown(e);
+  }
+
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
+    if (lineDrag && lineEditing) {
+      const screen = screenOf(e);
+      const point = worldAt(e);
+      if (!screen || !point) return;
+      const moved =
+        lineDrag.moved ||
+        Math.hypot(screen.x - lineDrag.start.x, screen.y - lineDrag.start.y) > DRAG_PX;
+      if (moved !== lineDrag.moved) setLineDrag({ ...lineDrag, moved });
+      const s = alignment.project(point)?.s;
+      if (moved && s !== undefined)
+        setLinePreview(
+          lineEditing.drag(lineDrag.id, lineDrag.sGrab, s, {
+            following: e.ctrlKey || e.metaKey,
+            snap: !e.shiftKey,
+          }),
+        );
+      return;
+    }
+    if (tool === 'none' && lineEditing && !e.buttons) {
+      const screen = screenOf(e);
+      setOverLine(
+        screen !== undefined &&
+          handleAt(screen, lineEditing.handles, toScreen, 'plan') !== undefined,
+      );
+    }
     if (vertexDrag) {
       const point = worldAt(e);
       if (point) setVertexDrag({ ...vertexDrag, point });
@@ -281,7 +339,17 @@ export function PlanView({
       role="application"
       aria-label={sk.viewport.plan}
       {...handlers}
+      onPointerDown={onPointerDown}
       onPointerUp={(e) => {
+        if (lineDrag) {
+          if (e.currentTarget.hasPointerCapture(e.pointerId))
+            e.currentTarget.releasePointerCapture(e.pointerId);
+          if (lineDrag.moved && linePreview) lineEditing?.commit(linePreview);
+          else lineEditing?.select(lineDrag.id);
+          setLineDrag(undefined);
+          setLinePreview(undefined);
+          return;
+        }
         handlers.onPointerUp(e);
         if (!vertexDrag) return;
         const round = (v: number) => Math.round(v * 1000) / 1000;
@@ -319,6 +387,7 @@ export function PlanView({
         if (!near) setSketch([...sketch, point]);
       }}
       data-add-mode={tool === 'line' || lineTool !== undefined || tool === 'measure' || undefined}
+      data-line-drag={overLine || lineDrag !== undefined || undefined}
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
@@ -438,8 +507,11 @@ export function PlanView({
               scale={view.sx}
             />
           ))}
-          {linePreview && linePreview.plan.length >= 2 && (
-            <polyline className="line-preview" points={polyline(linePreview.plan)} />
+          {[linePreview, ...(linePreview?.extra ?? [])].map((p, i) =>
+            p && p.plan.length >= 2 ? (
+              // biome-ignore lint/suspicious/noArrayIndexKey: náhľad osí je určený poradím
+              <polyline key={i} className="line-preview" points={polyline(p.plan)} />
+            ) : null,
           )}
           {linePreview?.frame && linePreview.spans.length > 0 && (
             <PlanDimensions

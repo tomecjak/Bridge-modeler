@@ -1,8 +1,9 @@
 import type { DimensionSegment } from '@bridge/drawing';
 import type { Vec2 } from '@bridge/geom';
+import type { DeckRange } from '@bridge/sections';
 import { SNAP_PX } from './measure.ts';
 
-/** Návrh polohy osi uloženia pod kurzorom (nástroje Os uloženia a Podpera, ADR 0017). */
+/** Návrh polohy osi uloženia pod kurzorom (nástroje Os uloženia a Podpera) alebo pri ťahaní (ADR 0017). */
 export interface LinePreview {
   deckId: string;
   /** spojité staničenie osi cesty (v osi mosta) */
@@ -21,6 +22,10 @@ export interface LinePreview {
     side: 1 | -1;
     reach: number;
   };
+  /** ťahanie: nové staničenia posunutých osí a rozsah NK (spojité staničenie osi cesty) */
+  moves?: { lines: { id: string; s: number }[]; deck: DeckRange };
+  /** ťahanie s Ctrl: ďalšie posunuté osi (náhľad) */
+  extra?: { plan: readonly Vec2[]; u?: number }[];
 }
 
 /** Os uloženia zobrazenej osi cesty na výber v pohľade. */
@@ -47,6 +52,20 @@ export interface LineEditing {
   preview(s: number, offset: number | undefined, snap: boolean): LinePreview | undefined;
   /** potvrdenie nástroja: nová os, alebo podpera (na voľnú os, inak s novou osou) */
   place(preview: LinePreview, tool: 'bearingLine' | 'support'): void;
+  /**
+   * Ťahanie osi `lineId` z miesta uchopenia `sGrab` na `sNow` (spojité staničenie osi cesty): posun po osi mosta,
+   * `following` posunie aj ďalšie osi, `snap` prichytí pole pred osou po 0,5 m.
+   */
+  drag(
+    lineId: string,
+    sGrab: number,
+    sNow: number,
+    options: { following: boolean; snap: boolean },
+  ): LinePreview | undefined;
+  /** zapíše posun z ťahania jedným krokom späť (osi a koniec NK) */
+  commit(preview: LinePreview): void;
+  /** klik na os: vyberie podperu na nej, inak os */
+  select(lineId: string): void;
 }
 
 /** Vzdialenosť bodu od úsečky [jednotky bodov]. */
