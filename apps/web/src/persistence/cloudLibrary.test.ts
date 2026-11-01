@@ -1,7 +1,12 @@
-import type { LibraryEntry } from '@bridge/model';
-import { slab } from '@bridge/sections';
+import type { LibraryEntry, SupportLibraryEntry } from '@bridge/model';
+import { builtinSupportLibrary, slab } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
-import { CloudConflictError, cloudProfileLibrary, detectCloud } from './cloudLibrary.ts';
+import {
+  CloudConflictError,
+  cloudProfileLibrary,
+  cloudSupportLibrary,
+  detectCloud,
+} from './cloudLibrary.ts';
 
 const entry = (id: string, name: string): LibraryEntry => ({
   id,
@@ -90,5 +95,25 @@ describe('cloudProfileLibrary', () => {
     await expect(lib.save(a)).rejects.toThrow('Položku medzitým zmenil kolega@firma.sk.');
     await expect(lib.remove('a')).rejects.toBeInstanceOf(CloudConflictError);
     expect(s.calls.at(-1)?.url).toBe('/api/library/a?version=1');
+  });
+});
+
+describe('cloudSupportLibrary', () => {
+  it('talks to the support library address with the expected version', async () => {
+    const support = (await builtinSupportLibrary().list())[0] as SupportLibraryEntry;
+    const s = server({
+      'GET /api/support-library': ok({
+        entries: [{ ...meta(entry('x', 'x'), 2), entry: support }],
+      }),
+      [`PUT /api/support-library/${encodeURIComponent(support.id)}`]: ok({
+        ...meta(entry('x', 'x'), 3),
+        entry: support,
+      }),
+    });
+    const lib = cloudSupportLibrary(s.fetchFn);
+    expect((await lib.list()).map((e) => e.name)).toEqual([support.name]);
+    await lib.save(support);
+    expect(s.calls.at(-1)).toMatchObject({ method: 'PUT', body: { expectedVersion: 2 } });
+    expect(lib.info(support.id)?.version).toBe(3);
   });
 });

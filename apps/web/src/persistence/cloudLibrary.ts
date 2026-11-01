@@ -1,4 +1,4 @@
-import type { LibraryEntry, ProfileLibrary } from '@bridge/model';
+import type { Library, LibraryEntry, ProfileLibrary, SupportLibraryEntry } from '@bridge/model';
 
 /** Verzia a autori položky firemnej knižnice (ADR 0015). */
 export interface CloudEntryInfo {
@@ -9,8 +9,8 @@ export interface CloudEntryInfo {
   updatedAt: string;
 }
 
-interface CloudEntry extends CloudEntryInfo {
-  entry: LibraryEntry;
+interface CloudEntry<E> extends CloudEntryInfo {
+  entry: E;
 }
 
 /** Položku medzitým zmenil niekto iný (409); hláška je zo servera. */
@@ -41,29 +41,35 @@ async function failure(r: Response): Promise<Error> {
   return r.status === 409 ? new CloudConflictError(message) : new Error(message);
 }
 
+/** Firemná knižnica s verziami položiek (na kontrolu súbežných zmien). */
+export type CloudLibrary<E extends { id: string }> = Library<E> & {
+  info(id: string): CloudEntryInfo | undefined;
+};
+
 /**
- * Firemná knižnica prierezov za rozhraním `ProfileLibrary` (API Workera, D1). Pamätá si verzie načítaných položiek
- * a posiela ich pri uložení a odstránení, aby sa neprepísala zmena kolegu (409 → `CloudConflictError`).
+ * Firemná knižnica za rozhraním `Library` (API Workera `path`, D1; ADR 0015, 0019). Pamätá si verzie načítaných
+ * položiek a posiela ich pri uložení a odstránení, aby sa neprepísala zmena kolegu (409 → `CloudConflictError`).
  */
-export function cloudProfileLibrary(
-  fetchFn: typeof fetch = fetch,
-  name = 'Firemná knižnica',
-): ProfileLibrary & { info(id: string): CloudEntryInfo | undefined } {
+export function cloudLibrary<E extends { id: string }>(
+  path: string,
+  fetchFn: typeof fetch,
+  name: string,
+): CloudLibrary<E> {
   const known = new Map<string, CloudEntryInfo>();
-  const remember = (e: CloudEntry) => {
+  const remember = (e: CloudEntry<E>) => {
     const { entry, ...info } = e;
     known.set(entry.id, info);
     return entry;
   };
-  const url = (id: string) => `/api/library/${encodeURIComponent(id)}`;
+  const url = (id: string) => `${path}/${encodeURIComponent(id)}`;
   return {
     name,
     readOnly: false,
     info: (id) => known.get(id),
     async list() {
-      const r = await fetchFn('/api/library');
+      const r = await fetchFn(path);
       if (!r.ok) throw await failure(r);
-      const { entries } = (await r.json()) as { entries: CloudEntry[] };
+      const { entries } = (await r.json()) as { entries: CloudEntry<E>[] };
       known.clear();
       return entries.map(remember);
     },
@@ -71,7 +77,7 @@ export function cloudProfileLibrary(
       const r = await fetchFn(url(id));
       if (r.status === 404) return undefined;
       if (!r.ok) throw await failure(r);
-      return remember((await r.json()) as CloudEntry);
+      return remember((await r.json()) as CloudEntry<E>);
     },
     async save(entry) {
       const version = known.get(entry.id)?.version;
@@ -83,7 +89,7 @@ export function cloudProfileLibrary(
         ),
       });
       if (!r.ok) throw await failure(r);
-      remember((await r.json()) as CloudEntry);
+      remember((await r.json()) as CloudEntry<E>);
     },
     async remove(id) {
       const version = known.get(id)?.version ?? 0;
@@ -93,3 +99,15 @@ export function cloudProfileLibrary(
     },
   };
 }
+
+/** Firemná knižnica prierezov (ADR 0015). */
+export const cloudProfileLibrary = (
+  fetchFn: typeof fetch = fetch,
+  name = 'Firemná knižnica',
+): ProfileLibrary & CloudLibrary<LibraryEntry> => cloudLibrary('/api/library', fetchFn, name);
+
+/** Firemná knižnica podpier (ADR 0019). */
+export const cloudSupportLibrary = (
+  fetchFn: typeof fetch = fetch,
+  name = 'Firemná knižnica',
+): CloudLibrary<SupportLibraryEntry> => cloudLibrary('/api/support-library', fetchFn, name);

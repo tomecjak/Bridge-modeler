@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Worker: statické súbory aplikácie, API firemnej knižnice prierezov (D1), overenie Cloudflare Access (ADR 0015).",
+  "description": "Cloudflare Worker: statické súbory aplikácie, API firemnej knižnice prierezov a podpier (D1), overenie Cloudflare Access (ADR 0015, 0019).",
   "scripts": {
     "dev": "wrangler d1 migrations apply DB --local && wrangler dev",
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",

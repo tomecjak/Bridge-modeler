@@ -1,4 +1,4 @@
-import type { LibraryEntry } from '@bridge/model';
+import type { LibraryEntry, SupportLibraryEntry } from '@bridge/model';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { type Env, handleApi } from '../src/index.ts';
 import { testDatabase } from './d1.ts';
@@ -101,5 +101,52 @@ describe('library API', () => {
 
   it('answers unsupported methods with 405', async () => {
     expect((await call('POST', '/api/library')).status).toBe(405);
+  });
+});
+
+const supportEntry = (id: string, name: string): SupportLibraryEntry => ({
+  id,
+  name,
+  support: {
+    kind: 'pier',
+    geometry: { type: 'wall', thickness: '1.2', length: '7.5' },
+    footing: { length: '9', width: '6.5', thickness: '1.5' },
+    connection: 'bearing',
+    bearingHeight: '0.45',
+    foundation: { mode: 'terrain', cover: '0.5', height: '8' },
+  },
+});
+
+describe('support library API (ADR 0019)', () => {
+  const putSupport = (e: SupportLibraryEntry, expectedVersion?: number) =>
+    call('PUT', `/api/support-library/${e.id}`, {
+      entry: e,
+      ...(expectedVersion ? { expectedVersion } : {}),
+    });
+
+  it('stores support types apart from profiles with versions and authors', async () => {
+    expect((await putSupport(supportEntry('s', 'Stenový pilier'))).status).toBe(201);
+    const list = (await (await call('GET', '/api/support-library')).json()) as {
+      entries: { entry: SupportLibraryEntry; version: number }[];
+    };
+    expect(list.entries).toMatchObject([
+      { entry: { id: 's', support: { geometry: { type: 'wall' } } }, version: 1 },
+    ]);
+    const profiles = (await (await call('GET', '/api/library')).json()) as { entries: unknown[] };
+    expect(profiles.entries).toEqual([]);
+    expect((await putSupport(supportEntry('s', 'Stena'), 1)).status).toBe(200);
+    expect((await putSupport(supportEntry('s', 'Stena 2'), 1)).status).toBe(409);
+    expect((await call('DELETE', '/api/support-library/s?version=2')).status).toBe(204);
+  });
+
+  it('rejects a level-founded type and unknown addresses', async () => {
+    const level = supportEntry('s', 'Kóta');
+    const r = await call('PUT', '/api/support-library/s', {
+      entry: { ...level, support: { ...level.support, foundation: { mode: 'level' } } },
+    });
+    expect(r.status).toBe(400);
+    expect(await r.json()).toMatchObject({ code: 'InvalidEntry' });
+    expect((await call('GET', '/api/support-library/a/b')).status).toBe(404);
+    expect((await call('GET', '/api/support-libraryx')).status).toBe(404);
   });
 });

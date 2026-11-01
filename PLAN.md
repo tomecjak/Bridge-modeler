@@ -458,7 +458,8 @@ Rozhodnutia 2026-11-01 (plan mode): terén pre založenie v strede podpery (os u
   - `packages/model/src/supportLibrary.ts`: `SupportType` (založenie len terén / výška), `SupportLibraryEntry`, `parseSupportLibrary` / `serializeSupportLibrary` (`NotASupportLibrary`), `supportFromType` (ložiská z NK, opora a jej základ na šírku NK, stĺpy pod ložiská), `typeFromSupport` (kóta → výška podpery); rozhranie `Library<E>` a `parseLibraryFile` spoločné s prierezmi.
 - [x] šablóny: stenový pilier, jeden stĺp, dva stĺpy, opora na pilótach (212-00), masívna opora, integrovaná opora — rozmery potvrdí projektant
   - `templates/supports.ts` (`SUPPORT_TEMPLATES`, `builtinSupportLibrary`): stena 1,2 × 7,5 na základe 9 × 6,5 × 1,5; stĺp ⌀ 1,5 votknutý, základ 5 × 5 × 1,5; dva stĺpy ⌀ 1,2, základ 6 × 3,5 × 1,2; opora na pilótach (t 0,84, výška 1,10); masívna opora (driek 1,5, základ × 5 × 1,5, výška 5); integrovaná opora (t_s 1,2, votknutie, výška 4). Test: všetky stoja na 212-00 bez chýb.
-- [ ] firemná knižnica podpier v D1 (tabuľka `support_library`, API `/api/support-library`, doplnok ADR 0015)
+- [x] firemná knižnica podpier v D1 (tabuľka `support_library`, API `/api/support-library`, doplnok ADR 0015)
+  - migrácia `0002_support_library.sql`; `apps/worker/src/library.ts` zovšeobecnený na tabuľky (`PROFILE_TABLE`, `SUPPORT_TABLE`) s rovnakými pravidlami (verzia, 409, autori); klient `cloudLibrary(path)` s `cloudProfileLibrary` a `cloudSupportLibrary`. Testy API cez `node:sqlite` so skutočnými migráciami.
 - [ ] UI: dialóg Knižnica podpier s náhľadom (šablóny, firemná, projekt, súbor), typ piliera a opory v karte nástroja Podpera, typy v Rozložení polí, použitie typu na vybranú podperu, skupina Založenie vo vlastnostiach podpery
 
 **Hotové, keď:** nový pilier stojí základom v teréne, zmena režimu prepočíta výšku a typ z firemnej knižnice sa vloží jedným klikom.
