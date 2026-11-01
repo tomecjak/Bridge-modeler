@@ -50,7 +50,18 @@ export interface ProfileInput {
   lines?: readonly ProfileBearingLine[];
   /** terénne čiary (u, výška v m n. m.) */
   terrain: readonly (readonly { u: number; z: number }[])[];
+  /** prekážky: rez voľným prierezom (u, lokálne z) a u priesečníkov s osou prekážky (ADR 0020) */
+  obstacles?: readonly ProfileObstacle[];
   scale?: number;
+}
+
+/** Prekážka v pozdĺžnom profile: obrys voľného prierezu a zvislica kríženia s popisom. */
+export interface ProfileObstacle {
+  id: string;
+  /** popis pri zvislici (km, názov, druh, pri vodnom toku Q100) */
+  label: string;
+  polygons: readonly Polygon2D[];
+  axis: readonly number[];
 }
 
 /** Presah obdĺžnika okolo pôdorysu podpier pri výbere úsekov čiary [m]. */
@@ -330,6 +341,27 @@ export function profileDrawing(input: ProfileInput): Drawing {
   }
   const mm = (v: number) => (v * scale) / 1000;
   const deckOuter = input.decks.flatMap((d) => d.cut.outer);
+  for (const o of input.obstacles ?? []) {
+    for (const p of o.polygons) entities.push(polyline('clearance', lift(p), true, o.id));
+    const ys = o.polygons.flatMap((p) => p.map((q) => q.y));
+    if (ys.length === 0) continue;
+    for (const x of o.axis) {
+      const deckTop = highestCrossing(deckOuter, x);
+      const yBottom = Math.min(...ys) + z0 - mm(3);
+      const yTop = Math.max(Math.max(...ys), deckTop ?? -Infinity) + z0 + mm(3);
+      entities.push(polyline('obstacle', [vec2(x, yBottom), vec2(x, yTop)], false, o.id));
+      entities.push({
+        kind: 'text',
+        layer: 'label',
+        at: vec2(x - th / 2, yBottom + mm(1)),
+        text: o.label,
+        height: th,
+        rotation: Math.PI / 2,
+        align: 'left',
+        owner: o.id,
+      });
+    }
+  }
   for (const l of input.lines ?? []) {
     const x = l.u;
     // výšky v m n. m.: NK a podpery na osi, bez nich niveleta

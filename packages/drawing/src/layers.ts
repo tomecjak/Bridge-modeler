@@ -21,6 +21,10 @@ export const LAYERS = {
   grade: { name: 'NIVELETA', color: 1, linetype: 'CONTINUOUS' },
   label: { name: 'POPIS', color: 7, linetype: 'CONTINUOUS' },
   planLine: { name: 'CIARY', color: 2, linetype: 'DASHED' },
+  /** os prekážky a zvislica kríženia v profile (ADR 0020) */
+  obstacle: { name: 'PREKAZKY', color: 210, linetype: 'DASHED' },
+  /** voľný (priechodný) prierez prekážky */
+  clearance: { name: 'VOLNY_PRIEREZ', color: 140, linetype: 'CONTINUOUS' },
 } as const satisfies Record<string, Layer>;
 
 export type LayerId = keyof typeof LAYERS;
@@ -39,6 +43,8 @@ export const ACI_RGB: Record<number, string> = {
   7: '#000000',
   8: '#808080',
   30: '#ff7f00',
+  140: '#0080c0',
+  210: '#c00080',
 };
 
 /** Vzor čiar v mm na papieri (čiara, medzera, …). */

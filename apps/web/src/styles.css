@@ -9,6 +9,8 @@
   --terrain: #8a6d3b;
   --terrain-left: #0f766e;
   --terrain-right: #be185d;
+  --clearance: #0e7490;
+  --obstacle: #a21caf;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
@@ -26,6 +28,8 @@
     --terrain: #c9a66b;
     --terrain-left: #2dd4bf;
     --terrain-right: #f472b6;
+    --clearance: #22d3ee;
+    --obstacle: #e879f9;
   }
 }
 
@@ -1008,6 +1012,25 @@ text.dw-stationing {
 
 .dw-plan-line.dw-selected {
   stroke-width: 2.5;
+}
+
+/* prekážka a voľný prierez (ADR 0020) */
+.dw-obstacle {
+  fill: none;
+  stroke: var(--obstacle);
+  stroke-width: 1.2;
+  stroke-dasharray: 8 3 2 3;
+}
+
+.dw-clearance {
+  fill: color-mix(in srgb, var(--clearance) 14%, transparent);
+  stroke: var(--clearance);
+  stroke-width: 1.2;
+}
+
+.dw-obstacle.dw-selected,
+.dw-clearance.dw-selected {
+  stroke-width: 2.4;
 }
 
 .plan-line-preview {

@@ -10,17 +10,19 @@ import {
 import {
   deckCrossbeams,
   evaluateBearingLine,
+  evaluateObstacle,
   evaluateSupport,
   type LawRef,
   type SupportContext,
   type SupportResult,
 } from '@bridge/sections';
+import { clearanceMesh } from './clearance.ts';
 import { type GeometryKernel, MeshKernel } from './kernel.ts';
 import { meshBounds, type TriangleMesh } from './mesh.ts';
 import { superstructureMesh } from './superstructure.ts';
 import { supportMesh } from './supports.ts';
 
-export type SceneObjectKind = 'superstructure' | 'support';
+export type SceneObjectKind = 'superstructure' | 'support' | 'clearance';
 
 export interface SceneObject {
   kind: SceneObjectKind;
@@ -161,6 +163,50 @@ export function buildScene(
         };
       });
     });
+    // voľné prierezy prekážok (ADR 0020): kľúč z prekážky, osí ciest, osí mostov, rozsahov NK a čiar
+    for (const o of project.obstacles) {
+      const names = new Set([
+        ...(o.reference.type === 'station'
+          ? [o.reference.alignment]
+          : o.reference.curve.type === 'alignment'
+            ? [o.reference.curve.name]
+            : []),
+        ...project.bridgeAxes.map((a) => a.alignment),
+      ]);
+      const key = JSON.stringify([
+        o,
+        origin,
+        params,
+        project.alignments.filter((a) => names.has(a.name)),
+        project.bridgeAxes,
+        project.superstructures.map((d) => [d.id, d.bridgeAxis, d.from, d.to]),
+        o.reference.type === 'curve' && o.reference.curve.type === 'planLine'
+          ? project.planLines.find(
+              (l) =>
+                o.reference.type === 'curve' && l.id === (o.reference.curve as { id: string }).id,
+            )
+          : undefined,
+      ]);
+      reuse('clearance', o.id, key, () => {
+        const r = evaluateObstacle(
+          {
+            alignments: alignments(),
+            parameters: parameters(),
+            bridgeAxes: project.bridgeAxes,
+            superstructures: project.superstructures,
+            planLines: project.planLines,
+          },
+          o,
+        );
+        return {
+          kind: 'clearance',
+          id: o.id,
+          name: o.name,
+          mesh: clearanceMesh(kernel, r),
+          issues: r.issues,
+        };
+      });
+    }
   }
   const removed = [...cache.entries.keys()].filter((k) => !seen.has(k));
   for (const k of removed) cache.entries.delete(k);

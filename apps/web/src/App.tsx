@@ -119,7 +119,13 @@ import type { Command, ElementCollection } from './store/commands.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
 import { duplicateElement } from './store/duplicate.ts';
-import { newObstacle, obstacleName, useObstacleState } from './store/obstacles.ts';
+import {
+  newObstacle,
+  obstacleName,
+  planObstacles,
+  sectionClearances,
+  useObstacleState,
+} from './store/obstacles.ts';
 import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { type ProfileAxisKey, useProfileView } from './store/profile.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
@@ -418,6 +424,7 @@ export function App() {
     planLines: project.planLines,
     tins,
     edgeTerrain: edgeTerrainOn,
+    obstacles: obstacleState,
   });
   const profileView = profile.drawing;
   /** kóty NK na zobrazenej osi: reťazce po osi mosta, poloha v pôdoryse a strana mimo obrysu NK */
@@ -450,8 +457,9 @@ export function App() {
         supports: roadSupports,
         otherAlignments,
         planLines: project.planLines,
+        obstacles: planObstacles(obstacleState),
       }),
-    [road, roadDecks, roadSupports, otherAlignments, project.planLines],
+    [road, roadDecks, roadSupports, otherAlignments, project.planLines, obstacleState],
   );
 
   /** Nakreslená čiara v pôdoryse (súradnice na mm) sa pridá a vyberie. */
@@ -480,10 +488,13 @@ export function App() {
     });
   }
   const drawnSections = sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []));
+  const sectionS = road?.stationing.fromDisplay(sectionAt);
   const sectionView = sectionDrawing({
     decks: drawnSections,
     supports: sectionSupports,
     terrain: sectionTerrain.flatMap((t) => t.runs),
+    clearances:
+      road && sectionS !== undefined ? sectionClearances(obstacleState, road, sectionS) : [],
   });
 
   /** Prierez vybraný v strome: editor s hodnotami parametrov z NK, ktorá ho používa, inak predvolené. */
@@ -1207,6 +1218,7 @@ export function App() {
       supports: roadSupports,
       otherAlignments,
       planLines: project.planLines,
+      obstacles: planObstacles(obstacleState),
       stationing: { step: 20, labelStep: 100 },
     });
     const origin = project.crs.origin;
@@ -2266,14 +2278,21 @@ export function App() {
                   ? { kind: 'superstructure', id: selectedElement.id }
                   : selectedElement?.collection === 'supports'
                     ? { kind: 'support', id: selectedElement.id }
-                    : undefined
+                    : selectedElement?.collection === 'obstacles'
+                      ? { kind: 'clearance', id: selectedElement.id }
+                      : undefined
               }
               onSelect={(picked) => {
                 if (!picked) {
                   setSelectedElement(undefined);
                   return;
                 }
-                const collection = picked.kind === 'support' ? 'supports' : 'superstructures';
+                const collection =
+                  picked.kind === 'support'
+                    ? 'supports'
+                    : picked.kind === 'clearance'
+                      ? 'obstacles'
+                      : 'superstructures';
                 setSelectedElement({ collection, id: picked.id });
                 const station = lineStationOf(picked.id);
                 if (station !== undefined) setSectionStation(station);

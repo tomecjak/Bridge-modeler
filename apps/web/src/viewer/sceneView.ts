@@ -84,7 +84,10 @@ export class SceneView {
   private readonly controls: OrbitControls;
   private readonly entries = new Map<string, Entry>();
   private readonly raycaster = new Raycaster();
-  private readonly materials: Record<SceneObjectKind | 'selected', MeshStandardMaterial>;
+  private readonly materials: Record<
+    SceneObjectKind | 'selected' | 'selectedClearance',
+    MeshStandardMaterial
+  >;
   private readonly edgeMaterial: LineBasicMaterial;
   private readonly axisMaterial: LineBasicMaterial;
   private readonly capMaterial = new MeshBasicMaterial({ side: DoubleSide });
@@ -126,7 +129,22 @@ export class SceneView {
     this.materials = {
       superstructure: new MeshStandardMaterial({ color: 0xc4c0b6, roughness: 0.9 }),
       support: new MeshStandardMaterial({ color: 0xa8a399, roughness: 0.9 }),
+      // voľný prierez prekážky (ADR 0020): priesvitný, nezakrýva most ani terén
+      clearance: new MeshStandardMaterial({
+        color: 0x0e7490,
+        roughness: 1,
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+      }),
       selected: new MeshStandardMaterial({ color: 0xc4c0b6, roughness: 0.9 }),
+      selectedClearance: new MeshStandardMaterial({
+        color: 0xc4c0b6,
+        roughness: 1,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false,
+      }),
     };
     for (const m of Object.values(this.materials)) {
       m.side = DoubleSide; // pri reze rovinou je vidno aj vnútro
@@ -146,6 +164,7 @@ export class SceneView {
   setTheme(theme: Theme): void {
     this.scene.background = new Color(theme.background);
     this.materials.selected.color.set(theme.accent);
+    this.materials.selectedClearance.color.set(theme.accent);
     this.capMaterial.color.set(theme.cut);
     this.edgeMaterial.color.set(theme.edges);
     this.requestRender();
@@ -195,6 +214,11 @@ export class SceneView {
     this.requestRender();
   }
 
+  /** Materiál vybraného objektu; voľný prierez ostane priesvitný. */
+  private selectedMaterial(kind: SceneObjectKind): MeshStandardMaterial {
+    return kind === 'clearance' ? this.materials.selectedClearance : this.materials.selected;
+  }
+
   setSelected(picked: Picked | undefined): void {
     const key = picked && `${picked.kind}:${picked.id}`;
     if (key === this.selectedKey) return;
@@ -202,7 +226,7 @@ export class SceneView {
     if (prev) prev.mesh.material = this.materials[prev.kind];
     this.selectedKey = key;
     const next = key ? this.entries.get(key) : undefined;
-    if (next) next.mesh.material = this.materials.selected;
+    if (next) next.mesh.material = this.selectedMaterial(next.kind);
     this.requestRender();
   }
 
@@ -354,7 +378,7 @@ export class SceneView {
     g.setIndex(new BufferAttribute(o.buffers.indices, 1));
     g.computeBoundingSphere();
     const selected = o.key === this.selectedKey;
-    const mesh = new Mesh(g, selected ? this.materials.selected : this.materials[o.kind]);
+    const mesh = new Mesh(g, selected ? this.selectedMaterial(o.kind) : this.materials[o.kind]);
     const c = o.buffers.center;
     mesh.position.set(c.x, c.y, c.z);
     const edges = new LineSegments(new EdgesGeometry(g, EDGE_ANGLE), this.edgeMaterial);

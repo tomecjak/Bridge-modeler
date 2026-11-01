@@ -8,7 +8,16 @@ import {
   type Superstructure,
 } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
-import { evaluateObstacle, type ObstacleContext } from './obstacles.ts';
+import {
+  CLEARANCE_REACH,
+  clearanceAlong,
+  clearanceAt,
+  clearanceFootprint,
+  clearanceOutline,
+  clearanceShape,
+  evaluateObstacle,
+  type ObstacleContext,
+} from './obstacles.ts';
 
 const ORIGIN = { x: 0, y: 0, z: 200 };
 const deg = (a: number) => (a * Math.PI) / 180;
@@ -200,5 +209,61 @@ describe('evaluateObstacle — kríženie s osou mosta', () => {
       slopeRight: 0.025,
       chamfer: 0,
     });
+  });
+});
+
+describe('voľný prierez', () => {
+  const manual = (angle: string) =>
+    evaluateObstacle(
+      context(),
+      obstacle(
+        { type: 'station', alignment: 'cesta', station: 1130, angle },
+        { kind: 'constant', value: '296.5' },
+      ),
+    );
+
+  it('slopes the bottom from the axis and cuts the top corners', () => {
+    const c = { left: 5, right: 4, height: 4.8, slopeLeft: 0.025, slopeRight: -0.02, chamfer: 0.5 };
+    expect(clearanceShape(c, 0)?.bottom).toBeCloseTo(0, 12);
+    expect(clearanceShape(c, 0)?.top).toBeCloseTo(4.8, 12);
+    expect(clearanceShape(c, -5)?.bottom).toBeCloseTo(-0.125, 12);
+    expect(clearanceShape(c, -5)?.top).toBeCloseTo(-0.125 + 4.3, 12);
+    expect(clearanceShape(c, 3.75)?.top).toBeCloseTo(0.075 + 4.8 - 0.25, 12);
+    expect(clearanceShape(c, 4.01)).toBeUndefined();
+    expect(clearanceOutline(c)).toHaveLength(8);
+    expect(clearanceOutline({ ...c, chamfer: 0 })).toHaveLength(6);
+  });
+
+  it('gives the bottom and top of the clearance at a plan point', () => {
+    const r = manual('90');
+    // bod osi mosta (cesta na sever) v krížení: os prekážky smeruje na západ, odsadenie 0
+    const at = clearanceAt(r, vec2(0, 130));
+    expect(at?.bottom).toBeCloseTo(96.5, 9);
+    expect(at?.top).toBeCloseTo(96.5 + 4.8, 9);
+    // 2 m na sever = 2 m vpravo od osi prekážky smerujúcej na západ
+    expect(clearanceAt(r, vec2(0, 132))?.bottom).toBeCloseTo(96.5 - 0.05, 9);
+    expect(clearanceAt(r, vec2(0, 136))).toBeUndefined();
+  });
+
+  it('cuts the clearance along the bridge axis to (l + r) / sin α wide', () => {
+    const r = manual('60');
+    const line = [0, 100, 200, 300].map((s) => ({ u: s, point: vec2(0, s) }));
+    const cut = clearanceAlong(r, line);
+    expect(cut.polygons).toHaveLength(1);
+    const us = (cut.polygons[0] ?? []).map((p) => p.x);
+    expect(Math.max(...us) - Math.min(...us)).toBeCloseTo(11 / Math.sin(deg(60)), 9);
+    expect(cut.axis).toHaveLength(1);
+    expect(cut.axis[0]).toBeCloseTo(130, 9);
+    const top = Math.max(...(cut.polygons[0] ?? []).map((p) => p.y));
+    expect(top).toBeCloseTo(96.5 + 4.8, 9);
+  });
+
+  it('draws the plan footprint of the clearance around the crossing', () => {
+    const r = manual('90');
+    const [band] = clearanceFootprint(r);
+    const xs = (band ?? []).map((p) => p.x);
+    const ys = (band ?? []).map((p) => p.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(11, 9);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(2 * CLEARANCE_REACH, 6);
   });
 });

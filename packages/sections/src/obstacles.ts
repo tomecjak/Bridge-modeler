@@ -288,3 +288,229 @@ export function evaluateObstacle(ctx: ObstacleContext, obstacle: Obstacle): Obst
     issues: issues.map((i) => ({ owner, ...i })),
   };
 }
+
+/** Dosah voľného prierezu po osi prekážky od kríženia s osou mosta (kreslenie a kontroly, ADR 0020) [m]. */
+export const CLEARANCE_REACH = 60;
+
+/** Bod pôdorysu voči osi prekážky: dĺžka po osi a odsadenie (kladné vpravo v smere osi). */
+export interface ObstacleFramePoint {
+  t: number;
+  x: number;
+}
+
+/** Úseky osi prekážky v okolí krížení (± `CLEARANCE_REACH`), prekrývajúce sa spojené. */
+export function clearanceRegions(r: ObstacleResult): ObstaclePoint[][] {
+  const ranges = r.crossings
+    .map((c) => [c.t - CLEARANCE_REACH, c.t + CLEARANCE_REACH] as [number, number])
+    .sort((p, q) => p[0] - q[0]);
+  const merged: [number, number][] = [];
+  for (const range of ranges) {
+    const last = merged.at(-1);
+    if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
+    else merged.push([...range]);
+  }
+  return merged.map(([a, b]) => slicePoints(r.points, a, b)).filter((p) => p.length >= 2);
+}
+
+/** Body osi medzi dĺžkami a a b (konce interpolované). */
+function slicePoints(points: readonly ObstaclePoint[], a: number, b: number): ObstaclePoint[] {
+  const out: ObstaclePoint[] = [];
+  const at = (t: number): ObstaclePoint | undefined => {
+    for (let i = 0; i + 1 < points.length; i++) {
+      const p = points[i] as ObstaclePoint;
+      const q = points[i + 1] as ObstaclePoint;
+      if (t >= p.t && t <= q.t && q.t > p.t) {
+        const k = (t - p.t) / (q.t - p.t);
+        return {
+          t,
+          point: vec2(
+            p.point.x + k * (q.point.x - p.point.x),
+            p.point.y + k * (q.point.y - p.point.y),
+          ),
+        };
+      }
+    }
+    return undefined;
+  };
+  const first = at(Math.max(a, points[0]?.t ?? a));
+  if (first) out.push(first);
+  for (const p of points) if (p.t > a && p.t < b) out.push(p);
+  const last = at(Math.min(b, points.at(-1)?.t ?? b));
+  if (last && (out.length === 0 || last.t > (out.at(-1) as ObstaclePoint).t + 1e-9)) out.push(last);
+  return out;
+}
+
+/** Bod pôdorysu voči úseku osi prekážky; mimo koncov úseku undefined. */
+export function obstacleFrame(
+  region: readonly ObstaclePoint[],
+  p: Vec2,
+): ObstacleFramePoint | undefined {
+  let best: { d: number; t: number; x: number; k: number; i: number } | undefined;
+  for (let i = 0; i + 1 < region.length; i++) {
+    const a = region[i] as ObstaclePoint;
+    const b = region[i + 1] as ObstaclePoint;
+    const dx = b.point.x - a.point.x;
+    const dy = b.point.y - a.point.y;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 1e-18) continue;
+    const k = ((p.x - a.point.x) * dx + (p.y - a.point.y) * dy) / len2;
+    const kc = Math.min(1, Math.max(0, k));
+    const fx = a.point.x + kc * dx;
+    const fy = a.point.y + kc * dy;
+    const d = Math.hypot(p.x - fx, p.y - fy);
+    if (best && d >= best.d) continue;
+    const len = Math.sqrt(len2);
+    // vľavo od smeru osi je kríženie kladné → odsadenie vpravo kladné
+    const x = -(dx * (p.y - a.point.y) - dy * (p.x - a.point.x)) / len;
+    best = { d, t: a.t + kc * (b.t - a.t), x, k, i };
+  }
+  if (!best) return undefined;
+  if ((best.i === 0 && best.k < -1e-9) || (best.i === region.length - 2 && best.k > 1 + 1e-9))
+    return undefined;
+  return { t: best.t, x: best.x };
+}
+
+/**
+ * Voľný prierez v odsadení `x` od osi prekážky voči úrovni v osi (ADR 0020): spodok sklonený od osi, vrch o výšku
+ * vyššie, pri okraji znížený skosením; mimo šírky undefined.
+ */
+export function clearanceShape(
+  c: ClearanceValues,
+  x: number,
+): { bottom: number; top: number } | undefined {
+  const eps = 1e-9;
+  if (x < -c.left - eps || x > c.right + eps) return undefined;
+  const left = x < 0;
+  const ax = Math.abs(x);
+  const bottom = -(left ? c.slopeLeft : c.slopeRight) * ax;
+  const edge = left ? c.left : c.right;
+  const ch = Math.min(c.chamfer, c.height, edge);
+  const dist = edge - ax;
+  const reduction = dist < ch ? ch - Math.max(dist, 0) : 0;
+  return { bottom, top: bottom + c.height - reduction };
+}
+
+/** Obrys voľného prierezu v reze kolmo na os (x vpravo, y nad úrovňou v osi), proti smeru hodín. */
+export function clearanceOutline(c: ClearanceValues): Vec2[] {
+  const at = (x: number, top: boolean) => {
+    const s = clearanceShape(c, x) as { bottom: number; top: number };
+    return vec2(x, top ? s.top : s.bottom);
+  };
+  const ch = (edge: number) => Math.min(c.chamfer, c.height, edge);
+  const out: Vec2[] = [at(-c.left, false), at(0, false), at(c.right, false), at(c.right, true)];
+  if (ch(c.right) > 1e-9) out.push(at(c.right - ch(c.right), true));
+  out.push(at(0, true));
+  if (ch(c.left) > 1e-9) out.push(at(-c.left + ch(c.left), true));
+  out.push(at(-c.left, true));
+  // odstráni zhodné susedné body (napr. nulová šírka na jednej strane)
+  return out.filter((p, i) => {
+    const q = out[(i + 1) % out.length] as Vec2;
+    return Math.hypot(p.x - q.x, p.y - q.y) > 1e-9;
+  });
+}
+
+/** Spodok a vrch voľného prierezu v bode pôdorysu (lokálne z); mimo voľného prierezu undefined. */
+export function clearanceAt(
+  r: ObstacleResult,
+  p: Vec2,
+): { t: number; x: number; bottom: number; top: number } | undefined {
+  if (!r.clearance) return undefined;
+  for (const region of clearanceRegions(r)) {
+    const f = obstacleFrame(region, p);
+    const shape = f && clearanceShape(r.clearance, f.x);
+    const level = f && r.levelAt(f.t);
+    if (f && shape && level !== undefined)
+      return { ...f, bottom: level + shape.bottom, top: level + shape.top };
+  }
+  return undefined;
+}
+
+/**
+ * Rez voľným prierezom ľubovoľnou čiarou v pôdoryse (profil, priečny rez; ADR 0020): polygóny (u, lokálne z)
+ * a u priesečníkov čiary s osou prekážky. Úseky čiary sa zahustia v odsadeniach okrajov, skosení a osi, takže
+ * šírka v čiare (napr. (l + r) / sin α v osi mosta) vyjde presne.
+ */
+export function clearanceAlong(
+  r: ObstacleResult,
+  line: readonly { u: number; point: Vec2 }[],
+): { polygons: Vec2[][]; axis: number[] } {
+  const c = r.clearance;
+  const polygons: Vec2[][] = [];
+  const axis: number[] = [];
+  if (!c) return { polygons, axis };
+  const keys = [
+    -c.left,
+    -c.left + Math.min(c.chamfer, c.left),
+    0,
+    c.right - Math.min(c.chamfer, c.right),
+    c.right,
+  ];
+  for (const region of clearanceRegions(r)) {
+    const samples: { u: number; point: Vec2 }[] = [];
+    for (let i = 0; i < line.length; i++) {
+      const a = line[i] as { u: number; point: Vec2 };
+      samples.push(a);
+      const b = line[i + 1];
+      if (!b) continue;
+      const fa = obstacleFrame(region, a.point);
+      const fb = obstacleFrame(region, b.point);
+      if (!fa || !fb || Math.abs(fb.x - fa.x) < 1e-12) continue;
+      const ks = keys
+        .map((k) => (k - fa.x) / (fb.x - fa.x))
+        .filter((k) => k > 1e-9 && k < 1 - 1e-9)
+        .sort((p, q) => p - q);
+      for (const k of ks)
+        samples.push({
+          u: a.u + k * (b.u - a.u),
+          point: vec2(
+            a.point.x + k * (b.point.x - a.point.x),
+            a.point.y + k * (b.point.y - a.point.y),
+          ),
+        });
+    }
+    let run: { u: number; bottom: number; top: number }[] = [];
+    const flush = () => {
+      if (run.length >= 2 && (run.at(-1)?.u ?? 0) - (run[0]?.u ?? 0) > 1e-6)
+        polygons.push([
+          ...run.map((s) => vec2(s.u, s.top)),
+          ...[...run].reverse().map((s) => vec2(s.u, s.bottom)),
+        ]);
+      run = [];
+    };
+    for (const s of samples) {
+      const f = obstacleFrame(region, s.point);
+      const shape = f && clearanceShape(c, f.x);
+      const level = f && r.levelAt(f.t);
+      if (!f || !shape || level === undefined) {
+        flush();
+        continue;
+      }
+      if (Math.abs(f.x) < 1e-6) axis.push(s.u);
+      run.push({ u: s.u, bottom: level + shape.bottom, top: level + shape.top });
+    }
+    flush();
+  }
+  return { polygons, axis };
+}
+
+/** Pás voľného prierezu v pôdoryse (okraje vľavo a vpravo od osi prekážky v okolí krížení). */
+export function clearanceFootprint(r: ObstacleResult): Vec2[][] {
+  const c = r.clearance;
+  if (!c) return [];
+  return clearanceRegions(r).map((region) => {
+    const normals = region.map((_, i) => {
+      const a = region[Math.max(0, i - 1)] as ObstaclePoint;
+      const b = region[Math.min(region.length - 1, i + 1)] as ObstaclePoint;
+      const dx = b.point.x - a.point.x;
+      const dy = b.point.y - a.point.y;
+      const len = Math.hypot(dx, dy) || 1;
+      return vec2(dy / len, -dx / len);
+    });
+    const side = (w: number) =>
+      region.map((p, i) => {
+        const n = normals[i] as Vec2;
+        return vec2(p.point.x + w * n.x, p.point.y + w * n.y);
+      });
+    return [...side(c.right), ...side(-c.left).reverse()];
+  });
+}

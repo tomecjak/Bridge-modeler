@@ -10,6 +10,8 @@ export interface SectionInput {
   /** pohľad na podperu na staničení rezu */
   supports: readonly { id: string; body: readonly Polygon2D[]; footing: Polygon2D | undefined }[];
   terrain: readonly (readonly Vec2[])[];
+  /** rez voľnými prierezmi prekážok (x, výška v m n. m.; ADR 0020) */
+  clearances?: readonly { id: string; polygons: readonly Polygon2D[] }[];
   scale?: number;
 }
 
@@ -21,6 +23,8 @@ export function sectionDrawing(input: SectionInput): Drawing {
   const scale = input.scale ?? 100;
   const entities: Entity[] = [];
   for (const run of input.terrain) if (run.length >= 2) entities.push(polyline('terrain', run));
+  for (const c of input.clearances ?? [])
+    for (const p of c.polygons) entities.push(polyline('clearance', p, true, c.id));
   for (const s of input.supports) {
     if (s.footing) entities.push(polyline('footing', s.footing, true, s.id));
     for (const b of s.body) entities.push(polyline('support', b, true, s.id));

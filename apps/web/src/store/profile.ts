@@ -13,12 +13,14 @@ import {
   type AxisLength,
   alignmentProfileLine,
   bridgeAxisProfileLine,
+  type ObstacleResult,
   type ProfileLine,
   polylineProfileLine,
   roadProfileLine,
 } from '@bridge/sections';
 import { useMemo } from 'react';
 import { sk } from '../i18n/sk.ts';
+import { profileObstacles } from './obstacles.ts';
 import { type TerrainTin, terrainProfilesAlong } from './terrain.ts';
 
 /**
@@ -106,6 +108,8 @@ export function useProfileView(input: {
   tins: readonly TerrainTin[];
   /** terén na okrajoch NK v profile v osi mosta */
   edgeTerrain: boolean;
+  /** prekážky s voľným prierezom (ADR 0020) */
+  obstacles: readonly ObstacleResult[];
 }): {
   line: ProfileLine | undefined;
   options: ProfileAxisOption[];
@@ -116,7 +120,7 @@ export function useProfileView(input: {
   /** terén na ľavom a pravom okraji NK (u, výška v m n. m.); len v osi mosta, nejde do exportu */
   edgeTerrain: EdgeTerrain | undefined;
 } {
-  const { key, road, deck, measure, others, planLines, tins } = input;
+  const { key, road, deck, measure, others, planLines, tins, obstacles } = input;
   const options = useMemo(
     () => (road ? profileAxisOptions({ road, deck, measure, others, planLines }) : []),
     [road, deck, measure, others, planLines],
@@ -140,9 +144,10 @@ export function useProfileView(input: {
       supports: cuts?.supports ?? [],
       lines: cuts?.lines ?? [],
       terrain,
+      obstacles: profileObstacles(obstacles, line.points, line.road.origin.z),
     });
     return { drawing, lines: cuts?.lines ?? [] };
-  }, [line, deck, measure, tins]);
+  }, [line, deck, measure, tins, obstacles]);
   const showEdges = input.edgeTerrain;
   const edgeTerrain = useMemo(() => {
     if (!showEdges || line?.kind !== 'bridgeAxis' || !deck || !measure || tins.length === 0)

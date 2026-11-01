@@ -27,6 +27,14 @@ export interface PlanInput {
   otherAlignments?: readonly Alignment[];
   /** čiary v pôdoryse (okraje NK podľa krivky) */
   planLines?: readonly PlanLine[];
+  /** prekážky v okolí mosta: os, pás voľného prierezu a popis pri krížení (ADR 0020) */
+  obstacles?: readonly {
+    id: string;
+    label: string;
+    axis: readonly (readonly Vec2[])[];
+    footprint: readonly Polygon2D[];
+    at: Vec2 | undefined;
+  }[];
   /** značky staničenia osi cesty [m]; bez nich sa staničenie nekreslí (pohľad má vlastné podľa priblíženia) */
   stationing?: { step: number; labelStep: number };
   scale?: number;
@@ -59,6 +67,21 @@ export function planDrawing(input: PlanInput): Drawing {
   }
   for (const line of input.planLines ?? []) {
     if (line.points.length >= 2) entities.push(polyline('planLine', line.points, false, line.id));
+  }
+  for (const o of input.obstacles ?? []) {
+    for (const band of o.footprint) entities.push(polyline('clearance', band, true, o.id));
+    for (const a of o.axis) if (a.length >= 2) entities.push(polyline('obstacle', a, false, o.id));
+    if (o.at)
+      entities.push({
+        kind: 'text',
+        layer: 'label',
+        at: vec2(o.at.x + mm(2), o.at.y + mm(2)),
+        text: o.label,
+        height: th,
+        rotation: 0,
+        align: 'left',
+        owner: o.id,
+      });
   }
   if (input.stationing) {
     const { step, labelStep } = input.stationing;
