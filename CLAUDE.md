@@ -28,6 +28,7 @@ packages/model      schéma doménového modelu (zod), staničné funkcie, valid
 packages/sections   prierez NK na staničení, rozvinutý pozdĺžny rez
 packages/mesh       GeometryKernel, generovanie 3D sietí (sweep NK, podpery)
 packages/terrain    terén: TIN z LandXML, výška v bode, rezy terénom
+packages/survey     meračka: čítačka DXF, výšky bodov z textov
 packages/drawing    2D výkresový model, hladiny, export SVG a DXF
 packages/ifc        export IFC 4.3
 fixtures/           referenčné LandXML, výpisy z Civil 3D, očakávané výsledky
@@ -110,3 +111,6 @@ pnpm lint
 | kategória cesty | `roadCategory` |
 | voľná šírka (na moste) | `freeWidth` |
 | oblasť mosta | `studyArea` |
+| prekážka | `obstacle` |
+| voľný (priechodný) prierez | `clearance` |
+| meračka (zameranie) | `survey` |

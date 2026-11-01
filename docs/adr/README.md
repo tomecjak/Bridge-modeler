@@ -25,6 +25,8 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0017](0017-osi-ulozenia.md) | Osi uloženia a rozloženie polí | Prijaté |
 | [0018](0018-opora-v-osi-mosta.md) | Opora v osi mosta, koniec NK z opory a priečniky | Prijaté |
 | [0019](0019-zalozenie-a-kniznica-podpier.md) | Založenie podpier, ložiská z prierezu a knižnica podpier | Prijaté |
+| [0020](0020-prekazky-a-volne-prierezy.md) | Prekážky a voľné prierezy | Prijaté |
+| [0021](0021-meracka-dxf.md) | Meračka v DXF a balík `survey` | Prijaté |
 
 ## Šablóna
 

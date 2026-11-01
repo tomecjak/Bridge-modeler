@@ -466,14 +466,17 @@ Rozhodnutia 2026-11-01 (plan mode): terén pre založenie v strede podpery (os u
 **Hotové, keď:** nový pilier stojí základom v teréne, zmena režimu prepočíta výšku a typ z firemnej knižnice sa vloží jedným klikom. — *2026-11-01:* overené testami (režimy založenia, `resolveSupportTerrain` a normalizácia v store, `deckBearings` na šablónach a 212-00, formát knižnice a `supportFromType`, API Workera) aj v prehliadači (Chrome bez okna): 125-00 s povrchmi z Civil 3D — nový pilier má základ 0,5 m pod terénom v strede, prepnutie na výšku (min 8,000 m) a kótu prepočíta výšku, ložiská jednotrámu ±1,00 m; typ Dva stĺpy klikom z karty „Umiestniť | Podpera“, Integrovaná opora z Rozloženia polí; firemná knižnica cez lokálny `wrangler dev` (uloženie, výber pre nástroj, odstránenie); 212-00 zo staršieho súboru (migrácia 7 → 10) s kótami 65,84 / 56,00 / 53,20; svetlá aj tmavá téma.
   - *Ostáva:* založenie sa posudzuje len v strede podpery; v pozdĺžnom profile pri malom priblížení vypadnú kóty kratšie ako 1 px (0,84 · 0,08 a presahy 0,50; v pôdoryse sú).
 
-#### 10f — Prekážky a meračka
-- [ ] prekážka (spoločný podklad): typ (cesta, železnica, vodný tok, poľná cesta, chodník, iná), referencia (os z LandXML / čiara v pôdoryse / čiara z meračky), výška (niveleta / Z čiary / konštanta, napr. Q100), voľný prierez s predvoľbou podľa typu; nové ADR
-- [ ] kríženie osi mosta s prekážkou → km a uhol kríženia (konvencia `crossingAngle`); ukotvenie a šikmosť pre 10c
-- [ ] kríženie zadané aj ručne na trase (km): v pozdĺžnom profile šrafovaná čiara s označením staničenia a popisom prekážky; vloženie prechodového (voľného) prierezu cesty (nastaviteľná šírka a výška) alebo priechodného prierezu železnice — predpisy naštudovať na začiatku 10f, hodnoty potvrdí projektant
-- [ ] voľný prierez v profile v osi mosta (šírka / sin α), v priečnom reze, v 3D a v profile v osi prekážky; vodný tok = kóta hladiny Q100 + rezerva a brehové čiary (bez prietokovej plochy)
+#### 10f — Prekážky, voľné prierezy a meračka (ADR 0020, 0021)
+Rozhodnutia 2026-11-01 (plan mode): hodnoty predvolieb voľných prierezov sú zástupné a v UI označené (cesta 4,80 m, poľná cesta 4,20 m, chodník a cyklotrasa 2,50 m, železnica elektrifikovaná 6,50 m a neelektrifikovaná 5,00 m nad TK, vodný tok Q100 + 0,50 m; texty STN 73 6201 a STN EN 15273 nie sú voľne dostupné); voľný prierez cesty je rovnobežný s priečnym sklonom (sklon v prekážke); priechodný prierez železnice je zjednodušený obrys so skosenými hornými rohmi, presný obrys príde s bodmi od projektanta; povrch terénu pre založenie podpier určuje príznak pri teréne (otázka z 10e).
+- [ ] povrch terénu pre založenie podpier: príznak pri teréne (schéma v11), predvolene pri prvom povrchu, pri viacerých najvyšší zo zapnutých
+- [ ] prekážka (spoločný podklad, schéma v12): druh (cesta, železnica, vodný tok, poľná cesta, chodník, iná), os (os z LandXML / čiara v pôdoryse / čiara meračky / ručne km osi cesty a uhol), úroveň (niveleta / Z čiary / konštanta, napr. TK alebo Q100), voľný prierez (šírka vľavo a vpravo, výška, sklony, skosenie) s predvoľbou podľa druhu
+- [ ] kríženie osi mosta s prekážkou → km a uhol kríženia (konvencia `crossingAngle`); prehliadač, vlastnosti a vloženie prekážky (z osi alebo čiary, ručne na km)
+- [ ] voľný prierez v profile v ľubovoľnej osi (šrafovaná zvislica s km a popisom, obrys, pri vodnom toku Q100), v priečnom reze, v pôdoryse a v 3D; DXF hladiny `VOLNY_PRIEREZ` a `PREKAZKY`
 - [ ] kontroly `ClearanceViolated` (s hodnotou), `SupportInClearance`; kóta minimálnej voľnej výšky
+- [ ] ukotvenie Rozloženia polí na kríženie s prekážkou (km a uhol, 10c)
 - [ ] podklad mapy (ortofoto, mapa ZBGIS) aj v pôdoryse, ako v 3D (odpoveď 23, 2026-11-01)
-- [ ] import meračky DXF (len 2D podklad, bez TIN — odpoveď 23): vlastná čítačka (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov), výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; nové ADR a balík `packages/survey` (doplniť do CLAUDE.md)
+- [ ] balík `packages/survey`: vlastná čítačka DXF (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha; ANSI_1250), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov)
+- [ ] import meračky DXF (len 2D podklad, bez TIN — odpoveď 23, schéma v13): výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; čiara meračky ako os prekážky
 
 **Hotové, keď:** vetva z LandXML ako prekážka „cesta“ dá km a uhol kríženia, voľný prierez sa ukáže vo všetkých pohľadoch, znížená niveleta vyvolá `ClearanceViolated` a čiara z DXF meračky sa dá použiť ako prekážka.
 
@@ -730,6 +733,8 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Terén pre založenie | v strede podpery (os uloženia + posun); výška podpery od hornej hrany základu po hornú hranu pod najnižším ložiskom; nová opora výškou podpery (2026-11-01) |
 | Ložiská z prierezu | 1/4 šírky spodnej plochy od okrajov; viac trámov → jedno ložisko pod stredom každého (2026-11-01) |
 | Typy podpier | kópia z knižnice pri vložení, ložiská sa v type neukladajú; typ sa vyberá v karte nástroja Podpera (2026-11-01) |
+| Voľné prierezy | zástupné predvoľby podľa druhu prekážky, v UI označené; cesta rovnobežne s priečnym sklonom, železnica zjednodušený obrys so skosením (2026-11-01) |
+| Povrch terénu pre založenie | príznak pri teréne, predvolene prvý povrch; pri viacerých zapnutých najvyšší (2026-11-01) |
 | Orientačná cena | zástupné hodnoty €/m², skutočné dodá projektant (2026-10-31) |
 | Prekážka na trase | kríženie zadané aj ručne km; v profile šrafovaná čiara so staničením a popisom, voľný prierez cesty alebo železnice (2026-10-31) |
 | Vodný tok | kóta Q100 + rezerva a brehové čiary stačia (2026-10-31) |
