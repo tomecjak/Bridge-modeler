@@ -1,5 +1,6 @@
 export * from './abutment.ts';
 export * from './axisLength.ts';
+export * from './bearingLayout.ts';
 export * from './bridgeLengths.ts';
 export * from './constraints.ts';
 export * from './crossbeams.ts';

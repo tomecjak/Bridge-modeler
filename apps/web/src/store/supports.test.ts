@@ -21,6 +21,14 @@ describe('support defaults', () => {
     expect(o.footing.length).toBe('16.5');
   });
 
+  it('takes the bearings derived from the deck profile', () => {
+    expect(defaultSupport('a', 'P1', 'pier', 'l1', 250, 12, [-1.25, 1.25]).bearings).toEqual([
+      '-1.25',
+      '1.25',
+    ]);
+    expect(defaultSupport('a', 'P1', 'pier', 'l1', 250).bearings).toEqual(['-1.8', '1.8']);
+  });
+
   it('provides geometry defaults per type', () => {
     expect(defaultGeometry('columns')).toMatchObject({
       type: 'columns',

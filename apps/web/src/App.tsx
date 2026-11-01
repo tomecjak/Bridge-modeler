@@ -25,6 +25,7 @@ import {
   bridgeAxisPlan,
   crossbeamBlock,
   type DeckRange,
+  deckBearingsAt,
   deckEndSources,
   evaluateSuperstructure,
   globalScope,
@@ -521,23 +522,21 @@ export function App() {
     } catch {
       soffit = 0;
     }
-    // opora na šírku NK (krídla pod okrajmi NK)
-    const section = evaluateSuperstructure(
-      {
-        alignments: alignmentMap,
-        parameters: parameterState.set,
-        bridgeAxes: project.bridgeAxes,
-        profiles: project.profiles,
-        planLines: project.planLines,
-      },
-      deck,
-      s,
-    );
+    // opora na šírku NK (krídla pod okrajmi NK), ložiská zo spodných plôch prierezu NK (ADR 0019)
+    const ctx = {
+      alignments: alignmentMap,
+      parameters: parameterState.set,
+      bridgeAxes: project.bridgeAxes,
+      profiles: project.profiles,
+      planLines: project.planLines,
+    };
+    const section = evaluateSuperstructure(ctx, deck, s);
     const xs = section.loops
       .filter((l) => l.role === 'outer')
       .flatMap((l) => l.polygon.map((p) => p.x));
     const width = xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : undefined;
-    return defaultSupport(newId('sup'), `${prefix}${n}`, kind, line.id, soffit, width);
+    const bearings = deckBearingsAt(ctx, deck, s);
+    return defaultSupport(newId('sup'), `${prefix}${n}`, kind, line.id, soffit, width, bearings);
   }
 
   /** Priečnik na osi z novej kópie šablóny „Priečnik – plný blok“ (prierez a priečnik jedným krokom späť). */
@@ -978,7 +977,6 @@ export function App() {
               footing: { ...template.footing },
               connection: template.connection,
               bearingHeight: template.bearingHeight,
-              bearings: [...template.bearings],
             }
           : {}),
         geometry: withEndOffset(
@@ -2196,6 +2194,13 @@ export function App() {
         <BearingsDialog
           supportId={bearingsOf}
           result={supportState.supports.find((r) => r.support.id === bearingsOf)}
+          derive={() => {
+            const r = supportState.supports.find((x) => x.support.id === bearingsOf);
+            const deck = project.superstructures.find((d) => d.id === r?.superstructure);
+            return sectionContext && deck && r && Number.isFinite(r.s)
+              ? deckBearingsAt(sectionContext, deck, r.s)
+              : [];
+          }}
           onClose={() => setBearingsOf(undefined)}
         />
       )}

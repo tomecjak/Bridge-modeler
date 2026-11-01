@@ -145,7 +145,8 @@ export function useSupportState(
 /**
  * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0019): pilier založený podľa terénu (krytie 0,5 m), opora
  * výškou podpery 4 m; kóta základovej škáry pre prepnutie režimu je odhad 8 m (pilier) alebo 5 m (opora) pod spodkom
- * NK mínus hrúbka základu, na 0,1 m. Opora má dĺžku podľa šírky NK (krídla pod okrajmi NK, ADR 0010).
+ * NK mínus hrúbka základu, na 0,1 m. Opora má dĺžku podľa šírky NK (krídla pod okrajmi NK, ADR 0010), ložiská sú
+ * z prierezu NK.
  */
 export function defaultSupport(
   id: string,
@@ -154,6 +155,8 @@ export function defaultSupport(
   bearingLine: string,
   soffitElevation: number,
   deckWidth = 12,
+  /** ložiská z prierezu NK (ADR 0019); prázdne = ±1,8 m */
+  bearings: readonly number[] = [],
 ): Support {
   const length = String(Math.round(deckWidth * 10) / 10);
   return {
@@ -172,7 +175,7 @@ export function defaultSupport(
         : { length: '8', width: '4', thickness: '1.2' },
     connection: 'bearing',
     bearingHeight: '0.35',
-    bearings: ['-1.8', '1.8'],
+    bearings: bearings.length > 0 ? bearings.map(String) : ['-1.8', '1.8'],
     foundation: defaultFoundation(
       kind,
       String(Math.round((soffitElevation - (kind === 'abutment' ? 5 : 8) - 1.2) * 10) / 10),

@@ -315,6 +315,10 @@ export const sk = {
     seat: 'Horná hrana [m n. m.]',
     height: 'Výška [m]',
     addBearing: 'Pridať ložisko',
+    bearingsFromDeck: 'Podľa prierezu NK',
+    bearingsFromDeckTitle:
+      'Ložiská v 1/4 šírky spodnej plochy prierezu NK od okrajov, pri viacerých trámoch jedno pod stredom každého',
+    bearingsFromDeckFailed: 'Spodná plocha prierezu NK sa na osi podpery nedá určiť.',
     heightRange: (min: string, max: string) => `Výška podpery ${min} – ${max} m.`,
     spans: 'Polia',
     deckLength: 'Dĺžka NK',
