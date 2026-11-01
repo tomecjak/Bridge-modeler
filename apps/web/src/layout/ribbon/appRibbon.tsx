@@ -251,6 +251,10 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
             },
           ],
         },
+        {
+          label: t.groups.measure,
+          items: [toolButton('measure', t.measure, 'measure', t.measureTitle, !c.hasRoad)],
+        },
       ],
     },
     {

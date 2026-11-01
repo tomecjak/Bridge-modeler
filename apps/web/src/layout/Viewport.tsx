@@ -22,6 +22,8 @@ interface Props {
   onProfileCursor: (cursor: ProfileCursor | undefined) => void;
   /** bod kurzora z profilu na čiare profilu (značka v pôdoryse) */
   planCursorPoint: Vec2 | undefined;
+  /** výsledok nástroja Merať */
+  onMeasure: (text: string | undefined) => void;
   parametersView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
@@ -73,6 +75,7 @@ export function Viewport({
   onPlanCursor,
   onProfileCursor,
   planCursorPoint,
+  onMeasure,
   parametersView,
   sectionView,
   plan,
@@ -148,6 +151,7 @@ export function Viewport({
                   ? profile.line.points.map((p) => p.point)
                   : undefined
               }
+              onMeasure={onMeasure}
             />
             {profile && (
               <ProfileView
@@ -167,6 +171,7 @@ export function Viewport({
                 focus={focus}
                 onStudyArea={onStudyArea}
                 goTo={goTo}
+                onMeasure={onMeasure}
               />
             )}
           </div>

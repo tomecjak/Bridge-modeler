@@ -1092,6 +1092,36 @@ text.dw-stationing {
   pointer-events: none;
 }
 
+/* nástroj Merať (Fáza 10b) */
+.measure {
+  pointer-events: none;
+}
+
+.measure-line {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.measure-point {
+  fill: var(--accent);
+}
+
+.measure-snap {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.measure-label {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text);
+  stroke: var(--panel);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
 /* čiara pozdĺžneho profilu v pôdoryse (Fáza 10b) */
 .profile-axis-plan {
   fill: none;

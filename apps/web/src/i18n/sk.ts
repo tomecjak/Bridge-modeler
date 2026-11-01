@@ -553,6 +553,13 @@ export const sk = {
     renameLabel: (name: string) => `Nový názov pre ${name}`,
     problems: 'Problémy',
   },
+  measure: {
+    length: 'Δl',
+    height: 'Δh',
+    slope: 'sklon',
+    distance: 'vzdialenosť',
+    azimuth: 'azimut od S',
+  },
   profileAxes: {
     road: (name: string) => `Os cesty ${name}`,
     bridgeAxis: (deck: string) => `Os mosta – ${deck}`,
@@ -587,6 +594,7 @@ export const sk = {
       terrain: 'Terén',
       profile: 'Prierez',
       element: 'Prvok',
+      measure: 'Merať',
       navigation: 'Navigácia',
       longitudinal: 'Pozdĺžny profil',
       view3d: '3D',
@@ -632,6 +640,9 @@ export const sk = {
     profileAxisTitle: 'Čiara, v ktorej sa kreslí pozdĺžny profil (x = rozvinutá dĺžka čiary)',
     profileInLine: 'Profil v čiare',
     profileInAxis: 'Profil v osi mosta',
+    measure: 'Merať',
+    measureTitle:
+      'Dočasné meranie v pôdoryse (vzdialenosť, ΔE, ΔN, azimut) a v profile (Δ dĺžka, Δ výška, sklon)',
     edgeTerrain: 'Terén na okrajoch',
     edgeTerrainTitle:
       'Terén rezaný na ľavom a pravom okraji NK premietnutý do profilu v osi mosta (len na obrazovke)',
@@ -647,6 +658,8 @@ export const sk = {
       support: 'Podpera: kliknite na os v pôdoryse; Esc zruší.',
       line: 'Čiara: klikajte vrcholy v pôdoryse, dvojklik alebo Enter ukončí, Esc zruší.',
       area: 'Oblasť mosta: ťahom v pozdĺžnom profile vyznačte úsek mosta; Esc zruší.',
+      measure:
+        'Merať: kliknite začiatok a koniec v pôdoryse alebo profile; prichytáva sa na vrcholy (Shift bez prichytávania), Esc ukončí.',
     },
     menu: {
       new: 'Nový',

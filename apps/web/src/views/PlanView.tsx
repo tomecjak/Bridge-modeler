@@ -5,6 +5,8 @@ import type { PlanLine } from '@bridge/model';
 import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { MeasureOverlay } from './MeasureOverlay.tsx';
+import { drawingVertices, formatPlanMeasure, snapPoint, useMeasure } from './measure.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import type { FitRequest, ViewTool } from './viewState.ts';
@@ -58,6 +60,8 @@ interface Props {
   onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
   /** čiara pozdĺžneho profilu, ak nie je os cesty ani os mosta (zvýraznená) */
   profileLine?: readonly Vec2[] | undefined;
+  /** výsledok nástroja Merať (stavový riadok) */
+  onMeasure?: (text: string | undefined) => void;
 }
 
 /** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
@@ -88,6 +92,7 @@ export function PlanView({
   onAddPlanLine,
   onMovePlanLineVertex,
   profileLine,
+  onMeasure,
 }: Props) {
   /** vrcholy rozkreslenej čiary */
   const [sketch, setSketch] = useState<Vec2[]>([]);
@@ -123,6 +128,22 @@ export function PlanView({
     [otherAlignments],
   );
   const selectedLine = planLines.find((l) => l.id === selected);
+  const measure = useMeasure(tool === 'measure');
+  // prichytenie na vrcholy výkresu, čiar v pôdoryse a styky prvkov osi
+  const snapTargets = useMemo(
+    () =>
+      drawingVertices(drawing, [
+        ...planLines.map((l) => l.points),
+        alignment.elements.map((e) => alignment.evaluateHorizontal(e.sStart).point),
+      ]),
+    [drawing, planLines, alignment],
+  );
+  const measureEnd = measure.b ?? measure.hover?.point;
+  const measureLabel = measure.a && measureEnd && formatPlanMeasure(measure.a, measureEnd);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hlási sa len zmena textu merania
+  useEffect(() => {
+    if (tool === 'measure') onMeasure?.(measureLabel);
+  }, [measureLabel, tool]);
 
   // zmena nástroja zahodí rozkreslenú čiaru
   useEffect(() => {
@@ -184,6 +205,12 @@ export function PlanView({
     const point = worldAt(e);
     if (!point) return;
     if (tool === 'line') setHover(point);
+    if (tool === 'measure' && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const snapped = e.shiftKey ? undefined : snapPoint(screen, snapTargets, toScreen);
+      measure.move({ point: snapped ?? point, snapped: snapped !== undefined });
+    }
     const projection = alignment.project(point);
     onCursor({ point, s: projection?.s, offset: projection?.offset });
   }
@@ -235,6 +262,10 @@ export function PlanView({
       }}
       onDoubleClick={() => (tool === 'line' ? finishSketch() : reset())}
       onClick={(e) => {
+        if (tool === 'measure' && measure.hover && !wasDrag()) {
+          measure.click(measure.hover.point);
+          return;
+        }
         if (!planTool || wasDrag() || !view) return;
         if (e.target instanceof Element && e.target.closest('button, summary, details')) return;
         const point = worldAt(e);
@@ -250,7 +281,7 @@ export function PlanView({
         onAddSupport(projection.s, projection.offset);
         onTool('none');
       }}
-      data-add-mode={planTool !== undefined || undefined}
+      data-add-mode={planTool !== undefined || tool === 'measure' || undefined}
     >
       <div className="drawing-toolbar">
         <span className="drawing-title">{sk.viewport.plan}</span>
@@ -352,6 +383,15 @@ export function PlanView({
             <polyline
               className="plan-line-preview"
               points={polyline(hover ? [...sketch, hover] : sketch)}
+            />
+          )}
+          {tool === 'measure' && (
+            <MeasureOverlay
+              a={measure.a}
+              b={measure.b}
+              hover={measure.hover}
+              toScreen={toScreen}
+              label={measureLabel}
             />
           )}
           {cursor && (

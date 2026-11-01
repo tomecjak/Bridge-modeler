@@ -133,6 +133,8 @@ export function App() {
   const [profileAxisKey, setProfileAxisKey] = useState<ProfileAxisKey>();
   /** terén na okrajoch NK v profile v osi mosta (Fáza 10b) */
   const [edgeTerrainOn, setEdgeTerrainOn] = useState(true);
+  /** výsledok nástroja Merať v stavovom riadku */
+  const [measureText, setMeasureText] = useState<string>();
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [deckDialog, setDeckDialog] = useState(false);
@@ -1318,6 +1320,7 @@ export function App() {
 
   /** Ľavá časť stavového riadka: výzva nástroja alebo poloha kurzora (hlásenie je vpravo). */
   function statusText(): string {
+    if (tool === 'measure' && measureText) return measureText;
     if (tool !== 'none') return sk.ribbon.toolHints[tool];
     if (mode === 'section' && editedProfile) return sk.profileEditor.hints[profileTool];
     if (cursor && item && project.crs.origin)
@@ -1418,6 +1421,7 @@ export function App() {
           setCursor(c && { source: 'profile', s: c.s, point: c.point, readout: c.readout })
         }
         planCursorPoint={cursor?.source === 'profile' ? cursor.point : undefined}
+        onMeasure={setMeasureText}
         parametersView={
           <ParameterTable
             parameters={project.parameters}

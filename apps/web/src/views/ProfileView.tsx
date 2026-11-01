@@ -15,6 +15,8 @@ import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import { DrawingEntities } from './DrawingEntities.tsx';
+import { MeasureOverlay } from './MeasureOverlay.tsx';
+import { drawingVertices, formatProfileMeasure, snapPoint, useMeasure } from './measure.ts';
 import { useElementSize } from './useElementSize.ts';
 import { usePanZoom } from './usePanZoom.ts';
 import type { FitRequest, ViewTool } from './viewState.ts';
@@ -64,6 +66,8 @@ interface Props {
   onStudyArea?: (range: SRange) => void;
   /** prejsť na staničenie: nová hodnota `nonce` vycentruje pohľad na spojité staničenie `s` */
   goTo?: { s: number; nonce: number } | undefined;
+  /** výsledok nástroja Merať (stavový riadok) */
+  onMeasure?: (text: string | undefined) => void;
 }
 
 /** niveletu kreslí pohľad sám (s polygónom PVI) */
@@ -120,6 +124,7 @@ export function ProfileView({
   focus,
   onStudyArea,
   goTo,
+  onMeasure,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
   /** rozťahovaná oblasť mosta (u začiatku a kurzora) */
@@ -165,7 +170,20 @@ export function ProfileView({
   }, [grade, drawing, range, focusU, whole]);
   const fit =
     size.width > 0 && grade.length > 1 ? fitView(bounds, size, 48, exaggeration) : undefined;
-  const { view, handlers, dragMove, reset, centerOn } = usePanZoom(ref, size, fit, tool !== 'area');
+  const { view, handlers, dragMove, wasDrag, reset, centerOn } = usePanZoom(
+    ref,
+    size,
+    fit,
+    tool !== 'area',
+  );
+  const measure = useMeasure(tool === 'measure');
+  const snapTargets = useMemo(() => drawingVertices(drawing, [grade]), [drawing, grade]);
+  const measureEnd = measure.b ?? measure.hover?.point;
+  const measureLabel = measure.a && measureEnd && formatProfileMeasure(measure.a, measureEnd);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: hlási sa len zmena textu merania
+  useEffect(() => {
+    if (tool === 'measure') onMeasure?.(measureLabel);
+  }, [measureLabel, tool]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: prispôsobí sa pri novej žiadosti z ribbonu a pri zmene prevýšenia
   useEffect(() => {
     if (fitRequest.nonce > 0) reset();
@@ -274,7 +292,13 @@ export function ProfileView({
     }
     if (!view) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const u = screenToWorld(view, size, { x: e.clientX - rect.left, y: e.clientY - rect.top }).x;
+    const screen = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const world = screenToWorld(view, size, screen);
+    if (tool === 'measure') {
+      const snapped = e.shiftKey ? undefined : snapPoint(screen, snapTargets, toScreen);
+      measure.move({ point: snapped ?? world, snapped: snapped !== undefined });
+    }
+    const u = world.x;
     if (u < line.uFrom || u > line.uTo) {
       onCursor(undefined);
       return;
@@ -324,13 +348,18 @@ export function ProfileView({
   };
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: body merania sa vyberajú kliknutím do profilu (dočasné meranie, len myšou)
     <div
       ref={ref}
       className="drawing"
       role="application"
       aria-label={sk.viewport.profile}
       data-area-mode={tool === 'area' ? '' : undefined}
+      data-add-mode={tool === 'measure' || undefined}
       {...handlers}
+      onClick={() => {
+        if (tool === 'measure' && measure.hover && !wasDrag()) measure.click(measure.hover.point);
+      }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerMove={onPointerMove}
@@ -450,6 +479,15 @@ export function ProfileView({
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />
               <circle className="cursor-marker" cx={cursorPoint.x} cy={cursorPoint.y} r={5} />
             </g>
+          )}
+          {tool === 'measure' && (
+            <MeasureOverlay
+              a={measure.a}
+              b={measure.b}
+              hover={measure.hover}
+              toScreen={toScreen}
+              label={measureLabel}
+            />
           )}
           {readout && (
             <g className="readout">
