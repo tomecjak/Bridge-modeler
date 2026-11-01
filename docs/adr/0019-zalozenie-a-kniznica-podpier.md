@@ -59,7 +59,7 @@ Rozhodnutia projektanta z plan mode 10e (2026-11-01).
 - podpera v režime `level` sa uloží ako typ v režime `height` s jej aktuálnou výškou, lebo kóta platí len na
   jednom mieste;
 - súbor `{ format: 'bridge-modeler/support-library', version: 1, entries }`, položka
-  `{ id, name, kind, description?, support }`;
+  `{ id, name, description?, support }` (druh je v type `support.kind`);
 - rozhranie `Library<E>` je spoločné pre prierezy a podpery (ADR 0013);
 - zdroje: zabudované šablóny, firemná knižnica, podpery projektu, súbor;
 - typ sa vyberá v kontextovej karte nástroja Podpera (zvlášť pre pilier a oporu) a v Rozložení polí.

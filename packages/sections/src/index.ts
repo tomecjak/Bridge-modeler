@@ -23,3 +23,4 @@ export * from './supportTerrain.ts';
 export * from './templates/catalog.ts';
 export * from './templates/deck.ts';
 export * from './templates/singleBeamHaunched.ts';
+export * from './templates/supports.ts';

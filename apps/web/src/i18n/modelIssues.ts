@@ -186,6 +186,8 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `Súbor nie je platný JSON (${issue.detail}).`;
     case 'NotAProfileLibrary':
       return 'Súbor nie je knižnica prierezov (napr. projektový súbor).';
+    case 'NotASupportLibrary':
+      return 'Súbor nie je knižnica podpier (napr. projektový súbor alebo knižnica prierezov).';
     case 'UnsupportedSchemaVersion':
       return `Nepodporovaná verzia projektového súboru „${issue.version}“.`;
     case 'SchemaViolation':

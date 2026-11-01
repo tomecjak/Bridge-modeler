@@ -105,6 +105,8 @@ export type ModelIssue = {
   | { code: 'InvalidJson'; detail: string }
   /** súbor nie je knižnica prierezov (chýba značka formátu) */
   | { code: 'NotAProfileLibrary' }
+  /** súbor nie je knižnica podpier (ADR 0019) */
+  | { code: 'NotASupportLibrary' }
   | { code: 'UnsupportedSchemaVersion'; version: string }
   | { code: 'SchemaViolation'; path: string; message: string }
 );

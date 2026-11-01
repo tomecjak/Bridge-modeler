@@ -24,8 +24,8 @@ export const ProfileLibraryFileSchema = z.strictObject({
   entries: z.array(LibraryEntrySchema),
 });
 
-export type LibraryParseResult =
-  | { ok: true; entries: LibraryEntry[] }
+export type LibraryParseResult<E = LibraryEntry> =
+  | { ok: true; entries: E[] }
   | { ok: false; issues: ModelIssue[] };
 
 /** Súbor knižnice prierezov (JSON so stabilným poradím kľúčov podľa schémy). */
@@ -38,8 +38,16 @@ export function serializeLibrary(entries: readonly LibraryEntry[]): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-/** Načíta súbor knižnice prierezov; problémy vracia, nevyhadzuje. */
-export function parseLibrary(text: string): LibraryParseResult {
+/**
+ * Načíta súbor knižnice so značkou `format` a schémou súboru; problémy vracia, nevyhadzuje. `notALibrary` = problém
+ * pre súbor s inou značkou (napr. projektový súbor).
+ */
+export function parseLibraryFile<E>(
+  text: string,
+  format: string,
+  schema: z.ZodType<{ entries: E[] }>,
+  notALibrary: ModelIssue,
+): LibraryParseResult<E> {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -49,14 +57,10 @@ export function parseLibrary(text: string): LibraryParseResult {
       issues: [{ code: 'InvalidJson', detail: e instanceof Error ? e.message : String(e) }],
     };
   }
-  if (
-    typeof raw !== 'object' ||
-    raw === null ||
-    (raw as { format?: unknown }).format !== PROFILE_LIBRARY_FORMAT
-  ) {
-    return { ok: false, issues: [{ code: 'NotAProfileLibrary' }] };
+  if (typeof raw !== 'object' || raw === null || (raw as { format?: unknown }).format !== format) {
+    return { ok: false, issues: [notALibrary] };
   }
-  const parsed = ProfileLibraryFileSchema.safeParse(raw);
+  const parsed = schema.safeParse(raw);
   if (parsed.success) return { ok: true, entries: parsed.data.entries };
   return {
     ok: false,
@@ -70,26 +74,37 @@ export function parseLibrary(text: string): LibraryParseResult {
   };
 }
 
+/** Načíta súbor knižnice prierezov; problémy vracia, nevyhadzuje. */
+export function parseLibrary(text: string): LibraryParseResult {
+  return parseLibraryFile(text, PROFILE_LIBRARY_FORMAT, ProfileLibraryFileSchema, {
+    code: 'NotAProfileLibrary',
+  });
+}
+
 /**
- * Knižnica prierezov — asynchrónne rozhranie, aby sa za ním dala neskôr schovať aj databáza (Cloudflare D1 / Worker
- * API) bez zmeny volajúcich. Implementácie: zabudované šablóny (len na čítanie), prierezy projektu, súbor.
+ * Knižnica položiek (prierezy, typy podpier) — asynchrónne rozhranie, aby sa za ním dala schovať aj databáza
+ * (Cloudflare D1 / Worker API) bez zmeny volajúcich (ADR 0013, 0019). Implementácie: zabudované šablóny (len na
+ * čítanie), prvky projektu, súbor, firemná knižnica.
  */
-export interface ProfileLibrary {
+export interface Library<E extends { id: string }> {
   readonly name: string;
   readonly readOnly: boolean;
-  list(): Promise<LibraryEntry[]>;
-  get(id: string): Promise<LibraryEntry | undefined>;
+  list(): Promise<E[]>;
+  get(id: string): Promise<E | undefined>;
   /** pridá položku alebo nahradí položku s rovnakým `id` (na jej mieste) */
-  save(entry: LibraryEntry): Promise<void>;
+  save(entry: E): Promise<void>;
   remove(id: string): Promise<void>;
 }
 
+/** Knižnica prierezov (ADR 0013). */
+export type ProfileLibrary = Library<LibraryEntry>;
+
 /** Knižnica v pamäti (zabudované šablóny, importovaný súbor); poradie položiek je poradie pridania. */
-export function memoryLibrary(
+export function memoryLibrary<E extends { id: string }>(
   name: string,
-  initial: readonly LibraryEntry[],
+  initial: readonly E[],
   options: { readOnly?: boolean } = {},
-): ProfileLibrary {
+): Library<E> {
   const entries = [...initial];
   const readOnly = options.readOnly ?? false;
   const guard = () => {
