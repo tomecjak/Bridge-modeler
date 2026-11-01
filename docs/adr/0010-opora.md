@@ -1,6 +1,6 @@
 # 0010 — Opora s úložným prahom, záverným múrikom a krídlami
 
-- Stav: Prijaté
+- Stav: Nahradené ADR 0018
 - Dátum: 2026-10-31
 
 ## Kontext

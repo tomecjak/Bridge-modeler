@@ -15,7 +15,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0007](0007-os-mosta-a-prierez.md) | Os mosta a parametrický prierez NK | Prijaté |
 | [0008](0008-podpery.md) | Podpery, uloženie a polia | Prijaté |
 | [0009](0009-3d-model.md) | 3D model a viewer | Prijaté |
-| [0010](0010-opora.md) | Opora s úložným prahom, záverným múrikom a krídlami | Prijaté |
+| [0010](0010-opora.md) | Opora s úložným prahom, záverným múrikom a krídlami | Nahradené ADR 0018 |
 | [0011](0011-teren.md) | Terén: uloženie, zdroje a súradnice | Prijaté |
 | [0012](0012-2d-vystupy-dxf.md) | 2D pohľady a export SVG / DXF | Prijaté |
 | [0013](0013-kniznica-prierezov-a-vazby.md) | Knižnica prierezov, šablóny a väzby bodov | Prijaté |
@@ -23,6 +23,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0015](0015-cloudflare.md) | Nasadenie na Cloudflare: Worker, D1, Access | Prijaté |
 | [0016](0016-rozhranie-cad.md) | Rozhranie v štýle CAD: ribbon, prehliadač projektu, vlastnosti | Prijaté |
 | [0017](0017-osi-ulozenia.md) | Osi uloženia a rozloženie polí | Prijaté |
+| [0018](0018-opora-v-osi-mosta.md) | Opora v osi mosta, koniec NK z opory a priečniky | Prijaté |
 
 ## Šablóna
 

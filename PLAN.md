@@ -427,13 +427,15 @@ Rozhodnutia 2026-11-01: podpera vždy stojí na osi uloženia (os patrí NK, má
 
 **Hotové, keď:** most 212-00 vznikne z „16 + 23 + 16“ a šikmosti jedným dialógom a ťahanie piliera mení rozpätia v kroku prichytávania. — *2026-11-01:* overené testom (`planSpanLayout` na 212-00) aj v prehliadači (Chrome bez okna) na 212-00 a SO 171-11-01 v tmavej téme: rozloženie polí, vloženie osi a podpery v profile aj pôdoryse, ťahanie s Ctrl / Shift, zadanie rozpätia na kóte, späť / znova.
 
-#### 10d — Opora a koniec NK
-- [ ] workshop s projektantom: náčrt rezu opory v osi mosta s pomenovanými rozmermi (predsadenie prahu pred os uloženia, odsadenie konca NK od osi uloženia, medzera NK – múrik, odsadenie NK od prahu = priestor pre ložiská, šírka a výška prahu, hrúbka múrika, krídla, typ opory) → doplnok ADR 0010 alebo nové ADR
-- [ ] nová parametrizácia opory v schéme + migrácia; typy opôr vrátane rámovej a integrovanej konštrukcie (bez ložísk)
-- [ ] koniec NK odvodený od opory (os uloženia ± odsadenie konca NK), NK sa natiahne a posúva s oporou; väzba sa dá odomknúť (ručné od/do)
-- [ ] rozmery opory v pozdĺžnom smere (predsadenie prahu, dĺžka prahu, odsadenie konca NK, medzera, hrúbka múrika) sa zadávajú v osi mosta ako kóty na výkrese (rozhodnutie 2026-11-01); migrácia z merania kolmo na os opory (ADR 0010)
-- [ ] NK pripravená na zmenu prierezu okolo osi uloženia, napr. priečnik (odpoveď 21, 2026-11-01) — tvar a parametre upresniť v plan mode 10d
+#### 10d — Opora a koniec NK (ADR 0018)
+Rozhodnutia 2026-11-01 (workshop v plan mode): rozmery opory v osi mosta od osi uloženia a = predsadenie prahu, e = odsadenie konca NK, g = medzera NK – múrik, t = hrúbka múrika, prah od zadnej líce múrika po prednú lícu (212-00: 2,32 v osi mosta = 2,05 kolmo na os opory); monolitická opora (integrovaná aj rámová) = stena t_s so stredom na osi uloženia, NK končí na jej zadnej líci; priečnik = iný prierez v páse okolo osi uloženia, nastavený na každej osi (prierez + šírka v osi mosta, koncový od čela NK), parametre s rovnakým menom preberá z NK.
+- [x] workshop s projektantom: náčrt rezu opory v osi mosta s pomenovanými rozmermi → ADR 0018 (nahrádza ADR 0010)
+- [ ] nová parametrizácia opory v schéme v9 + migrácia; opora s prahom a monolitická opora (integrovaná, rámová; bez ložísk); rozmery v pozdĺžnom smere v osi mosta (migrácia z merania kolmo na os opory)
+- [ ] koniec NK odvodený od opory (os uloženia ∓ e, monolitická ∓ t_s/2), NK sa natiahne a posúva s oporou; väzba sa dá odomknúť (ručné od / do)
 - [ ] nápoveda s náčrtom (SVG schéma s kótami) pri parametroch opory; rovnaký mechanizmus neskôr pre pilier a prierez
+- [ ] čiastkové kóty presahu opory (krídlo 4,00 · múrik 0,84 · medzera 0,08) namiesto jednej 4,92
+- [ ] priečnik na osi uloženia: prierez a šírka v osi mosta, šablóna „Priečnik – plný blok“, kontroly
+- [ ] priečnik v geometrii: prierez v páse (aj spodok NK nad ložiskami a pohľad Prierez), NK z úsekov so šikmými hranicami v 3D, OCCT a výkresoch
 
 **Hotové, keď:** 212-00 dá z parametrov opory NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 (test) a posun opory posunie koniec NK.
 
@@ -723,4 +725,8 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Koniec NK pri posune osi | posun krajnej osi posunie aj koniec NK so zachovaným presahom, kým ho v 10d neodvodí opora (2026-11-01) |
 | Ťahanie osí | posunie sa len ťahaná os, prichytáva sa pole pred ňou po 0,5 m; Ctrl = aj ďalšie osi, Shift = bez prichytávania (2026-11-01) |
 | Rozloženie polí | existujúce podpery sa zachovajú a presunú (opory na krajných osiach, piliere podľa poradia), chýbajúce sa doplnia, nadbytočné odstránia (2026-11-01) |
+| Opora v osi mosta | a, e, g, t v osi mosta od osi uloženia; prah od zadnej líce múrika po prednú lícu (2026-11-01, ADR 0018) |
+| Monolitická opora | integrovaná aj rámová = stena t_s so stredom na osi uloženia, NK končí na jej zadnej líci, bez ložísk (2026-11-01) |
+| Koniec NK | odvodený z opory na krajnej osi (∓ e, monolitická ∓ t_s/2), dá sa odomknúť na ručné od / do (2026-11-01) |
+| Priečnik | iný prierez v páse okolo osi uloženia, na každej osi zvlášť; šírka v osi mosta, koncový od čela NK; parametre s rovnakým menom z NK (2026-11-01) |
 | Šírka NK a šírka mosta | okraj NK (krajný bod prierezu NK) určuje šírku NK, vonkajší okraj rímsy šírku mosta (2026-11-01) |
