@@ -99,6 +99,7 @@ pnpm lint
 | opora | `abutment` |
 | pilier | `pier` |
 | ložisko | `bearing` (v IFC `IfcBearing`) |
+| os uloženia | `bearingLine` |
 | rímsa | `edgeBeam` |
 | pole, rozpätie | `span` |
 | šikmosť, uhol kríženia | `skew` |

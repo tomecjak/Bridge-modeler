@@ -405,13 +405,16 @@ Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do p�
 
 **Hotové, keď:** na 212-00 kóty ukazujú 16,00 + 23,00 + 16,00, NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 a na posunutej osi v oblúku sedia rozpätia s dĺžkou po osi mosta (test). — *2026-11-01:* overené testami (`bridgeLengths`, `bridgeDimensions`) aj v prehliadači (Chrome bez okna) na 212-00, 125-00 a SO 171-11-01.
 
-#### 10c — Polia v pozdĺžnom profile
-- [ ] osi uloženia (odpoveď 21, 2026-11-01): projektant najprv rozmiestni osi uloženia (rozpätia, šikmosť) a až potom na ne vloží podperu alebo oporu — upresniť v plan mode 10c (samostatný prvok alebo vlastnosť NK, väzba podpery na os uloženia)
-- [ ] pridanie podpery klikom aj v pozdĺžnom profile
-- [ ] ťahanie podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta po 0,5 m (nie km), Shift = bez prichytávania, živé kóty, jeden krok späť; staničenie v editore podpery ostáva ľubovoľné
-- [ ] úprava rozpätia kliknutím na kótu a zadaním hodnoty: zmení sa len upravené pole a všetky podpery za ním (na strane od vybranej podpery) sa posunú, celková dĺžka mosta sa zmení (rozhodnutie 2026-10-31)
-- [ ] „Rozloženie polí“: „16 + 23 + 16“ / „3×20“, ukotvenie od začiatku / od konca / symetricky okolo km (predvolene kríženie s prekážkou), spoločný uhol kríženia, typ piliera a opory z knižnice; nahradí podpery NK jedným krokom späť
-- [ ] spoločná šikmosť: v editore NK „použiť uhol na všetky podpery“
+#### 10c — Osi uloženia a polia v pozdĺžnom profile (ADR 0017)
+Rozhodnutia 2026-11-01: podpera vždy stojí na osi uloženia (os patrí NK, má číslo, staničenie a uhol kríženia; polia z osí aj bez podpier); posun krajnej osi posunie aj koniec NK so zachovaným presahom (do 10d); ťahanie posúva len ťahanú os, prichytáva pole pred ňou po 0,5 m, Ctrl aj ďalšie osi, Shift bez prichytávania; rozloženie polí zachová a presunie existujúce podpery.
+- [ ] osi uloženia v modeli: schéma v8 (`bearingLines`, podpera na osi), migrácia 7 → 8, polia z osí (os bez podpery = upozornenie, dve podpery na osi = chyba), prehliadač NK → os → podpera, vlastnosti osi, podpera preberá staničenie a uhol z osi
+- [ ] kreslenie osí uloženia v pôdoryse a profile (aj voľných, aj do DXF) a príkaz `batch` (viac zmien = jeden krok späť)
+- [ ] čisté funkcie polí: zápis „16 + 23 + 16“ / „3×20“, polohy osí po osi mosta s ukotvením, posun osi, zadanie rozpätia, prichytávanie po 0,5 m (test-first)
+- [ ] vloženie osi uloženia a podpery klikom v pôdoryse aj v pozdĺžnom profile s náhľadom a prichytávaním dĺžky poľa
+- [ ] ťahanie osí a podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta po 0,5 m (nie km), Shift = bez prichytávania, Ctrl = aj ďalšie osi, živé kóty, jeden krok späť; staničenie v editore ostáva ľubovoľné
+- [ ] úprava rozpätia kliknutím na kótu a zadaním hodnoty: zmení sa len upravené pole a všetky osi za ním (na strane od vybranej podpery) sa posunú, celková dĺžka mosta sa zmení (rozhodnutie 2026-10-31)
+- [ ] „Rozloženie polí“: „16 + 23 + 16“ / „3×20“, ukotvenie od začiatku / od konca / symetricky okolo km (kríženie s prekážkou príde v 10f), spoločný uhol kríženia, presah konca NK, typ piliera a opory (z projektu alebo predvolený; firemná knižnica v 10e); existujúce podpery sa zachovajú a presunú, jeden krok späť
+- [ ] spoločná šikmosť: vo vlastnostiach NK uhol kríženia všetkých osí uloženia
 
 **Hotové, keď:** most 212-00 vznikne z „16 + 23 + 16“ a šikmosti jedným dialógom a ťahanie piliera mení rozpätia v kroku prichytávania.
 
@@ -706,4 +709,8 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Meračka | len 2D podklad, bez TIN; ortofoto a mapa aj v pôdoryse (2026-11-01) |
 | Dĺžky po osi mosta | vodorovne, priemet do pôdorysu (2026-11-01) |
 | Merať | v profile aj v pôdoryse, dočasné; v pôdoryse bez smeru (azimut ani smerník netreba) (2026-11-01) |
+| Os uloženia | samostatný prvok NK (číslo, staničenie, uhol kríženia); podpera vždy stojí na osi a preberá z nej polohu aj šikmosť; polia z osí aj bez podpier (2026-11-01, ADR 0017) |
+| Koniec NK pri posune osi | posun krajnej osi posunie aj koniec NK so zachovaným presahom, kým ho v 10d neodvodí opora (2026-11-01) |
+| Ťahanie osí | posunie sa len ťahaná os, prichytáva sa pole pred ňou po 0,5 m; Ctrl = aj ďalšie osi, Shift = bez prichytávania (2026-11-01) |
+| Rozloženie polí | existujúce podpery sa zachovajú a presunú (opory na krajných osiach, piliere podľa poradia), chýbajúce sa doplnia, nadbytočné odstránia (2026-11-01) |
 | Šírka NK a šírka mosta | okraj NK (krajný bod prierezu NK) určuje šírku NK, vonkajší okraj rímsy šírku mosta (2026-11-01) |

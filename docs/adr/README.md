@@ -22,6 +22,7 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0014](0014-opencascade.md) | OpenCascade (WASM) ako druhé geometrické jadro | Prijaté |
 | [0015](0015-cloudflare.md) | Nasadenie na Cloudflare: Worker, D1, Access | Prijaté |
 | [0016](0016-rozhranie-cad.md) | Rozhranie v štýle CAD: ribbon, prehliadač projektu, vlastnosti | Prijaté |
+| [0017](0017-osi-ulozenia.md) | Osi uloženia a rozloženie polí | Prijaté |
 
 ## Šablóna
 
