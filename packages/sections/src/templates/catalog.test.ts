@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateProfileDefinition, profileParameterValues } from '../profile.ts';
 import { ECONOMIC_SPANS } from '../spans.ts';
-import { builtinProfileLibrary, PROFILE_TEMPLATES, profileTemplate } from './catalog.ts';
+import {
+  builtinProfileLibrary,
+  CROSSBEAM_TYPOLOGY,
+  PROFILE_TEMPLATES,
+  profileTemplate,
+} from './catalog.ts';
 
 const globals = () => undefined;
 
@@ -24,7 +29,7 @@ const bottom = (r: ReturnType<typeof evaluate>) =>
   Math.min(...r.loops.flatMap((l) => l.polygon.map((p) => p.y)));
 
 describe('profile templates', () => {
-  it('offers every VŠB typology with an economic span, including the existing haunched beam', () => {
+  it('offers every VŠB typology with an economic span, the existing haunched beam and a crossbeam', () => {
     expect(PROFILE_TEMPLATES.map((t) => t.typology).sort()).toEqual(
       [
         'slab',
@@ -35,10 +40,11 @@ describe('profile templates', () => {
         'twinBeam',
         'box',
         'boxHaunched',
+        CROSSBEAM_TYPOLOGY,
       ].sort(),
     );
     for (const t of PROFILE_TEMPLATES) {
-      expect(ECONOMIC_SPANS[t.typology]).toBeGreaterThan(0);
+      if (t.typology !== CROSSBEAM_TYPOLOGY) expect(ECONOMIC_SPANS[t.typology]).toBeGreaterThan(0);
       const def = t.create('x');
       expect(def.typology).toBe(t.typology);
       expect(def.id).toBe('x');

@@ -78,6 +78,12 @@ export type ModelIssue = {
   | { code: 'BearingLineWithoutSupport'; line: string }
   /** na jednej osi uloženia stojí viac podpier */
   | { code: 'BearingLineOccupied'; line: string; supports: string[] }
+  /** priečnik na osi uloženia odkazuje na prierez, ktorý v projekte nie je (ADR 0018) */
+  | { code: 'UnknownCrossbeamProfile'; line: string; id: string }
+  /** pás priečnika siaha mimo NK */
+  | { code: 'CrossbeamOutsideDeck'; line: string }
+  /** pásy priečnikov susedných osí sa prekrývajú */
+  | { code: 'CrossbeamOverlap'; lines: [string, string] }
   | { code: 'InvalidCrossingAngle'; angle: number }
   | { code: 'BearingOutsideDeck'; index: number; x: number }
   | { code: 'NonPositiveSupportHeight'; height: number }

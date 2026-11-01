@@ -176,6 +176,9 @@ function lineRows(line: BearingLine, dispatch: Dispatch): PropertyRow[] {
   ];
 }
 
+/** Hodnota výberu prierezu priečnika: nový prierez zo šablóny „Priečnik – plný blok“. */
+const CROSSBEAM_TEMPLATE = 'template:crossbeam';
+
 /** Popis osi uloženia vo výbere: NK, číslo osi a staničenie. */
 const lineLabel = (line: BearingLine, decks: readonly Pick<Superstructure, 'id' | 'name'>[]) =>
   `${decks.find((d) => d.id === line.superstructure)?.name ?? '—'} · ${sk.bearingLines.label(line.name)} · ${formatStation(line.station, 3)}`;
@@ -191,6 +194,10 @@ export function bearingLineSheet(input: {
   /** podpery na osi (správne najviac jedna) */
   supports: readonly Pick<Support, 'id' | 'name' | 'kind'>[];
   spans: DeckSpans | undefined;
+  /** prierezy projektu na výber priečnika */
+  profiles: readonly Pick<ProfileDefinition, 'id' | 'name'>[];
+  /** priečnik z novej šablóny „Priečnik – plný blok“ (pridá prierez do projektu) */
+  onCrossbeamTemplate: () => void;
   onAddSupport: () => void;
   onSelectSupport: (id: string) => void;
   onDelete: () => void;
@@ -205,9 +212,41 @@ export function bearingLineSheet(input: {
     ...(result?.issues ?? []),
     ...(input.spans?.issues ?? []).filter(
       (i) =>
-        (i.code === 'BearingLineWithoutSupport' || i.code === 'BearingLineOccupied') &&
-        i.line === line.name,
+        ((i.code === 'BearingLineWithoutSupport' ||
+          i.code === 'BearingLineOccupied' ||
+          i.code === 'UnknownCrossbeamProfile' ||
+          i.code === 'CrossbeamOutsideDeck') &&
+          i.line === line.name) ||
+        (i.code === 'CrossbeamOverlap' && i.lines.includes(line.name)),
     ),
+  ];
+  const setLine = (changes: Partial<BearingLine>) =>
+    input.dispatch({ type: 'updateElement', collection: 'bearingLines', id: line.id, changes });
+  const cb = line.crossbeam;
+  const crossbeamRows: PropertyRow[] = [
+    {
+      kind: 'select',
+      label: t.crossbeamProfile,
+      value: cb?.profile ?? '',
+      options: [
+        { value: '', label: t.noCrossbeam },
+        ...input.profiles.map((p) => ({ value: p.id, label: p.name })),
+        ...(cb && !input.profiles.some((p) => p.id === cb.profile)
+          ? [{ value: cb.profile, label: '—' }]
+          : []),
+        { value: CROSSBEAM_TEMPLATE, label: t.crossbeamTemplate },
+      ],
+      onChange: (v) =>
+        v === CROSSBEAM_TEMPLATE
+          ? input.onCrossbeamTemplate()
+          : setLine({ crossbeam: v ? { profile: v, width: cb?.width ?? '1.2' } : undefined }),
+    },
+    ...(cb
+      ? [
+          expr(t.crossbeamWidth, cb.width, (width) => setLine({ crossbeam: { ...cb, width } })),
+          { kind: 'note' as const, text: t.crossbeamHint, tone: 'muted' as const },
+        ]
+      : []),
   ];
   return {
     heading: { icon: 'bearingLine', label: t.kind },
@@ -251,6 +290,7 @@ export function bearingLineSheet(input: {
                 }),
               ),
       },
+      { id: 'line-crossbeam', title: t.crossbeam, rows: crossbeamRows },
       ...(adjacent.length > 0
         ? [
             {

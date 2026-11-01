@@ -1,5 +1,5 @@
 import { copyForProject } from '@bridge/model';
-import { deckFromProfile } from '@bridge/sections';
+import { CROSSBEAM_TYPOLOGY, deckFromProfile } from '@bridge/sections';
 import { useState } from 'react';
 import { parseNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
@@ -29,7 +29,15 @@ interface Props {
 export function DeckInsertDialog({ alignment, range, onClose, onInserted, onExample }: Props) {
   const t = sk.deckInsert;
   const project = useProject((s) => s.project);
-  const { entries, sources, cloudError } = useProfileSources();
+  const profileSources = useProfileSources();
+  const { sources, cloudError } = profileSources;
+  // priečniky nie sú prierezy NK (ADR 0018)
+  const entries = Object.fromEntries(
+    Object.entries(profileSources.entries).map(([key, list]) => [
+      key,
+      list.filter((e) => e.typology !== CROSSBEAM_TYPOLOGY),
+    ]),
+  ) as typeof profileSources.entries;
   const [choice, setChoice] = useState<{ source: SourceKey; id: string }>();
   const [name, setName] = useState(() => {
     const used = new Set(project.superstructures.map((s) => s.name));

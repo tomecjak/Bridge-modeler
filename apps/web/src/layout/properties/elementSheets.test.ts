@@ -205,6 +205,8 @@ describe('bearingLineSheet', () => {
       decks: [{ id: 'nk', name: 'NK' }],
       supports,
       spans: undefined,
+      profiles: [{ id: 'cb', name: 'Priečnik' }],
+      onCrossbeamTemplate: () => {},
       onAddSupport: () => {},
       onSelectSupport: () => {},
       onDelete: () => {},
@@ -214,9 +216,47 @@ describe('bearingLineSheet', () => {
   it('shows position and the support standing on it', () => {
     const s = sheet([{ id: 'p1', name: 'P1', kind: 'pier' }]);
     expect(s.heading.label).toBe('Os uloženia');
-    expect(groupIds(s)).toEqual(['line-identity', 'line-position', 'line-support']);
+    expect(groupIds(s)).toEqual([
+      'line-identity',
+      'line-position',
+      'line-support',
+      'line-crossbeam',
+    ]);
     expect(labels(s, 'line-position')).toEqual(['Staničenie', 'Uhol kríženia [°] (90 = kolmá)']);
     expect(s.actions?.map((a) => a.label)).toEqual(['Odstrániť']);
+  });
+
+  it('chooses a crossbeam profile and width on the line', () => {
+    const commands: Command[] = [];
+    const s = bearingLineSheet({
+      line: { ...line2, crossbeam: { profile: 'cb', width: '1.0' } },
+      result: undefined,
+      decks: [{ id: 'nk', name: 'NK' }],
+      supports: [],
+      spans: undefined,
+      profiles: [{ id: 'cb', name: 'Priečnik' }],
+      onCrossbeamTemplate: () => {},
+      onAddSupport: () => {},
+      onSelectSupport: () => {},
+      onDelete: () => {},
+      dispatch: (c) => commands.push(c),
+    });
+    expect(labels(s, 'line-crossbeam')).toEqual([
+      'Prierez priečnika',
+      'Šírka v osi mosta [m]',
+      'note',
+    ]);
+    const select = s.groups.find((g) => g.id === 'line-crossbeam')?.rows?.[0];
+    expect(select?.kind === 'select' && select.options.map((o) => o.value)).toEqual([
+      '',
+      'cb',
+      'template:crossbeam',
+    ]);
+    if (select?.kind === 'select') select.onChange('');
+    expect(commands[0]).toMatchObject({
+      collection: 'bearingLines',
+      changes: { crossbeam: undefined },
+    });
   });
 
   it('offers to insert a support on a free line', () => {

@@ -319,7 +319,41 @@ export function boxHaunched(id: string): ProfileDefinition {
   );
 }
 
-/** Všetky šablóny v poradí podľa ekonomického rozpätia. */
+/**
+ * Priečnik – plný blok (ADR 0018): horná plocha ako NK (bL, bR, q), spodok vodorovne v hĺbke h pod referenčným bodom.
+ * Východisko pre koncové a vnútorné priečniky; parametre s rovnakým menom preberá z NK.
+ */
+export function crossbeamBlock(id: string): ProfileDefinition {
+  return profile(
+    id,
+    'Priečnik – plný blok',
+    CROSSBEAM_TYPOLOGY,
+    [
+      length('bL', '6', 'os NK → ľavý okraj betónu'),
+      length('bR', '6', 'os NK → pravý okraj betónu'),
+      length('h', '1.7', 'hĺbka spodku priečnika pod referenčným bodom'),
+      {
+        name: 'q',
+        unit: 'slope',
+        default: '0.025',
+        description: 'priečny sklon, kladný = klesá doprava',
+      },
+    ],
+    [
+      { name: 'R', x: '0', y: '0' },
+      { name: 'TL', x: '-bL', y: 'q * bL' },
+      { name: 'TR', x: 'bR', y: '-q * bR' },
+      { name: 'BR', x: 'bR', y: '-h' },
+      { name: 'BL', x: '-bL', y: '-h' },
+    ],
+    [{ name: 'obrys', role: 'outer', points: ['TL', 'BL', 'BR', 'TR'] }],
+  );
+}
+
+/** Typológia šablón priečnikov (nie sú to prierezy NK, vo výbere NK sa neponúkajú). */
+export const CROSSBEAM_TYPOLOGY = 'crossbeam';
+
+/** Všetky šablóny v poradí podľa ekonomického rozpätia, na konci priečnik. */
 export const PROFILE_TEMPLATES: readonly ProfileTemplate[] = [
   { typology: 'slab', name: 'Doska', create: slab },
   { typology: 'voidedSlab', name: 'Vyľahčená doska', create: voidedSlab },
@@ -333,6 +367,7 @@ export const PROFILE_TEMPLATES: readonly ProfileTemplate[] = [
   { typology: 'twinBeam', name: 'Dvojtrám', create: twinBeam },
   { typology: 'box', name: 'Komora', create: box },
   { typology: 'boxHaunched', name: 'Komora s nábehmi', create: boxHaunched },
+  { typology: CROSSBEAM_TYPOLOGY, name: 'Priečnik – plný blok', create: crossbeamBlock },
 ];
 
 /** Šablóna podľa typológie s daným id; neznáma typológia → undefined. */

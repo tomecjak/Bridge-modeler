@@ -146,6 +146,12 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}os uloženia neexistuje.`;
     case 'BearingLineWithoutSupport':
       return `${prefix}na osi uloženia ${issue.line} zatiaľ nestojí podpera.`;
+    case 'UnknownCrossbeamProfile':
+      return `${prefix}priečnik na osi uloženia ${issue.line} odkazuje na prierez, ktorý v projekte nie je.`;
+    case 'CrossbeamOutsideDeck':
+      return `${prefix}priečnik na osi uloženia ${issue.line} siaha mimo NK.`;
+    case 'CrossbeamOverlap':
+      return `${prefix}priečniky na osiach uloženia ${issue.lines[0]} a ${issue.lines[1]} sa prekrývajú.`;
     case 'BearingLineOccupied':
       return `${prefix}na osi uloženia ${issue.line} stojí viac podpier (${issue.supports.join(', ')}).`;
     case 'InvalidCrossingAngle':

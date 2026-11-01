@@ -23,6 +23,7 @@ import {
 import {
   type AxisLength,
   bridgeAxisPlan,
+  crossbeamBlock,
   type DeckRange,
   deckEndSources,
   evaluateSuperstructure,
@@ -528,6 +529,27 @@ export function App() {
       .flatMap((l) => l.polygon.map((p) => p.x));
     const width = xs.length > 0 ? Math.max(...xs) - Math.min(...xs) : undefined;
     return defaultSupport(newId('sup'), `${prefix}${n}`, kind, line.id, soffit, width);
+  }
+
+  /** Priečnik na osi z novej kópie šablóny „Priečnik – plný blok“ (prierez a priečnik jedným krokom späť). */
+  function addCrossbeamFromTemplate(lineId: string) {
+    const profile = crossbeamBlock(newId('prof'));
+    const names = project.profiles.map((p) => p.name);
+    let name: string = sk.bearingLines.crossbeamName;
+    for (let n = 2; names.includes(name); n++) name = `${sk.bearingLines.crossbeamName} ${n}`;
+    const width = project.bearingLines.find((l) => l.id === lineId)?.crossbeam?.width ?? '1.2';
+    projectStore.getState().dispatch({
+      type: 'batch',
+      commands: [
+        { type: 'addElements', profiles: [{ ...profile, name }] },
+        {
+          type: 'updateElement',
+          collection: 'bearingLines',
+          id: lineId,
+          changes: { crossbeam: { profile: profile.id, width } },
+        },
+      ],
+    });
   }
 
   /** Podpera na voľnej osi uloženia (vlastnosti osi, kontextová karta). */
@@ -1744,6 +1766,8 @@ export function App() {
               decks: project.superstructures,
               supports: project.supports.filter((s) => s.bearingLine === line.id),
               spans: supportState.spans.get(line.superstructure),
+              profiles: project.profiles,
+              onCrossbeamTemplate: () => addCrossbeamFromTemplate(line.id),
               onAddSupport: () => addSupportOnLine(line.id),
               onSelectSupport: (id) => setSelectedElement({ collection: 'supports', id }),
               onDelete: deleteSelected,

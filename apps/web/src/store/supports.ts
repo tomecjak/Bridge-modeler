@@ -7,6 +7,8 @@ import {
   bridgeAxisLength,
   bridgeAxisPlan,
   bridgeLengths,
+  type CrossbeamBand,
+  crossbeamBands,
   evaluateBearingLine,
   evaluateSpans,
   evaluateSupport,
@@ -17,8 +19,11 @@ import {
 import { useMemo } from 'react';
 import { useProject } from './projectStore.ts';
 
-/** Polia NK a dĺžky mosta (NK, premostenie, celková) vodorovne po osi mosta [m] (ADR 0007, 0010). */
-export type DeckSpans = SpanResult & { lengths?: BridgeLengths };
+/**
+ * Polia NK, dĺžky mosta (NK, premostenie, celková) vodorovne po osi mosta [m] a pásy priečnikov (ADR 0007, 0017,
+ * 0018); problémy priečnikov sú v `issues`.
+ */
+export type DeckSpans = SpanResult & { lengths?: BridgeLengths; crossbeams?: CrossbeamBand[] };
 
 /** Presah osi mosta za konce NK pri hľadaní líc prahov [m]. */
 const AXIS_REACH = 30;
@@ -93,6 +98,18 @@ export function useSupportState(
           sTo,
           axisLine: bridgeAxisPlan(axis, road, parameters, sFrom - AXIS_REACH, sTo + AXIS_REACH),
         });
+      }
+      if (road && measure) {
+        const cb = crossbeamBands({
+          deck: sup,
+          lines,
+          profiles,
+          parameters,
+          alignment: road,
+          measure,
+        });
+        result.crossbeams = cb.bands;
+        result.issues.push(...cb.issues);
       }
       spans.set(sup.id, result);
     }
