@@ -32,8 +32,14 @@ export type PropertyRow =
       disabled?: boolean;
     }
   | { kind: 'station'; label: string; value: number; onCommit: (value: number) => void }
-  /** výraz v jednotkách modelu (m, °; ADR 0006) */
-  | { kind: 'expression'; label: string; value: string; onCommit: (value: string) => void }
+  /** výraz v jednotkách modelu (m, °; ADR 0006); prázdna hodnota so zástupným textom (napr. „rôzne“) nie je chyba */
+  | {
+      kind: 'expression';
+      label: string;
+      value: string;
+      onCommit: (value: string) => void;
+      placeholder?: string;
+    }
   | {
       kind: 'toggle';
       label: string;
@@ -124,7 +130,14 @@ function Editor({ row }: { row: Exclude<PropertyRow, { kind: 'note' }> }) {
     case 'station':
       return <StationField ariaLabel={row.label} value={row.value} onCommit={row.onCommit} />;
     case 'expression':
-      return <ExpressionInput value={row.value} ariaLabel={row.label} onCommit={row.onCommit} />;
+      return (
+        <ExpressionInput
+          value={row.value}
+          ariaLabel={row.label}
+          onCommit={row.onCommit}
+          {...(row.placeholder ? { placeholder: row.placeholder } : {})}
+        />
+      );
     case 'toggle':
       return (
         <input

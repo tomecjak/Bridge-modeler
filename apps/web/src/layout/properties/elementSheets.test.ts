@@ -225,20 +225,59 @@ describe('deckSheet', () => {
     },
   } as DeckSpans;
 
-  it('lists profile parameters with their laws and flags unknown ones', () => {
-    const sheet = deckSheet({
+  const sheetOf = (
+    lines: Pick<BearingLine, 'id' | 'crossingAngle'>[] = [],
+    commands: Command[] = [],
+  ) =>
+    deckSheet({
       deck,
       profiles: [profile],
       axes: [{ id: 'ax', name: 'Os mosta' }],
       curveName: () => '',
       spans,
+      lines,
       result: undefined,
       station: 1120,
       onEditLaw: () => {},
       onAddSupport: () => {},
+      onSpanLayout: () => {},
       onDelete: () => {},
-      dispatch: () => {},
+      dispatch: (c) => commands.push(c),
     });
+
+  it('sets the crossing angle of all bearing lines in one step and shows mixed angles', () => {
+    const commands: Command[] = [];
+    const sheet = sheetOf(
+      [
+        { id: 'l1', crossingAngle: '90' },
+        { id: 'l2', crossingAngle: '80' },
+      ],
+      commands,
+    );
+    const row = sheet.groups.find((g) => g.id === 'deck-lines')?.rows?.[0];
+    expect(row).toMatchObject({ kind: 'expression', value: '', placeholder: 'rôzne' });
+    if (row?.kind === 'expression') row.onCommit('68.71 * 0.9');
+    expect(commands).toEqual([
+      {
+        type: 'batch',
+        commands: ['l1', 'l2'].map((id) => ({
+          type: 'updateElement',
+          collection: 'bearingLines',
+          id,
+          changes: { crossingAngle: '68.71 * 0.9' },
+        })),
+      },
+    ]);
+    expect(
+      sheetOf([{ id: 'l1', crossingAngle: '76' }]).groups.find((g) => g.id === 'deck-lines')
+        ?.rows?.[0],
+    ).toMatchObject({ value: '76' });
+    expect(sheetOf().groups.some((g) => g.id === 'deck-lines')).toBe(false);
+    expect(sheet.actions?.[0]?.label).toBe('Rozloženie polí');
+  });
+
+  it('lists profile parameters with their laws and flags unknown ones', () => {
+    const sheet = sheetOf();
     const laws = sheet.groups.find((g) => g.id === 'deck-laws')?.rows ?? [];
     const h = laws.find((r) => r.kind === 'edit' && r.label.startsWith('h '));
     expect(h).toMatchObject({ value: '1.1 m' });

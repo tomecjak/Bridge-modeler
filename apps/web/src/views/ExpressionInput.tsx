@@ -11,13 +11,13 @@ interface Props {
 
 /**
  * Pole pre výraz: úprava lokálne, potvrdenie Enterom alebo opustením poľa (jeden krok späť/znova).
- * Syntaktickú chybu ukáže hneď pod poľom s vyznačeným miestom.
+ * Syntaktickú chybu ukáže hneď pod poľom s vyznačeným miestom; prázdne pole so zástupným textom chybou nie je.
  */
 export function ExpressionInput({ value, onCommit, ariaLabel, placeholder }: Props) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
   const parsed = parse(draft);
-  const error = parsed.ok ? undefined : parsed.error;
+  const error = parsed.ok || (draft === '' && placeholder) ? undefined : parsed.error;
 
   const commit = () => {
     if (draft !== value) onCommit(draft);

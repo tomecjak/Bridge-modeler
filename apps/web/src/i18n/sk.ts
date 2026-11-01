@@ -205,6 +205,11 @@ export const sk = {
     support: 'Podpera na osi',
     noSupport: 'Na osi zatiaľ nestojí podpera.',
     addSupport: 'Vložiť podperu',
+    group: 'Osi uloženia',
+    commonAngle: 'Uhol kríženia všetkých osí [°]',
+    mixed: 'rôzne',
+    commonAngleHint: (n: number) =>
+      `Zmena nastaví uhol všetkým ${n} osiam uloženia NK jedným krokom späť (90 = kolmé).`,
   },
   supports: {
     kind: 'Druh',

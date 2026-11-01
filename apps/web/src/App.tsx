@@ -890,10 +890,12 @@ export function App() {
       .sort((a, b) => a.s - b.s);
     const compact = (v: number) => String(Math.round(v * 100) / 100).replace('.', ',');
     const firstLine = own[0];
-    const overhang =
+    const current =
       firstLine && measure && sFrom !== undefined
         ? Math.round((measure.lengthAt(firstLine.s) - measure.lengthAt(sFrom)) * 100) / 100
-        : 0.5;
+        : undefined;
+    // doterajší presah konca NK, ak je primeraný; inak 0,50 m (212-00)
+    const overhang = current !== undefined && current >= 0 && current <= 2 ? current : 0.5;
     const first = firstLine?.station ?? (deck?.from ?? 0) + overhang;
     const last = own.at(-1)?.station ?? (deck?.to ?? 0) - overhang;
     const area = project.studyArea?.alignment === road?.name ? project.studyArea : undefined;
@@ -905,7 +907,7 @@ export function App() {
         center: area ? (area.from + area.to) / 2 : (first + last) / 2,
       },
       angle: firstLine?.line.crossingAngle ?? '90',
-      overhang: Math.max(0, overhang),
+      overhang,
     };
   }
 
@@ -976,6 +978,10 @@ export function App() {
       }),
     );
     setSelectedElement({ collection: 'superstructures', id: r.deck.id });
+    // prierez ostane na NK aj po zmene jej rozsahu
+    setSectionStation(
+      Math.round(toDisplay((r.layout.deck.sFrom + r.layout.deck.sTo) / 2) * 1000) / 1000,
+    );
     setSpanLayoutDeck(undefined);
   }
 
@@ -1767,6 +1773,7 @@ export function App() {
                       (l) => law.curve.type === 'planLine' && l.id === law.curve.id,
                     )?.name ?? sk.edgeLaw.missing),
               spans: supportState.spans.get(deck.id),
+              lines: project.bearingLines.filter((l) => l.superstructure === deck.id),
               result: sections.results.find((r) => r.superstructure.id === deck.id),
               station: sectionAt,
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
@@ -1774,6 +1781,7 @@ export function App() {
                 setMode('2d');
                 setTool('support');
               },
+              onSpanLayout: openSpanLayout,
               onDelete: deleteSelected,
               dispatch,
             })}

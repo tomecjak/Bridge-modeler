@@ -407,16 +407,25 @@ Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do p�
 
 #### 10c — Osi uloženia a polia v pozdĺžnom profile (ADR 0017)
 Rozhodnutia 2026-11-01: podpera vždy stojí na osi uloženia (os patrí NK, má číslo, staničenie a uhol kríženia; polia z osí aj bez podpier); posun krajnej osi posunie aj koniec NK so zachovaným presahom (do 10d); ťahanie posúva len ťahanú os, prichytáva pole pred ňou po 0,5 m, Ctrl aj ďalšie osi, Shift bez prichytávania; rozloženie polí zachová a presunie existujúce podpery.
-- [ ] osi uloženia v modeli: schéma v8 (`bearingLines`, podpera na osi), migrácia 7 → 8, polia z osí (os bez podpery = upozornenie, dve podpery na osi = chyba), prehliadač NK → os → podpera, vlastnosti osi, podpera preberá staničenie a uhol z osi
-- [ ] kreslenie osí uloženia v pôdoryse a profile (aj voľných, aj do DXF) a príkaz `batch` (viac zmien = jeden krok späť)
-- [ ] čisté funkcie polí: zápis „16 + 23 + 16“ / „3×20“, polohy osí po osi mosta s ukotvením, posun osi, zadanie rozpätia, prichytávanie po 0,5 m (test-first)
-- [ ] vloženie osi uloženia a podpery klikom v pôdoryse aj v pozdĺžnom profile s náhľadom a prichytávaním dĺžky poľa
-- [ ] ťahanie osí a podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta po 0,5 m (nie km), Shift = bez prichytávania, Ctrl = aj ďalšie osi, živé kóty, jeden krok späť; staničenie v editore ostáva ľubovoľné
-- [ ] úprava rozpätia kliknutím na kótu a zadaním hodnoty: zmení sa len upravené pole a všetky osi za ním (na strane od vybranej podpery) sa posunú, celková dĺžka mosta sa zmení (rozhodnutie 2026-10-31)
-- [ ] „Rozloženie polí“: „16 + 23 + 16“ / „3×20“, ukotvenie od začiatku / od konca / symetricky okolo km (kríženie s prekážkou príde v 10f), spoločný uhol kríženia, presah konca NK, typ piliera a opory (z projektu alebo predvolený; firemná knižnica v 10e); existujúce podpery sa zachovajú a presunú, jeden krok späť
-- [ ] spoločná šikmosť: vo vlastnostiach NK uhol kríženia všetkých osí uloženia
+- [x] osi uloženia v modeli: schéma v8 (`bearingLines`, podpera na osi), migrácia 7 → 8, polia z osí (os bez podpery = upozornenie, dve podpery na osi = chyba), prehliadač NK → os → podpera, vlastnosti osi, podpera preberá staničenie a uhol z osi
+  - `evaluateBearingLine` (prvá polovica bývalého `evaluateSupport`), `SupportResult.superstructure` / `.line`, `spanLines` + `evaluateSpans` z osí, `bearingLineSheet`, os vo výbere podpery (len voľné osi), zmazanie osi zmaže aj podperu, duplikovanie podpery / osi / NK s osami. Pomôcka pre testy `supportsOnLines` (`@bridge/sections/testing`).
+- [x] kreslenie osí uloženia v pôdoryse a profile (aj voľných, aj do DXF) a príkaz `batch` (viac zmien = jeden krok späť)
+  - pôdorys: os cez obrys NK a pôdorys podpier na nej + číslo osi (hladina `OS_PODPERY`); profil: zvislica cez NK a podperu + „číslo  km“ (priesečník osi s čiarou profilu, v osi mosta dĺžka po osi mosta).
+- [x] čisté funkcie polí: zápis „16 + 23 + 16“ / „3×20“, polohy osí po osi mosta s ukotvením, posun osi, zadanie rozpätia, prichytávanie po 0,5 m (test-first)
+  - `packages/sections/src/spanLayout.ts` (`parseSpanLayout`, `layoutStations`, `moveLine`, `setSpanLength`, `snapSpan`, `snapToPrevious`); test aj na osi posunutej o 7 m v oblúku R 300.
+- [x] vloženie osi uloženia a podpery klikom v pôdoryse aj v pozdĺžnom profile s náhľadom a prichytávaním dĺžky poľa
+  - Domov → Most → Os uloženia (nový nástroj) a Podpera: náhľad osi a živé kóty susedných polí, Podpera do 10 px od voľnej osi sa postaví na ňu; nástroje ostávajú aktívne do Esc (`views/lineEdit.ts`).
+- [x] ťahanie osí a podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta po 0,5 m (nie km), Shift = bez prichytávania, Ctrl = aj ďalšie osi, živé kóty, jeden krok späť; staničenie v editore ostáva ľubovoľné
+  - klik bez ťahania vyberie podperu na osi (voľnú os); bez Ctrl ostane os medzi susedmi (najmenej 0,5 m); posun krajnej osi posunie koniec NK.
+- [x] úprava rozpätia kliknutím na kótu a zadaním hodnoty: zmení sa len upravené pole a všetky osi za ním (na strane od vybranej podpery) sa posunú, celková dĺžka mosta sa zmení (rozhodnutie 2026-10-31)
+  - pole priamo na mieste kóty v profile aj pôdoryse (Enter potvrdí, Esc zruší); presahy konca NK (0,50) sa nedajú upraviť, len polia.
+- [x] „Rozloženie polí“: „16 + 23 + 16“ / „3×20“, ukotvenie od začiatku / od konca / symetricky okolo km (kríženie s prekážkou príde v 10f), spoločný uhol kríženia, presah konca NK, typ piliera a opory (z projektu alebo predvolený; firemná knižnica v 10e); existujúce podpery sa zachovajú a presunú, jeden krok späť
+  - `layout/SpanLayoutDialog.tsx` (Domov → Most, kontextová karta a vlastnosti NK), `store/spanLayout.ts` (`planSpanLayout`, test: 212-00 z „16 + 23 + 16“ a 68,71 g → 16 / 23 / 16, NK 56,00, premostenie 53,20, celková 65,84). Symetria okolo stredu oblasti mosta.
+- [x] spoločná šikmosť: vo vlastnostiach NK uhol kríženia všetkých osí uloženia
+  - skupina „Osi uloženia“ vo vlastnostiach NK; rôzne uhly → „rôzne“, zmena = jeden krok späť.
+  - *Ostáva:* koniec NK je stále rovnobežný s krajnou oporou, nie s krajnou osou uloženia (prejde na os v 10d); popisy osí v profile sa pri malom priblížení prekrývajú s kótami.
 
-**Hotové, keď:** most 212-00 vznikne z „16 + 23 + 16“ a šikmosti jedným dialógom a ťahanie piliera mení rozpätia v kroku prichytávania.
+**Hotové, keď:** most 212-00 vznikne z „16 + 23 + 16“ a šikmosti jedným dialógom a ťahanie piliera mení rozpätia v kroku prichytávania. — *2026-11-01:* overené testom (`planSpanLayout` na 212-00) aj v prehliadači (Chrome bez okna) na 212-00 a SO 171-11-01 v tmavej téme: rozloženie polí, vloženie osi a podpery v profile aj pôdoryse, ťahanie s Ctrl / Shift, zadanie rozpätia na kóte, späť / znova.
 
 #### 10d — Opora a koniec NK
 - [ ] workshop s projektantom: náčrt rezu opory v osi mosta s pomenovanými rozmermi (predsadenie prahu pred os uloženia, odsadenie konca NK od osi uloženia, medzera NK – múrik, odsadenie NK od prahu = priestor pre ložiská, šírka a výška prahu, hrúbka múrika, krídla, typ opory) → doplnok ADR 0010 alebo nové ADR
@@ -525,6 +534,7 @@ Rozhodnutia 2026-11-01: podpera vždy stojí na osi uloženia (os patrí NK, má
 - Premenovanie globálneho parametra dnes prepíše odkazy len v ostatných globálnych parametroch, nie v priebehoch NK, posunoch osi mosta, predvolených hodnotách profilu ani v podperách (zistené 2026-10-31). Doplniť?
 - Golden testy a CI: podklady sa neverzujú, takže CI k nim nemá prístup. *Predpoklad:* testy proti reálnym podkladom bežia len lokálne (ak dáta chýbajú, preskočia sa) a CI overuje syntetické osi so známou geometriou.
 - Fáza 10b, *predpoklady:* (1) odčítanie terénu pri viacerých povrchoch berie najvyšší. (2) čiara v pôdoryse a okraj NK sa v profile popisujú km osi cesty v päte kolmice. *Vyriešené 2026-11-01:* Merať v pôdoryse smer neukazuje; okraj NK = krajný bod prierezu NK (šírka NK), okraj rímsy = šírka mosta (10i).
+- Fáza 10c, *predpoklady:* (1) nová os uloženia preberá uhol kríženia najbližšej osi NK (bez osí 90°). (2) Nástroje Os uloženia a Podpera ostávajú aktívne do Esc (ako v Revite); predtým sa Podpera po jednom kliku vypla. (3) Klik na os v pohľade vyberie podperu, ktorá na nej stojí; samotnú os vyberiete v prehliadači. (4) Predvolený presah konca NK v dialógu je doterajší, ak je 0 – 2 m, inak 0,50 m. (5) Nové podpery z rozloženia sa na NK bez podpier volajú číslom osi (1, 2, …), inak O / P s ďalším číslom; horná hrana základu je zatiaľ odhad z nivelety (− 1,8 m − 8 / 5 m) aj pri type z projektu, kým 10e nezavedie založenie podľa terénu. (6) Staničenia osí sa ukladajú na 0,1 mm.
 - **TODO (statik): štíhlosť NK** pre kontrolu vo Fáze 10g. Kým nebudú potvrdené hodnoty, platia orientačné
   (*predpoklad:* spojité predpäté NK, h = výška v osi, len upozornenie): doska L/25 – L/30; vyľahčená doska
   L/22 – L/28; doskotrám, jednotrám, dvojtrám L/15 – L/20; jednotrám s nábehmi v poli L/20 – L/25; komora

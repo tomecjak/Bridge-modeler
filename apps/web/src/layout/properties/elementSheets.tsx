@@ -420,14 +420,42 @@ export function deckSheet(input: {
   /** názov krivky okraja (os z LandXML alebo čiara v pôdoryse) */
   curveName: (law: Extract<ProfileLaw, { kind: 'edge' }>) => string;
   spans: DeckSpans | undefined;
+  /** osi uloženia NK (spoločná šikmosť, ADR 0017) */
+  lines: readonly Pick<BearingLine, 'id' | 'crossingAngle'>[];
   result: SectionResult | undefined;
   station: number;
   onEditLaw: (parameter: string) => void;
   onAddSupport: () => void;
+  onSpanLayout: () => void;
   onDelete: () => void;
   dispatch: Dispatch;
 }): PropertySheet {
-  const { deck, spans } = input;
+  const { deck, spans, lines } = input;
+  const angles = new Set(lines.map((l) => l.crossingAngle));
+  const common = angles.size === 1 ? (lines[0]?.crossingAngle ?? '') : '';
+  const lineRowsOfDeck: PropertyRow[] = [
+    {
+      kind: 'expression',
+      label: sk.bearingLines.commonAngle,
+      value: common,
+      ...(angles.size > 1 ? { placeholder: sk.bearingLines.mixed } : {}),
+      onCommit: (crossingAngle) =>
+        input.dispatch({
+          type: 'batch',
+          commands: lines.map((l) => ({
+            type: 'updateElement',
+            collection: 'bearingLines',
+            id: l.id,
+            changes: { crossingAngle },
+          })),
+        }),
+    },
+    {
+      kind: 'note',
+      text: sk.bearingLines.commonAngleHint(lines.length),
+      tone: 'muted',
+    },
+  ];
   const set = (changes: Partial<Superstructure>) =>
     input.dispatch({ type: 'updateElement', collection: 'superstructures', id: deck.id, changes });
   const profile = input.profiles.find((p) => p.id === deck.profile);
@@ -532,6 +560,9 @@ export function deckSheet(input: {
       },
       { id: 'deck-laws', title: sk.properties.profileLaws, rows: lawRows },
       { id: 'deck-spans', title: sk.supports.spans, rows: spanRows },
+      ...(lines.length > 0
+        ? [{ id: 'deck-lines', title: sk.bearingLines.group, rows: lineRowsOfDeck }]
+        : []),
       {
         id: 'deck-section',
         title: sk.properties.sectionAt(formatStation(input.station, 3)),
@@ -541,6 +572,7 @@ export function deckSheet(input: {
       },
     ],
     actions: [
+      { label: sk.ribbon.spanLayout, icon: 'spans', onClick: input.onSpanLayout },
       { label: sk.supports.add, icon: 'pier', onClick: input.onAddSupport },
       { label: sk.properties.remove, icon: 'trash', danger: true, onClick: input.onDelete },
     ],

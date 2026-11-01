@@ -111,7 +111,7 @@ export function planSpanLayout(p: SpanLayoutPlan): Command {
       return;
     }
     const kind = i === 0 || i === n - 1 ? 'abutment' : 'pier';
-    const name = supportName(String(i + 1), kind, names);
+    const name = supportName(String(i + 1), kind, names, kept.size === 0);
     names.add(name);
     created.push(p.newSupport(kind, id, name, p.stations[i] as number));
   });
@@ -126,9 +126,17 @@ export function planSpanLayout(p: SpanLayoutPlan): Command {
   return { type: 'batch', commands };
 }
 
-/** Názov novej podpery: číslo osi, ak je voľné; inak O / P s prvým voľným číslom. */
-function supportName(lineName: string, kind: Support['kind'], used: ReadonlySet<string>): string {
-  if (!used.has(lineName)) return lineName;
+/**
+ * Názov novej podpery: na NK bez podpier číslo osi (ako na výkrese), ak je voľné; inak O / P s prvým voľným číslom,
+ * aby sa nemiešalo s doterajším pomenovaním.
+ */
+function supportName(
+  lineName: string,
+  kind: Support['kind'],
+  used: ReadonlySet<string>,
+  byLine: boolean,
+): string {
+  if (byLine && !used.has(lineName)) return lineName;
   const prefix = kind === 'abutment' ? 'O' : 'P';
   let k = 1;
   while (used.has(`${prefix}${k}`)) k++;
