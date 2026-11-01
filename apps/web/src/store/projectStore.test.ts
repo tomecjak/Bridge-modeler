@@ -1,9 +1,9 @@
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
-import { levelFoundation, type Parameter } from '@bridge/model';
+import { levelFoundation, type Parameter, type TerrainSurface } from '@bridge/model';
 import { reference212Project } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { syncDeckEnds } from './deckEnds.ts';
-import { createProjectStore } from './projectStore.ts';
+import { createProjectStore, normalizeProject } from './projectStore.ts';
 
 const param = (id: string, name: string, value: string): Parameter => ({
   id,
@@ -199,6 +199,49 @@ describe('project store', () => {
       changes: { station: 9362.81 },
     });
     expect(deck()?.to).toBeCloseTo(9365.31, 9);
+  });
+
+  it('samples the terrain in the support centres in the same undoable step', () => {
+    const plane = (x: number, y: number) => 300 + 0.01 * x + 0.02 * y;
+    const corners = [
+      [-300, -300],
+      [400, -300],
+      [400, 400],
+      [-300, 400],
+    ] as const;
+    const terrain: TerrainSurface = {
+      id: 't',
+      name: 'DMR',
+      source: 'landxml',
+      corridor: { halfWidth: 60, margin: 50 },
+      data: {
+        kind: 'tin',
+        points: corners.flatMap(([x, y]) => [x, y, plane(x, y)]),
+        triangles: [0, 1, 2, 0, 2, 3],
+      },
+    };
+    const store = createProjectStore(reference212Project(), normalizeProject);
+    const terrainOf = (id: string) =>
+      store.getState().project.supports.find((s) => s.id === id)?.foundation.terrain;
+    expect(terrainOf('p2')).toBeUndefined();
+    store.getState().dispatch({ type: 'addElements', terrains: [terrain] });
+    const before = terrainOf('p2') ?? Number.NaN;
+    expect(before).toBeGreaterThan(290);
+    // os 2 o 1 m ďalej po osi cesty (azimut 1,1 rad) → terén v strede piliera sa zmení
+    store.getState().dispatch({
+      type: 'updateElement',
+      collection: 'bearingLines',
+      id: 'l2',
+      changes: { station: 9324.81 },
+    });
+    expect((terrainOf('p2') ?? 0) - before).toBeCloseTo(
+      0.01 * Math.sin(1.1) + 0.02 * Math.cos(1.1),
+      3,
+    );
+    store.getState().undo();
+    expect(terrainOf('p2')).toBe(before);
+    store.getState().dispatch({ type: 'removeElement', collection: 'terrains', id: 't' });
+    expect(terrainOf('p2')).toBeUndefined();
   });
 
   it('edits the brief and the study area as undoable steps', () => {

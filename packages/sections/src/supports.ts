@@ -170,6 +170,17 @@ export function evaluateBearingLine(ctx: SupportContext, line: BearingLine): Bea
   return done();
 }
 
+/**
+ * Stred podpery v pôdoryse (ADR 0008, 0019): bod na osi uloženia, ktorého kolmá vzdialenosť od osi mosta je `offset`
+ * (+ vpravo). Os uloženia musí byť vyhodnotená (`axis`).
+ */
+export function supportCenter(line: BearingLineResult, offset: number): Vec2 {
+  const p = line.axis?.point ?? vec2(0, 0);
+  const d = line.direction;
+  const k = offset / Math.sin(line.crossingAngle);
+  return vec2(p.x - k * d.x, p.y - k * d.y);
+}
+
 /** Blokujúce problémy (chyby, nie upozornenia). */
 const hasErrors = (issues: readonly ModelIssue[]) => issues.some((i) => i.severity !== 'warning');
 
@@ -281,8 +292,7 @@ export function evaluateSupport(
   result.direction = d;
   const sin = Math.sin(alpha);
   const cot = Math.cos(alpha) / sin;
-  const along = (perpendicular: number) =>
-    vec2(axis.point.x - (perpendicular / sin) * d.x, axis.point.y - (perpendicular / sin) * d.y);
+  const along = (perpendicular: number) => supportCenter(line, perpendicular);
   result.center = along(offset);
 
   // koniec NK je rovnobežný s krajnou oporou (ADR 0009) → ložisko opory môže ležať za staničením „od/do“

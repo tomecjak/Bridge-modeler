@@ -11,6 +11,7 @@ import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { applyCommand, type Command } from './commands.ts';
 import { syncDeckEnds } from './deckEnds.ts';
+import { syncSupportTerrain } from './supportTerrain.ts';
 
 enablePatches();
 
@@ -36,12 +37,37 @@ export interface ProjectState {
 }
 
 /**
- * Zosúladenie odvodených hodnôt projektu po zmene (napr. konce NK z opôr, ADR 0018): úprava draftu alebo undefined,
+ * Zosúladenie odvodených hodnôt projektu po zmene (napr. konce NK z opôr, ADR 0018, terén podpier, ADR 0019): úprava draftu alebo undefined,
  * ak je projekt v súlade. Zapíše sa do toho istého kroku späť.
  */
 export type ProjectNormalizer = (
   project: ProjectFile,
 ) => ((draft: Draft<ProjectFile>) => void) | undefined;
+
+/**
+ * Normalizátory za sebou: každý vidí projekt po úpravách predchádzajúcich (napr. terén podpery na osi, ktorú
+ * zosúladenie koncov NK vrátilo do rozsahu NK).
+ */
+export function composeNormalizers(...list: ProjectNormalizer[]): ProjectNormalizer {
+  return (project) => {
+    let current = project;
+    const fixes: ((draft: Draft<ProjectFile>) => void)[] = [];
+    for (const normalize of list) {
+      const fix = normalize(current);
+      if (!fix) continue;
+      current = produce(current, fix);
+      fixes.push(fix);
+    }
+    return fixes.length === 0
+      ? undefined
+      : (draft) => {
+          for (const fix of fixes) fix(draft);
+        };
+  };
+}
+
+/** Odvodené hodnoty projektu: konce NK z opôr (ADR 0018) a terén v strede podpier (ADR 0019). */
+export const normalizeProject = composeNormalizers(syncDeckEnds, syncSupportTerrain);
 
 export function createProjectStore(
   initial: ProjectFile = createEmptyProject('Nový most'),
@@ -110,7 +136,7 @@ export function createProjectStore(
 export type ProjectStore = ReturnType<typeof createProjectStore>;
 
 /** Jediný store aplikácie; konce NK sa po každej zmene zosúladia s oporami (ADR 0018). */
-export const projectStore = createProjectStore(undefined, syncDeckEnds);
+export const projectStore = createProjectStore(undefined, normalizeProject);
 
 export function useProject<T>(selector: (state: ProjectState) => T): T {
   return useStore(projectStore, selector);
