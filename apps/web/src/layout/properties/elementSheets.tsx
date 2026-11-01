@@ -3,6 +3,7 @@ import type {
   AbutmentGeometry,
   BearingLine,
   BridgeAxis,
+  FoundationMode,
   ProfileDefinition,
   ProfileLaw,
   Superstructure,
@@ -320,6 +321,62 @@ export function bearingLineSheet(input: {
 }
 
 /**
+ * Založenie podpery (ADR 0019): režim, pole zvoleného režimu, terén v strede podpery a vypočítaná horná hrana
+ * základu a základová škára.
+ */
+function foundationRows(
+  support: Support,
+  result: SupportResult | undefined,
+  z0: number,
+  set: (changes: Partial<Support>) => void,
+): PropertyRow[] {
+  const t = sk.supports.foundation;
+  const f = support.foundation;
+  const field =
+    f.mode === 'terrain'
+      ? expr(t.cover, f.cover, (cover) => set({ foundation: { ...f, cover } }))
+      : f.mode === 'height'
+        ? expr(t.height, f.height, (height) => set({ foundation: { ...f, height } }))
+        : expr(t.level, f.level, (level) => set({ foundation: { ...f, level } }));
+  const top =
+    result && Number.isFinite(result.foundationTop) ? result.foundationTop + z0 : undefined;
+  const thickness = result?.footing.thickness;
+  return [
+    {
+      kind: 'select',
+      label: t.mode,
+      value: f.mode,
+      options: (['terrain', 'height', 'level'] as const).map((v) => ({
+        value: v,
+        label: t.modes[v],
+      })),
+      onChange: (v) => set({ foundation: { ...f, mode: v as FoundationMode } }),
+    },
+    field,
+    {
+      kind: 'readonly',
+      label: t.terrain,
+      value: f.terrain === undefined ? t.noTerrain : formatNumber(f.terrain, 3),
+    },
+    ...(top === undefined
+      ? []
+      : [
+          { kind: 'readonly' as const, label: t.top, value: formatNumber(top, 3) },
+          ...(thickness !== undefined && Number.isFinite(thickness)
+            ? [
+                {
+                  kind: 'readonly' as const,
+                  label: t.base,
+                  value: formatNumber(top - thickness, 3),
+                },
+              ]
+            : []),
+        ]),
+    { kind: 'note', text: t.hints[f.mode] },
+  ];
+}
+
+/**
  * Podpera v mriežke vlastností (ADR 0008, 0010, 0017): typ geometrie navrchu, identita s osou uloženia, poloha
  * (staničenie a uhol mení os uloženia), rozmery (pri opore po častiach), založenie, uloženie s ložiskami
  * („…“ = tabuľka) a výsledky výpočtu.
@@ -335,6 +392,8 @@ export function supportSheet(input: {
   onBearings: () => void;
   onDelete: () => void;
   dispatch: Dispatch;
+  /** výška počiatku projektu (lokálne z → m n. m.) */
+  z0?: number;
 }): PropertySheet {
   const { support, result } = input;
   const s = sk.supports;
@@ -426,7 +485,7 @@ export function supportSheet(input: {
       id: 'support-founding',
       title: sk.properties.founding,
       rows: [
-        expr(s.foundationTop, support.foundationTop, (foundationTop) => set({ foundationTop })),
+        ...foundationRows(support, result, input.z0 ?? 0, set),
         ...(['length', 'width', 'thickness'] as const).map((k) =>
           expr(s.footingFields[k], support.footing[k], (v) =>
             set({ footing: { ...support.footing, [k]: v } }),

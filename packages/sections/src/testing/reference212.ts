@@ -4,7 +4,8 @@
  * súradnice sú vymyslené. Rozmery z výkresu: polia 16,00 + 23,00 + 16,00 m (kolmo 14,10 / 20,26 / 14,10),
  * NK 56,00 m, premostenie 53,20 m (predsadenie prahu 0,90 m), celková dĺžka 65,84 m (krídla 4,00 m, opora 0,84 m,
  * medzera 0,08 m v osi mosta), šikmosť 68,71 g,
- * NK h = 1,20 m + vozovka 0,09 m, výška uloženia 0,45 m, horná hrana prahu opôr 316,772 a 316,417 m n. m.
+ * NK h = 1,20 m + vozovka 0,09 m, výška uloženia 0,45 m, horná hrana prahu opôr 316,772 a 316,417 m n. m. (prah
+ * výšky 1,10 m priamo na pilótach).
  */
 import type { AlignmentData } from '@bridge/alignment';
 import { createAlignment } from '@bridge/alignment';
@@ -13,6 +14,8 @@ import {
   buildParameterSet,
   createEmptyProject,
   defaultAbutmentGeometry,
+  defaultFoundation,
+  levelFoundation,
   type ProjectFile,
   type Superstructure,
   type Support,
@@ -101,12 +104,11 @@ export function reference212Project(): ProjectFile {
       connection: 'bearing',
       bearingHeight: '0.45',
       bearings: ['-1.25', '1.25'],
-      // opory: prah priamo na pilótach (spodok prahu); piliere: základ z výkresu
-      foundationTop: abutment
-        ? String((i === 0 ? 316.772 : 316.417) - 1.1)
-        : i === 1
-          ? '311.07'
-          : '311.18',
+      // opory: prah priamo na pilótach (výška podpery = výška prahu); piliere: základová škára z výkresu
+      // (horná hrana základu 311,07 / 311,18 − hrúbka 1,5)
+      foundation: abutment
+        ? { ...defaultFoundation('abutment'), height: '1.1' }
+        : levelFoundation(i === 1 ? '309.57' : '309.68'),
     };
   };
   return {

@@ -4,6 +4,7 @@ import {
   type BearingLine,
   buildParameterSet,
   defaultAbutmentGeometry,
+  levelFoundation,
   type Superstructure,
   type Support,
 } from '@bridge/model';
@@ -53,7 +54,7 @@ const pier = (changes: CaseChanges = {}): Case => {
       connection: 'bearing',
       bearingHeight: '0.35',
       bearings: ['-1.8', '1.8'],
-      foundationTop: '240',
+      foundation: levelFoundation('240 - 1.2'),
       ...rest,
     },
   };
@@ -103,6 +104,80 @@ describe('evaluateSupport — výška podpery', () => {
   });
 });
 
+describe('evaluateSupport — založenie (ADR 0019)', () => {
+  const foundation = (changes: Partial<Support['foundation']>): Support['foundation'] => ({
+    ...levelFoundation('238.8'),
+    ...changes,
+  });
+
+  it('puts the footing top the footing thickness above the foundation level', () => {
+    const r = evaluate(context(), pier({ foundation: foundation({ level: '238.8' }) }));
+    expect(r.foundationTop).toBeCloseTo(240, 12);
+    const bare = evaluate(
+      context(),
+      pier({ foundation: foundation({}), footing: { length: '0', width: '0', thickness: '0' } }),
+    );
+    expect(bare.foundationTop).toBeCloseTo(238.8, 12);
+  });
+
+  it('measures the support height from the footing top to the lowest seat', () => {
+    const r = evaluate(
+      context(),
+      pier({ foundation: foundation({ mode: 'height', height: '7.5' }) }),
+    );
+    expect(r.issues).toEqual([]);
+    expect(r.height.min).toBeCloseTo(7.5, 12);
+    const lowest = Math.min(...r.bearings.map((b) => b.seat));
+    expect(r.foundationTop).toBeCloseTo(lowest - 7.5, 12);
+    expect(r.height.max).toBeGreaterThan(7.5);
+  });
+
+  it('founds the support the cover below the terrain in its centre', () => {
+    const r = evaluate(
+      context(),
+      pier({ foundation: foundation({ mode: 'terrain', cover: '0.5', terrain: 245.25 }) }),
+    );
+    expect(r.issues).toEqual([]);
+    expect(r.terrain).toBeCloseTo(245.25, 12);
+    expect(r.foundationTop).toBeCloseTo(244.75, 12);
+  });
+
+  it('estimates the footing below the deck soffit without terrain and warns', () => {
+    const r = evaluate(context(), pier({ foundation: foundation({ mode: 'terrain' }) }));
+    const soffit = Math.min(...r.bearings.map((b) => b.soffit));
+    expect(r.foundationTop).toBeCloseTo(soffit - 8, 12);
+    expect(r.issues).toMatchObject([
+      { code: 'FoundationWithoutTerrain', severity: 'warning', estimate: soffit - 8 },
+    ]);
+  });
+
+  it('warns when the footing top is above the terrain', () => {
+    const r = evaluate(context(), pier({ foundation: foundation({ terrain: 239.7 }) }));
+    expect(r.issues).toMatchObject([{ code: 'FoundationAboveTerrain', severity: 'warning' }]);
+    expect(r.issues[0]).toHaveProperty('by', expect.closeTo(0.3, 9));
+    expect(
+      evaluate(context(), pier({ foundation: foundation({ terrain: 240.5 }) })).issues,
+    ).toEqual([]);
+  });
+
+  it('evaluates only the field of the selected mode', () => {
+    const r = evaluate(
+      context(),
+      pier({ foundation: foundation({ cover: 'nonsense', height: '?' }) }),
+    );
+    expect(r.issues).toEqual([]);
+  });
+
+  it('reports a height-founded support without bearings', () => {
+    const r = evaluate(
+      context(),
+      pier({ bearings: [], foundation: foundation({ mode: 'height' }) }),
+    );
+    expect(r.issues.map((i) => i.code)).toEqual(['SupportHeightWithoutBearings']);
+    expect(r.foundationTop).toBeNaN();
+  });
+});
+
 describe('evaluateSupport — šikmosť (uhol kríženia)', () => {
   it('rotates the support axis by the crossing angle counter-clockwise from the bridge axis', () => {
     const r = evaluate(context(), pier({ crossingAngle: '70' }));
@@ -134,9 +209,9 @@ describe('evaluateSupport — šikmosť (uhol kríženia)', () => {
 
 describe('evaluateSupport — problémy', () => {
   it('reports non-positive heights, invalid angles and bearings outside the deck soffit', () => {
-    expect(evaluate(context(), pier({ foundationTop: '400' })).issues.map((i) => i.code)).toContain(
-      'NonPositiveSupportHeight',
-    );
+    expect(
+      evaluate(context(), pier({ foundation: levelFoundation('400') })).issues.map((i) => i.code),
+    ).toContain('NonPositiveSupportHeight');
     expect(evaluate(context(), pier({ crossingAngle: '0' })).issues).toMatchObject([
       { code: 'InvalidCrossingAngle', owner: { kind: 'bearingLine', name: '1' } },
     ]);

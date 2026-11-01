@@ -1,6 +1,7 @@
 import {
   type BearingLine,
   defaultAbutmentGeometry,
+  levelFoundation,
   type Superstructure,
   type Support,
 } from '@bridge/model';
@@ -41,7 +42,7 @@ const pier: Support = {
   connection: 'bearing',
   bearingHeight: '0.35',
   bearings: ['-1.8', '1.8'],
-  foundationTop: '240',
+  foundation: levelFoundation('240 - 1.2'),
 };
 
 const groupIds = (sheet: PropertySheet) => sheet.groups.map((g) => g.id);
@@ -81,6 +82,27 @@ describe('supportSheet', () => {
     ]);
     const bearings = sheet.groups.find((g) => g.id === 'support-bearings')?.rows ?? [];
     expect(bearings.find((r) => r.kind === 'edit')).toMatchObject({ value: '-1.8; 1.8' });
+  });
+
+  it('shows the field of the foundation mode, the terrain and switches the mode', () => {
+    const commands: Command[] = [];
+    expect(labels(support(pier), 'support-founding').slice(0, 3)).toEqual([
+      'Založenie',
+      'Kóta základovej škáry [m n. m.]',
+      'Terén v strede podpery [m n. m.]',
+    ]);
+    const onTerrain: Support = {
+      ...pier,
+      foundation: { ...pier.foundation, mode: 'terrain', terrain: 245.123 },
+    };
+    const rows = support(onTerrain, commands).groups.find((g) => g.id === 'support-founding')?.rows;
+    expect(rows?.[1]).toMatchObject({ label: 'Krytie pod terénom [m]', value: '0.5' });
+    expect(rows?.[2]).toMatchObject({ kind: 'readonly', value: '245,123' });
+    const mode = rows?.[0];
+    if (mode?.kind === 'select') mode.onChange('height');
+    expect(commands[0]).toMatchObject({
+      changes: { foundation: { mode: 'height', height: '8', terrain: 245.123 } },
+    });
   });
 
   it('shows the column shape and switches dimensions for rectangular columns', () => {

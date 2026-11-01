@@ -3,6 +3,7 @@ import {
   type BearingLine,
   createEmptyProject,
   defaultAbutmentGeometry,
+  levelFoundation,
   type Support,
 } from '@bridge/model';
 import { deckFromProfile, profileTemplate } from '@bridge/sections';
@@ -30,7 +31,7 @@ function support(id: string, kind: Support['kind'], bearingLine: string): Suppor
     connection: 'bearing',
     bearingHeight: '0.35',
     bearings: ['0'],
-    foundationTop: '240',
+    foundation: levelFoundation('240 - 1.2'),
   };
 }
 

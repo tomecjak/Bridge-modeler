@@ -1,7 +1,12 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { dot3, type Polygon2D, signedArea, sub3, type Vec2, type Vec3, vec2 } from '@bridge/geom';
-import { buildParameterSet, defaultAbutmentGeometry, type Superstructure } from '@bridge/model';
+import {
+  buildParameterSet,
+  defaultAbutmentGeometry,
+  levelFoundation,
+  type Superstructure,
+} from '@bridge/model';
 import { evaluateSuperstructure, type SectionContext, twinDeckExample } from '@bridge/sections';
 import { evaluateSupportOnLine, type SupportOnLine } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
@@ -155,7 +160,7 @@ describe('šikmý koniec NK podľa opory', () => {
       connection: 'bearing',
       bearingHeight: '0.35',
       bearings: ['-3', '3'],
-      foundationTop: '240',
+      foundation: levelFoundation('240 - 1.5'),
     };
     const sctx = { ...ctx, superstructures: [sup] };
     const r = superstructureMesh(kernel, {

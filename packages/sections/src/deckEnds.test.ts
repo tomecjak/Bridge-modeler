@@ -4,6 +4,7 @@ import {
   type BridgeAxis,
   buildParameterSet,
   defaultAbutmentGeometry,
+  levelFoundation,
   type ProjectFile,
   type Support,
 } from '@bridge/model';
@@ -134,7 +135,7 @@ describe('resolveDeckEnds', () => {
       connection: 'bearing',
       bearingHeight: '0.35',
       bearings: ['0'],
-      foundationTop: '290',
+      foundation: levelFoundation('290'),
     });
     const alignment = createAlignment(road, { x: 0, y: 0, z: 0 }).alignment;
     const parameters = buildParameterSet([]);

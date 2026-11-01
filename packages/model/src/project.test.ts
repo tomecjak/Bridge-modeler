@@ -98,7 +98,7 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('9');
+      expect(r.project.schemaVersion).toBe('10');
       expect(r.project.bearingLines).toEqual([]);
       expect(r.project.studyArea).toBeNull();
       expect(r.project.brief.roadCategory).toBe('');
@@ -116,12 +116,12 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '9', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '10', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '9', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '10', name: 'Starý most', parameters: [] },
     });
   });
 
@@ -223,6 +223,41 @@ describe('migrateProject', () => {
     expect(o1).not.toHaveProperty('seatLength');
     // uhol zadaný výrazom → výraz
     expect(o2).toMatchObject({ frontOffset: '(0.9) / sin(alfa)', endOffset: '0.5' });
+  });
+
+  it('turns the version 9 footing top into the foundation level below the footing', () => {
+    const support = (id: string, kind: string, top: string, thickness: string) => ({
+      id,
+      name: id,
+      kind,
+      bearingLine: `l-${id}`,
+      offset: '0',
+      geometry: { type: 'wall', thickness: '1.2', length: '4' },
+      footing: { length: '8', width: '4', thickness },
+      connection: 'bearing',
+      bearingHeight: '0.35',
+      bearings: ['-1.8', '1.8'],
+      foundationTop: top,
+    });
+    const v9 = {
+      ...createEmptyProject('Most v9'),
+      schemaVersion: '9',
+      supports: [
+        support('p1', 'pier', '311.07', '1.5'),
+        support('o1', 'abutment', '315.672', '0'),
+        support('p2', 'pier', 'z0 - 8', 't'),
+        support('p3', 'pier', 'z0 - 8', '0'),
+      ],
+    };
+    const r = openProject(JSON.stringify(v9));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const [p1, o1, p2, p3] = r.project.supports;
+    expect(p1?.foundation).toEqual({ mode: 'level', cover: '0.5', height: '8', level: '309.57' });
+    expect(o1?.foundation).toEqual({ mode: 'level', cover: '0.5', height: '4', level: '315.672' });
+    expect(p2?.foundation.level).toBe('(z0 - 8) - (t)');
+    expect(p3?.foundation.level).toBe('z0 - 8');
+    expect(p1).not.toHaveProperty('foundationTop');
   });
 
   it('adds an empty brief and no study area to version 6 files', () => {

@@ -1,4 +1,4 @@
-import { createEmptyProject, type Support } from '@bridge/model';
+import { createEmptyProject, levelFoundation, type Support } from '@bridge/model';
 import { deckFromProfile, profileTemplate } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
 import { copyName, duplicateElement } from './duplicate.ts';
@@ -29,7 +29,7 @@ function project() {
     connection: 'bearing',
     bearingHeight: '0.35',
     bearings: ['-1.8', '1.8'],
-    foundationTop: '240',
+    foundation: levelFoundation('240 - 1.2'),
   };
   p.supports.push(pier, { ...pier, id: 'p2', name: 'P2', bearingLine: 'b2' });
   p.planLines.push({

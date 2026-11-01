@@ -5,6 +5,7 @@ import {
   type AbutmentGeometry,
   buildParameterSet,
   defaultAbutmentGeometry,
+  levelFoundation,
   type Superstructure,
   type Support,
 } from '@bridge/model';
@@ -59,7 +60,7 @@ function abutment(
       connection: 'bearing',
       bearingHeight: '0.45',
       bearings: ['-3', '3'],
-      foundationTop: '0',
+      foundation: levelFoundation('0'),
       ...changes,
     },
   );
@@ -80,7 +81,11 @@ describe('abutmentParts — kolmá opora', () => {
   const shallow = () => {
     const probe = abutment();
     const seat = Math.min(...probe.bearings.map((b) => b.seat));
-    return abutment(90, {}, { foundationTop: String(seat - 1.1 + (alignment.origin.z ?? 0)) });
+    return abutment(
+      90,
+      {},
+      { foundation: levelFoundation(String(seat - 1.1 + (alignment.origin.z ?? 0))) },
+    );
   };
 
   it('builds seat, backwall and two wings; no stem when the seat sits on the foundation', () => {
@@ -90,7 +95,7 @@ describe('abutmentParts — kolmá opora', () => {
   });
 
   it('adds a stem when the foundation is lower than the seat bottom', () => {
-    const r = abutment(90, {}, { foundationTop: '230' });
+    const r = abutment(90, {}, { foundation: levelFoundation('230') });
     const stem = part(abutmentParts(r), 'stem');
     expect(stem).toBeDefined();
     const p = stem.plan[0] as Vec2;
@@ -213,7 +218,7 @@ describe('abutmentParts — šikmá opora', () => {
     const r = abutment(
       90,
       { construction: 'monolithic', wallThickness: '1.0' },
-      { connection: 'fixed', bearingHeight: '0', foundationTop: '230' },
+      { connection: 'fixed', bearingHeight: '0', foundation: levelFoundation('230') },
     );
     expect(r.issues).toEqual([]);
     const parts = abutmentParts(r);

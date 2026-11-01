@@ -1760,6 +1760,7 @@ export function App() {
               onBearings: () => setBearingsOf(support.id),
               onDelete: deleteSelected,
               dispatch,
+              z0: project.crs.origin?.z ?? 0,
             })}
           />
         );

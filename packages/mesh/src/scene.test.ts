@@ -4,6 +4,7 @@ import {
   type BearingLine,
   createEmptyProject,
   defaultAbutmentGeometry,
+  levelFoundation,
   type ProjectFile,
   type Support,
 } from '@bridge/model';
@@ -34,7 +35,7 @@ function support(id: string, deck: string, kind: Support['kind'], station: numbe
     connection: 'bearing',
     bearingHeight: '0.35',
     bearings: ['-1.8', '1.8'],
-    foundationTop: '238',
+    foundation: levelFoundation('238 - 1.2'),
   };
 }
 

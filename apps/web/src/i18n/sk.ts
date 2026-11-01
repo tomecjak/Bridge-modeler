@@ -226,7 +226,27 @@ export const sk = {
     station: 'Staničenie',
     crossingAngle: 'Uhol kríženia [°] (90 = kolmá)',
     offset: 'Posun od osi NK [m]',
-    foundationTop: 'Horná hrana základu [m n. m.]',
+    foundation: {
+      mode: 'Založenie',
+      modes: {
+        terrain: 'podľa terénu',
+        height: 'výška podpery',
+        level: 'kóta základovej škáry',
+      },
+      cover: 'Krytie pod terénom [m]',
+      height: 'Výška podpery [m]',
+      level: 'Kóta základovej škáry [m n. m.]',
+      terrain: 'Terén v strede podpery [m n. m.]',
+      noTerrain: 'mimo terénu',
+      top: 'Horná hrana základu [m n. m.]',
+      base: 'Základová škára [m n. m.]',
+      hints: {
+        terrain:
+          'Horná hrana základu = terén v strede podpery − krytie; posun podpery alebo nový terén ju prepočíta. Bez terénu sa základ odhadne pod spodkom NK.',
+        height: 'Výška od hornej hrany základu po hornú hranu podpery pod najnižším ložiskom.',
+        level: 'Kóta spodku základu (bez základu spodku podpery).',
+      },
+    },
     geometry: 'Tvar podpery',
     type: 'Typ',
     types: { wall: 'stenový pilier', columns: 'stĺpy', abutment: 'opora' },

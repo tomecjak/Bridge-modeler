@@ -15,7 +15,9 @@ const FIELD: Record<ExpressionField, string> = {
   crossingAngle: 'uhol kríženia',
   offset: 'posun',
   bearingHeight: 'výška uloženia',
-  foundationTop: 'horná hrana základu',
+  foundationCover: 'krytie základu',
+  supportHeight: 'výška podpery',
+  foundationLevel: 'kóta základovej škáry',
   bearing: 'poloha ložiska',
   dimension: 'rozmer',
 };
@@ -160,6 +162,14 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}ložisko č. ${issue.index + 1} (${formatNumber(issue.x * 1000, 0)} mm od osi NK) nie je pod spodkom NK.`;
     case 'NonPositiveSupportHeight':
       return `${prefix}výška podpery vychádza ${formatNumber(issue.height * 1000, 0)} mm — horná hrana základu je príliš vysoko.`;
+    case 'FoundationWithoutTerrain':
+      return Number.isFinite(issue.estimate)
+        ? `${prefix}v strede podpery nie je terén — horná hrana základu je odhadnutá na ${formatNumber(issue.estimate, 3)} m n. m.`
+        : `${prefix}v strede podpery nie je terén a podpera nemá ložiská — základ sa nedá určiť.`;
+    case 'FoundationAboveTerrain':
+      return `${prefix}horná hrana základu je ${formatNumber(issue.by * 1000, 0)} mm nad terénom v strede podpery.`;
+    case 'SupportHeightWithoutBearings':
+      return `${prefix}výška podpery sa meria od ložiska, podpera však nemá žiadne.`;
     case 'InvalidDimension':
       return `${prefix}neplatný rozmer ${sk.supports.dimensions[issue.name] ?? issue.name} = ${formatNumber(issue.value, 3)}.`;
     case 'SupportOrder':

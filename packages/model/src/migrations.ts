@@ -1,7 +1,7 @@
 import { emptyBrief } from './brief.ts';
 import type { ModelIssue } from './issues.ts';
 import { SCHEMA_VERSION } from './schema.ts';
-import { defaultAbutmentGeometry } from './types.ts';
+import { defaultAbutmentGeometry, levelFoundation } from './types.ts';
 
 type RawProject = Record<string, unknown>;
 
@@ -81,6 +81,35 @@ function migrateAbutmentsAlongAxis(raw: RawProject): RawProject {
 }
 
 /**
+ * Kóta základovej škáry z hornej hrany základu a jeho hrúbky (ADR 0019): pri číselných hodnotách číslo (na 1e-6),
+ * inak výraz.
+ */
+function foundationLevel(top: unknown, thickness: unknown): string {
+  const f = typeof top === 'string' ? top : '0';
+  const t = typeof thickness === 'string' ? thickness : '0';
+  if (NUMBER.test(f) && NUMBER.test(t))
+    return String(Math.round((Number(f) - Number(t)) * 1e6) / 1e6);
+  if (NUMBER.test(t) && Number(t) === 0) return f;
+  return `(${f}) - (${t})`;
+}
+
+/** 9 → 10: založenie podpery (ADR 0019); doterajšia kóta hornej hrany základu → kóta základovej škáry. */
+function migrateFoundations(raw: RawProject): RawProject {
+  const supports = Array.isArray(raw.supports) ? (raw.supports as RawProject[]) : [];
+  return {
+    ...raw,
+    supports: supports.map(({ foundationTop, ...s }) => {
+      const kind = s.kind === 'abutment' ? 'abutment' : 'pier';
+      const footing = s.footing as RawProject | undefined;
+      return {
+        ...s,
+        foundation: levelFoundation(foundationLevel(foundationTop, footing?.thickness), kind),
+      };
+    }),
+  };
+}
+
+/**
  * Reťaz migrácií `verzia → nasledujúca verzia`. Každá migrácia je čistá funkcia s vlastným testom.
  */
 export const MIGRATIONS: Readonly<
@@ -135,6 +164,8 @@ export const MIGRATIONS: Readonly<
   },
   /** 8 → 9: rozmery opory v osi mosta, koniec NK z opory, priečniky (ADR 0018) */
   '8': { to: '9', migrate: migrateAbutmentsAlongAxis },
+  /** 9 → 10: režimy založenia podpier (ADR 0019) */
+  '9': { to: '10', migrate: migrateFoundations },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

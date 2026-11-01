@@ -1,5 +1,10 @@
 import type { Alignment } from '@bridge/alignment';
-import { defaultAbutmentGeometry, type ParameterSet, type Support } from '@bridge/model';
+import {
+  defaultAbutmentGeometry,
+  defaultFoundation,
+  type ParameterSet,
+  type Support,
+} from '@bridge/model';
 import {
   type AxisLength,
   type BearingLineResult,
@@ -138,8 +143,9 @@ export function useSupportState(
 }
 
 /**
- * Nová podpera na osi uloženia s predvolenými rozmermi; základ 8 m (pilier) alebo 5 m (opora) pod spodkom NK,
- * zaokrúhlené na 0,1 m. Opora má dĺžku podľa šírky NK (krídla pod okrajmi NK, ADR 0010).
+ * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0019): pilier založený podľa terénu (krytie 0,5 m), opora
+ * výškou podpery 4 m; kóta základovej škáry pre prepnutie režimu je odhad 8 m (pilier) alebo 5 m (opora) pod spodkom
+ * NK mínus hrúbka základu, na 0,1 m. Opora má dĺžku podľa šírky NK (krídla pod okrajmi NK, ADR 0010).
  */
 export function defaultSupport(
   id: string,
@@ -167,7 +173,10 @@ export function defaultSupport(
     connection: 'bearing',
     bearingHeight: '0.35',
     bearings: ['-1.8', '1.8'],
-    foundationTop: String(Math.round((soffitElevation - (kind === 'abutment' ? 5 : 8)) * 10) / 10),
+    foundation: defaultFoundation(
+      kind,
+      String(Math.round((soffitElevation - (kind === 'abutment' ? 5 : 8) - 1.2) * 10) / 10),
+    ),
   };
 }
 

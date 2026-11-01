@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "9"
+      "const": "10"
     },
     "name": {
       "type": "string"
@@ -1470,8 +1470,37 @@
               "type": "string"
             }
           },
-          "foundationTop": {
-            "type": "string"
+          "foundation": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "terrain",
+                  "height",
+                  "level"
+                ]
+              },
+              "cover": {
+                "type": "string"
+              },
+              "height": {
+                "type": "string"
+              },
+              "level": {
+                "type": "string"
+              },
+              "terrain": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "mode",
+              "cover",
+              "height",
+              "level"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -1485,7 +1514,7 @@
           "connection",
           "bearingHeight",
           "bearings",
-          "foundationTop"
+          "foundation"
         ],
         "additionalProperties": false
       }
@@ -1700,6 +1729,6 @@
     "planLines"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-9.json",
-  "title": "Projekt modelára mostov (schemaVersion 9)"
+  "$id": "https://bridge-modeler.local/schema/project-10.json",
+  "title": "Projekt modelára mostov (schemaVersion 10)"
 }

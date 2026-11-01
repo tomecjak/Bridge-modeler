@@ -11,7 +11,9 @@ export type ExpressionField =
   | 'crossingAngle'
   | 'offset'
   | 'bearingHeight'
-  | 'foundationTop'
+  | 'foundationCover'
+  | 'supportHeight'
+  | 'foundationLevel'
   | 'bearing'
   | 'dimension';
 
@@ -87,6 +89,12 @@ export type ModelIssue = {
   | { code: 'InvalidCrossingAngle'; angle: number }
   | { code: 'BearingOutsideDeck'; index: number; x: number }
   | { code: 'NonPositiveSupportHeight'; height: number }
+  /** založenie podľa terénu bez terénu v strede podpery — základ je odhadnutý pod spodkom NK (ADR 0019) */
+  | { code: 'FoundationWithoutTerrain'; estimate: number }
+  /** horná hrana základu je nad terénom v strede podpery */
+  | { code: 'FoundationAboveTerrain'; by: number }
+  /** výška podpery sa meria od ložiska, podpera nemá žiadne */
+  | { code: 'SupportHeightWithoutBearings' }
   | { code: 'InvalidDimension'; name: string; value: number }
   | { code: 'SupportOrder'; support: string; expected: 'abutment' | 'pier' }
   | { code: 'DuplicateBearingLineStation'; station: number }

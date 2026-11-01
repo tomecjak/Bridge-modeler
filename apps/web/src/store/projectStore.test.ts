@@ -1,5 +1,5 @@
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
-import type { Parameter } from '@bridge/model';
+import { levelFoundation, type Parameter } from '@bridge/model';
 import { reference212Project } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { syncDeckEnds } from './deckEnds.ts';
@@ -145,7 +145,7 @@ describe('project store', () => {
       connection: 'bearing' as const,
       bearingHeight: '0.35',
       bearings: ['0'],
-      foundationTop: '240',
+      foundation: levelFoundation('240'),
     };
     s.dispatch({ type: 'addElements', supports: [support] });
     s.dispatch({

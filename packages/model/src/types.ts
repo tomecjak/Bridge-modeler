@@ -235,6 +235,41 @@ export const BearingLineSchema = z.object({
 });
 export type BearingLine = z.infer<typeof BearingLineSchema>;
 
+/**
+ * Založenie podpery (ADR 0019): horná hrana základu podľa terénu v strede podpery (− krytie), z výšky podpery (pod
+ * najnižším ložiskom − výška) alebo z kóty základovej škáry (+ hrúbka základu). Všetky polia sú vždy uložené, takže
+ * prepnutie režimu nestratí hodnoty.
+ */
+export const FoundationSchema = z.object({
+  mode: z.enum(['terrain', 'height', 'level']),
+  /** krytie hornej hrany základu pod terénom [m] */
+  cover: ExprSchema,
+  /** výška podpery od hornej hrany základu po hornú hranu podpery pod najnižším ložiskom [m] */
+  height: ExprSchema,
+  /** kóta základovej škáry = spodok základu, bez základu spodok podpery [m n. m.] */
+  level: ExprSchema,
+  /** terén v strede podpery [m n. m.]; udržiava ho aplikácia z terénu projektu, chýba = bez terénu */
+  terrain: z.number().optional(),
+});
+export type Foundation = z.infer<typeof FoundationSchema>;
+export type FoundationMode = Foundation['mode'];
+
+/**
+ * Predvolené založenie novej podpery (ADR 0019): pilier podľa terénu s krytím 0,5 m, opora výškou podpery 4 m.
+ * `level` = kóta základovej škáry pre prepnutie do režimu kóty.
+ */
+export function defaultFoundation(kind: 'abutment' | 'pier', level = '0'): Foundation {
+  return kind === 'abutment'
+    ? { mode: 'height', cover: '0.5', height: '4', level }
+    : { mode: 'terrain', cover: '0.5', height: '8', level };
+}
+
+/** Založenie kótou základovej škáry (napr. podpera zo staršieho súboru). */
+export const levelFoundation = (level: string, kind: 'abutment' | 'pier' = 'pier'): Foundation => ({
+  ...defaultFoundation(kind, level),
+  mode: 'level',
+});
+
 /** Podpera (ADR 0008, 0017): stojí na osi uloženia, z ktorej preberá NK, staničenie a uhol kríženia. */
 export const SupportSchema = z.object({
   id: z.string().min(1),
@@ -252,8 +287,8 @@ export const SupportSchema = z.object({
   bearingHeight: ExprSchema,
   /** priečne vzdialenosti ložísk od osi NK [m], + vpravo */
   bearings: z.array(ExprSchema),
-  /** horná hrana základu [m n. m.] */
-  foundationTop: ExprSchema,
+  /** založenie (ADR 0019) */
+  foundation: FoundationSchema,
 });
 export type Support = z.infer<typeof SupportSchema>;
 

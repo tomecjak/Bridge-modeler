@@ -75,8 +75,10 @@ export interface SupportResult {
   /** uhol kríženia [rad] */
   crossingAngle: number;
   bearings: BearingResult[];
-  /** horná hrana základu (lokálne z) */
+  /** horná hrana základu (lokálne z) podľa režimu založenia (ADR 0019) */
   foundationTop: number;
+  /** terén v strede podpery (lokálne z), ak ho model má */
+  terrain?: number;
   height: { min: number; max: number };
   /** vyhodnotené rozmery geometrie a základu [m] (počet stĺpov ako číslo) */
   dimensions: Record<string, number>;
@@ -171,10 +173,14 @@ export function evaluateBearingLine(ctx: SupportContext, line: BearingLine): Bea
 /** Blokujúce problémy (chyby, nie upozornenia). */
 const hasErrors = (issues: readonly ModelIssue[]) => issues.some((i) => i.severity !== 'warning');
 
+/** Odhad hornej hrany základu pod najnižším spodkom NK, keď podpera podľa terénu terén nemá (ADR 0019) [m]. */
+const DEPTH_WITHOUT_TERRAIN = { pier: 8, abutment: 5 } as const;
+
 /**
- * Vyhodnotí podperu (ADR 0008, 0017): stojí na osi uloženia, ložiská na nej, spodok NK nad každým ložiskom z rezu
- * prierezu, horná hrana = spodok − výška uloženia, výška = horná hrana − základ. Problémy osi uloženia sa prenesú
- * do výsledku podpery. `lineResult` = už vyhodnotená os (inak sa vyhodnotí z `ctx.bearingLines`).
+ * Vyhodnotí podperu (ADR 0008, 0017, 0019): stojí na osi uloženia, ložiská na nej, spodok NK nad každým ložiskom
+ * z rezu prierezu, horná hrana = spodok − výška uloženia; horná hrana základu podľa režimu založenia, výška = horná
+ * hrana − základ. Problémy osi uloženia sa prenesú do výsledku podpery. `lineResult` = už vyhodnotená os (inak sa
+ * vyhodnotí z `ctx.bearingLines`).
  */
 export function evaluateSupport(
   ctx: SupportContext,
@@ -230,7 +236,20 @@ export function evaluateSupport(
   };
   const offset = num(support.offset, 'offset');
   const bearingHeight = num(support.bearingHeight, 'bearingHeight');
-  const foundationTop = num(support.foundationTop, 'foundationTop');
+  // vyhodnotí sa len pole zvoleného režimu založenia
+  const foundation = support.foundation;
+  const foundationValue = num(
+    foundation.mode === 'terrain'
+      ? foundation.cover
+      : foundation.mode === 'height'
+        ? foundation.height
+        : foundation.level,
+    foundation.mode === 'terrain'
+      ? 'foundationCover'
+      : foundation.mode === 'height'
+        ? 'supportHeight'
+        : 'foundationLevel',
+  );
   const xs = support.bearings.map((b) => num(b, 'bearing'));
   result.dimensions = evaluateDimensions(support, num, issues);
   const footing = {
@@ -249,7 +268,7 @@ export function evaluateSupport(
   if (
     offset === undefined ||
     bearingHeight === undefined ||
-    foundationTop === undefined ||
+    foundationValue === undefined ||
     xs.some((x) => x === undefined)
   ) {
     return done();
@@ -257,7 +276,6 @@ export function evaluateSupport(
   result.footing = footing as SupportResult['footing'];
   const alpha = line.crossingAngle;
   result.crossingAngle = alpha;
-  result.foundationTop = foundationTop - alignment.origin.z;
   result.axis = axis;
   const d = line.direction;
   result.direction = d;
@@ -305,22 +323,72 @@ export function evaluateSupport(
       plan: along(x),
       soffit,
       seat,
-      height: seat - result.foundationTop,
+      height: Number.NaN,
     });
   });
+
+  const top = foundationTop(support, result, foundationValue, alignment.origin.z, issues);
+  if (top !== undefined) {
+    result.foundationTop = top;
+    for (const b of result.bearings) b.height = b.seat - top;
+  }
 
   if (support.geometry.type === 'abutment' && sFrom !== undefined && sTo !== undefined) {
     const deckEnd = evaluateDeckEnd(ctx, sup, s0 - sFrom < sTo - s0 ? 'start' : 'end', sFrom, sTo);
     if (deckEnd) result.deckEnd = deckEnd;
   }
 
-  if (result.bearings.length > 0) {
+  if (top !== undefined && result.bearings.length > 0) {
     const heights = result.bearings.map((b) => b.height);
     result.height = { min: Math.min(...heights), max: Math.max(...heights) };
     if (result.height.min <= 0)
       issues.push({ code: 'NonPositiveSupportHeight', height: result.height.min });
   }
   return done();
+}
+
+/**
+ * Horná hrana základu (lokálne z) podľa režimu založenia (ADR 0019): kóta základovej škáry + hrúbka základu, horná
+ * hrana pod najnižším ložiskom − výška podpery, terén v strede podpery − krytie. Bez terénu odhad pod najnižším
+ * spodkom NK s upozornením; nad terénom upozornenie. Doplní `result.terrain`.
+ */
+function foundationTop(
+  support: Support,
+  result: SupportResult,
+  value: number,
+  z0: number,
+  issues: ModelIssue[],
+): number | undefined {
+  const terrain =
+    support.foundation.terrain === undefined ? undefined : support.foundation.terrain - z0;
+  if (terrain !== undefined) result.terrain = terrain;
+  const bearings = result.bearings;
+  let top: number | undefined;
+  switch (support.foundation.mode) {
+    case 'level':
+      // neplatná hrúbka základu už je v problémoch
+      if (Number.isFinite(result.footing.thickness)) top = value + result.footing.thickness - z0;
+      break;
+    case 'height':
+      if (bearings.length === 0) issues.push({ code: 'SupportHeightWithoutBearings' });
+      else top = Math.min(...bearings.map((b) => b.seat)) - value;
+      break;
+    case 'terrain':
+      if (terrain !== undefined) top = terrain - value;
+      else if (bearings.length > 0) {
+        top = Math.min(...bearings.map((b) => b.soffit)) - DEPTH_WITHOUT_TERRAIN[support.kind];
+        issues.push({ code: 'FoundationWithoutTerrain', estimate: top + z0, severity: 'warning' });
+      } else
+        issues.push({
+          code: 'FoundationWithoutTerrain',
+          estimate: Number.NaN,
+          severity: 'warning',
+        });
+      break;
+  }
+  if (top !== undefined && terrain !== undefined && top > terrain + 1e-3)
+    issues.push({ code: 'FoundationAboveTerrain', by: top - terrain, severity: 'warning' });
+  return top;
 }
 
 /** Horný povrch NK na konci v priečnej polohe x (lineárne medzi bodmi, mimo šírky NK výška okraja). */

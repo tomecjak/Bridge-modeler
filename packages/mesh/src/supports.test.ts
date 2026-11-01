@@ -1,7 +1,12 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { type Polygon2D, pointInPolygon, signedArea, vec2 } from '@bridge/geom';
-import { buildParameterSet, defaultAbutmentGeometry, type Superstructure } from '@bridge/model';
+import {
+  buildParameterSet,
+  defaultAbutmentGeometry,
+  levelFoundation,
+  type Superstructure,
+} from '@bridge/model';
 import {
   abutmentParts,
   BEARING_PLAN_SIZE,
@@ -45,7 +50,7 @@ const pier = (changes: Partial<SupportOnLine> = {}): SupportResult =>
     connection: 'bearing',
     bearingHeight: '0.35',
     bearings: ['-1.8', '1.8'],
-    foundationTop: '240',
+    foundation: levelFoundation('240 - 1.2'),
     ...changes,
   });
 
@@ -134,7 +139,7 @@ describe('supportMesh — opora', () => {
       crossingAngle: '70',
       geometry: defaultAbutmentGeometry('16'),
       footing: { length: '0', width: '0', thickness: '0' },
-      foundationTop: '238',
+      foundation: levelFoundation('238'),
       ...changes,
     });
 
