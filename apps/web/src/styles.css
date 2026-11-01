@@ -1639,6 +1639,29 @@ text.dw-stationing {
 }
 
 /* vloženie NK (Fáza 10a) */
+.span-layout-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.span-layout-preview {
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.span-layout-preview th,
+.span-layout-preview td {
+  padding: 2px 12px 2px 0;
+  text-align: left;
+}
+
+.span-layout-preview th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .deck-insert-fields {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1.5fr;

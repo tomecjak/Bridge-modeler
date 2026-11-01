@@ -16,6 +16,7 @@ import {
   type BearingLine,
   createEmptyProject,
   openProject,
+  type Support,
   type TerrainSurface,
 } from '@bridge/model';
 import {
@@ -24,6 +25,7 @@ import {
   type DeckRange,
   evaluateSuperstructure,
   globalScope,
+  layoutStations,
   moveLine,
   profileParameterValues,
   SPAN_SNAP,
@@ -88,6 +90,11 @@ import {
 } from './layout/ribbon/appRibbon.tsx';
 import { Ribbon } from './layout/ribbon/Ribbon.tsx';
 import { TitleBar } from './layout/ribbon/TitleBar.tsx';
+import {
+  type SpanLayoutDefaults,
+  SpanLayoutDialog,
+  type SpanLayoutForm,
+} from './layout/SpanLayoutDialog.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
@@ -103,7 +110,13 @@ import { issuesOf, newId, useParameterState } from './store/parameters.ts';
 import { type ProfileAxisKey, useProfileView } from './store/profile.ts';
 import { projectStore, useProject } from './store/projectStore.ts';
 import { useSectionResults } from './store/sections.ts';
-import { defaultSupport, useAxisLengths, useSupportState } from './store/supports.ts';
+import { planSpanLayout, type SupportFactory } from './store/spanLayout.ts';
+import {
+  defaultGeometry,
+  defaultSupport,
+  useAxisLengths,
+  useSupportState,
+} from './store/supports.ts';
 import {
   terrainCrossSections,
   terrainProfiles,
@@ -162,6 +175,8 @@ export function App() {
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [deckDialog, setDeckDialog] = useState(false);
+  /** dialóg Rozloženie polí pre NK (id) */
+  const [spanLayoutDeck, setSpanLayoutDeck] = useState<string>();
   /** vybraný bod v editore prierezu (zvýraznený aj v tabuľke bodov) */
   const [profilePoint, setProfilePoint] = useState<string>();
   const [terrainBusy, setTerrainBusy] = useState(false);
@@ -462,7 +477,11 @@ export function App() {
    * Nová podpera na osi uloženia s predvolenými rozmermi (ADR 0017): opora pri konci NK (do 2 m) alebo na krajnej
    * z aspoň dvoch osí NK, inak pilier. `lines` = osi projektu vrátane novej osi.
    */
-  function newSupportOn(line: BearingLine, lines: readonly BearingLine[]) {
+  function newSupportOn(
+    line: BearingLine,
+    lines: readonly BearingLine[],
+    forceKind?: Support['kind'],
+  ) {
     const road = item?.alignment;
     const deck = project.superstructures.find((d) => d.id === line.superstructure);
     const s = road?.stationing.fromDisplay(line.station);
@@ -472,7 +491,7 @@ export function App() {
       .sort((a, b) => a.station - b.station);
     const atEnd = own.length >= 2 && (own[0]?.id === line.id || own.at(-1)?.id === line.id);
     const nearEnd = line.station - deck.from < 2 || deck.to - line.station < 2;
-    const kind = nearEnd || atEnd ? 'abutment' : 'pier';
+    const kind = forceKind ?? (nearEnd || atEnd ? 'abutment' : 'pier');
     const prefix = kind === 'abutment' ? 'O' : 'P';
     const existing = new Set(project.supports.map((x) => x.name));
     let n = 1;
@@ -845,6 +864,121 @@ export function App() {
       }
     : undefined;
 
+  /** Dialóg Rozloženie polí pre vybranú NK (podpera, os → jej NK), inak NK profilu. */
+  function openSpanLayout() {
+    const lineOf = (id: string) => project.bearingLines.find((l) => l.id === id);
+    const fromSelection =
+      selectedElement?.collection === 'superstructures'
+        ? selectedElement.id
+        : selectedElement?.collection === 'bearingLines'
+          ? lineOf(selectedElement.id)?.superstructure
+          : selectedElement?.collection === 'supports'
+            ? lineOf(project.supports.find((s) => s.id === selectedElement.id)?.bearingLine ?? '')
+                ?.superstructure
+            : undefined;
+    const deckId = roadDecks.some((d) => d.id === fromSelection) ? fromSelection : profileDeck?.id;
+    if (deckId) setSpanLayoutDeck(deckId);
+  }
+
+  /** Predvolené hodnoty dialógu: doterajšie polia, km prvej a poslednej osi, stred oblasti mosta, uhol, presah. */
+  function spanLayoutDefaults(deckId: string): SpanLayoutDefaults {
+    const deck = project.superstructures.find((d) => d.id === deckId);
+    const measure = deck && axisLengths.get(deck.bridgeAxis);
+    const sFrom = deck && road?.stationing.fromDisplay(deck.from);
+    const own = supportState.lines
+      .filter((x) => x.line.superstructure === deckId && Number.isFinite(x.s))
+      .sort((a, b) => a.s - b.s);
+    const compact = (v: number) => String(Math.round(v * 100) / 100).replace('.', ',');
+    const firstLine = own[0];
+    const overhang =
+      firstLine && measure && sFrom !== undefined
+        ? Math.round((measure.lengthAt(firstLine.s) - measure.lengthAt(sFrom)) * 100) / 100
+        : 0.5;
+    const first = firstLine?.station ?? (deck?.from ?? 0) + overhang;
+    const last = own.at(-1)?.station ?? (deck?.to ?? 0) - overhang;
+    const area = project.studyArea?.alignment === road?.name ? project.studyArea : undefined;
+    return {
+      text: (supportState.spans.get(deckId)?.spans ?? []).map((s) => compact(s.length)).join(' + '),
+      stations: {
+        start: first,
+        end: last,
+        center: area ? (area.from + area.to) / 2 : (first + last) / 2,
+      },
+      angle: firstLine?.line.crossingAngle ?? '90',
+      overhang: Math.max(0, overhang),
+    };
+  }
+
+  /** Polohy osí rozloženia (spojité staničenie) a rozsah NK; mimo osi cesty undefined. */
+  function spanLayoutStations(form: SpanLayoutForm) {
+    const deck = project.superstructures.find((d) => d.id === form.deckId);
+    const measure = deck && axisLengths.get(deck.bridgeAxis);
+    const s0 = road?.stationing.fromDisplay(form.station);
+    if (!road || !deck || !measure || s0 === undefined) return undefined;
+    const layout = layoutStations({
+      spans: form.spans,
+      anchor: { kind: form.anchor, s: s0 },
+      measure,
+      overhang: { start: form.overhang, end: form.overhang },
+    });
+    const inside = (s: number) => s >= 0 && s <= road.length;
+    return inside(layout.deck.sFrom) && inside(layout.deck.sTo) ? { deck, layout } : undefined;
+  }
+
+  /** Rozloženie polí jedným krokom späť (ADR 0017); nové podpery majú typ z dialógu. */
+  function applySpanLayout(form: SpanLayoutForm) {
+    const r = spanLayoutStations(form);
+    if (!road || !r) return;
+    const toDisplay = (s: number) => road.stationing.toDisplay(s).station;
+    const newSupport: SupportFactory = (kind, lineId, name, s) => {
+      const draft: BearingLine = {
+        id: lineId,
+        name,
+        superstructure: r.deck.id,
+        station: Math.round(toDisplay(s) * 1e4) / 1e4,
+        crossingAngle: form.angle,
+      };
+      const base =
+        newSupportOn(draft, project.bearingLines, kind) ??
+        defaultSupport('', name, kind, lineId, 0);
+      const choice = kind === 'abutment' ? form.abutment : form.pier;
+      const template = project.supports.find((x) => x.id === choice);
+      const geometry =
+        template?.geometry ?? (choice === 'columns' ? defaultGeometry('columns') : base.geometry);
+      return {
+        ...base,
+        ...(template
+          ? {
+              offset: template.offset,
+              footing: { ...template.footing },
+              connection: template.connection,
+              bearingHeight: template.bearingHeight,
+              bearings: [...template.bearings],
+            }
+          : {}),
+        geometry: JSON.parse(JSON.stringify(geometry)) as Support['geometry'],
+        id: newId('sup'),
+        name,
+        bearingLine: lineId,
+      };
+    };
+    projectStore.getState().dispatch(
+      planSpanLayout({
+        deck: r.deck,
+        lines: project.bearingLines,
+        supports: project.supports,
+        stations: r.layout.stations,
+        range: r.layout.deck,
+        toDisplay,
+        angle: form.angle,
+        newSupport,
+        newId,
+      }),
+    );
+    setSelectedElement({ collection: 'superstructures', id: r.deck.id });
+    setSpanLayoutDeck(undefined);
+  }
+
   /** Otvorí vloženie NK výberom typológie; bez osi s niveletou len hláška. */
   function openDeckDialog() {
     if (!defaultDeckRange()) {
@@ -1013,6 +1147,12 @@ export function App() {
         setMode('parameters');
         return;
     }
+  }
+
+  /** Názov NK, na ktorej podpera stojí (cez os uloženia). */
+  function deckNameOf(support: Support): string {
+    const line = project.bearingLines.find((l) => l.id === support.bearingLine);
+    return project.superstructures.find((d) => d.id === line?.superstructure)?.name ?? '—';
   }
 
   /** Staničenie osi uloženia podľa id osi alebo podpery na nej. */
@@ -1194,6 +1334,7 @@ export function App() {
         setMode('2d');
         setTool('support');
       },
+      onSpanLayout: openSpanLayout,
       onSupportOnLine:
         selectedElement.collection === 'bearingLines' &&
         !project.supports.some((s) => s.bearingLine === selectedElement.id)
@@ -1246,6 +1387,7 @@ export function App() {
     hasSelection: selectedElement !== undefined,
     dmrBusy: dmrProgress !== undefined,
     onInsertDeck: openDeckDialog,
+    onSpanLayout: openSpanLayout,
     onEditStudyArea: () => {
       setSelectedElement(undefined);
       setPanelTarget('studyArea');
@@ -2023,6 +2165,35 @@ export function App() {
         <PlanLineVerticesDialog
           lineId={planLineVertices}
           onClose={() => setPlanLineVertices(undefined)}
+        />
+      )}
+      {spanLayoutDeck && (
+        <SpanLayoutDialog
+          decks={roadDecks.map((d) => ({ id: d.id, name: d.name }))}
+          deckId={spanLayoutDeck}
+          defaults={spanLayoutDefaults}
+          preview={(form) =>
+            spanLayoutStations(form)?.layout.stations.map(
+              (s) => road?.stationing.toDisplay(s).station ?? s,
+            )
+          }
+          templates={{
+            pier: [
+              ...project.supports
+                .filter((s) => s.kind === 'pier')
+                .map((s) => ({ value: s.id, label: sk.spanLayout.like(s.name, deckNameOf(s)) })),
+              { value: '', label: sk.spanLayout.defaultWall },
+              { value: 'columns', label: sk.spanLayout.defaultColumns },
+            ],
+            abutment: [
+              ...project.supports
+                .filter((s) => s.kind === 'abutment')
+                .map((s) => ({ value: s.id, label: sk.spanLayout.like(s.name, deckNameOf(s)) })),
+              { value: '', label: sk.spanLayout.defaultAbutment },
+            ],
+          }}
+          onApply={applySpanLayout}
+          onClose={() => setSpanLayoutDeck(undefined)}
         />
       )}
       {deckDialog &&

@@ -506,6 +506,42 @@ export const sk = {
     arc: 'oblúk',
     spiral: 'prechodnica',
   },
+  spanLayout: {
+    title: 'Rozloženie polí',
+    hint: 'Osi uloženia sa rozmiestnia podľa dĺžok polí po osi mosta a prečíslujú od začiatku. Existujúce podpery sa zachovajú a presunú (opory na krajné osi, piliere podľa poradia), chýbajúce sa doplnia zvoleným typom, nadbytočné sa odstránia. Koniec NK sa nastaví podľa presahu. Jeden krok späť.',
+    deck: 'Nosná konštrukcia',
+    spans: 'Polia [m]',
+    anchor: 'Ukotvenie',
+    anchors: {
+      start: 'od začiatku (prvá os)',
+      end: 'od konca (posledná os)',
+      center: 'symetricky okolo km',
+    },
+    station: 'Staničenie ukotvenia',
+    angle: 'Uhol kríženia všetkých osí [°]',
+    overhang: 'Presah konca NK za krajnú os [m]',
+    pier: 'Typ nových pilierov',
+    abutment: 'Typ nových opôr',
+    summary: (n: number, total: string) =>
+      `${n} ${n === 1 ? 'pole' : n < 5 ? 'polia' : 'polí'}, spolu ${total} m`,
+    line: 'Os',
+    stationColumn: 'Staničenie',
+    supportColumn: 'Podpera',
+    abutmentKind: 'opora',
+    pierKind: 'pilier',
+    like: (support: string, deck: string) => `ako ${support} (${deck})`,
+    defaultWall: 'stenový pilier (predvolený)',
+    defaultColumns: 'pilier zo stĺpov (predvolený)',
+    defaultAbutment: 'opora (predvolená, podľa 212-00)',
+    cancel: 'Zrušiť',
+    confirm: 'Použiť',
+    errors: {
+      empty: 'Zadajte polia, napr. 16 + 23 + 16 alebo 3×20.',
+      invalidTerm: (term: string) =>
+        term === '' ? 'Chýba pole za „+“.' : `„${term}“ nie je pole (dĺžka alebo počet × dĺžka).`,
+      nonPositive: 'Dĺžka poľa musí byť kladná.',
+    },
+  },
   deckInsert: {
     title: 'Vložiť nosnú konštrukciu',
     hint: 'Vyberte typológiu prierezu. NK sa vloží na oblasť mosta na vlastnú os mosta; rozmery a priebehy upravíte v editore NK.',
@@ -621,6 +657,9 @@ export const sk = {
     },
     deck: 'Nosná konštrukcia',
     deckTitle: 'Vložiť NK výberom typológie prierezu na oblasť mosta',
+    spanLayout: 'Rozloženie polí',
+    spanLayoutTitle:
+      'Rozmiestniť osi uloženia NK podľa zápisu polí (16 + 23 + 16, 3×20) s ukotvením a spoločnou šikmosťou',
     bearingLine: 'Os uloženia',
     bearingLineTitle:
       'Rozmiestniť osi uloženia kliknutím v pôdoryse alebo pozdĺžnom profile (pole sa prichytáva po 0,5 m)',

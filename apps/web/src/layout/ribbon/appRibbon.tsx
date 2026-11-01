@@ -28,6 +28,8 @@ export interface RibbonContext {
   hasSelection: boolean;
   dmrBusy: boolean;
   onInsertDeck: () => void;
+  /** dialóg Rozloženie polí (ADR 0017) */
+  onSpanLayout: () => void;
   onEditStudyArea: () => void;
   onImportLandXml: () => void;
   onImportTerrain: () => void;
@@ -122,6 +124,15 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               onClick: c.onInsertDeck,
             },
             toolButton('bearingLine', t.bearingLine, 'bearingLine', t.bearingLineTitle, !c.hasDeck),
+            {
+              kind: 'button',
+              id: 'span-layout',
+              label: t.spanLayout,
+              icon: 'spans',
+              title: t.spanLayoutTitle,
+              disabled: !c.hasDeck,
+              onClick: c.onSpanLayout,
+            },
             toolButton('support', t.support, 'pier', t.supportTitle, !c.hasDeck),
           ],
         },
@@ -475,8 +486,9 @@ export interface ContextualContext {
   onRename: () => void;
   /** podpera, NK: prierez na jej staničení */
   onShowInSection: () => void;
-  /** NK: nástroj Podpera a prechod do editora jej prierezu */
+  /** NK: nástroj Podpera, rozloženie polí a prechod do editora jej prierezu */
   onAddSupport: () => void;
+  onSpanLayout: () => void;
   /** os uloženia bez podpery: vložiť na ňu podperu (ADR 0017) */
   onSupportOnLine: (() => void) | undefined;
   onEditProfile: () => void;
@@ -584,6 +596,7 @@ export function contextualTab(c: ContextualContext): RibbonTab {
           {
             label: t.groups.bridge,
             items: [
+              button('deck-spans', t.spanLayout, 'spans', c.onSpanLayout, t.spanLayoutTitle),
               button('deck-support', t.support, 'pier', c.onAddSupport, t.supportTitle),
               button('deck-profile', t.editProfile, 'section', c.onEditProfile),
               button('deck-section', t.showInSection, 'section', c.onShowInSection),
