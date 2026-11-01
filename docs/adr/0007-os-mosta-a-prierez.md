@@ -43,6 +43,27 @@ v pôdoryse (`planLines`, lokálne súradnice na mm). Vrcholy čiary a styky prv
 sa presne. Hľadá sa najbližší priesečník na danej strane do 50 m; inak `EdgeCurveNotReached`. Globálne parametre
 a os mosta ostávajú pri staničných funkciách.
 
+**Doplnok 2026-11-01 — dĺžka po osi mosta a profil v ľubovoľnej čiare (Fáza 10b).**
+- Dĺžky mosta sa merajú **vodorovne po osi mosta**:
+  - rozpätia, dĺžka NK, dĺžka premostenia a celková dĺžka;
+  - dĺžka je priemet do pôdorysu, bez sklonu nivelety.
+- Dĺžka po osi mosta je L(s) = ∫ √((1 − κ·h)² + h′²) ds:
+  - κ je krivosť osi cesty, kladná pre oblúk doprava;
+  - h je vodorovný posun osi mosta;
+  - integruje sa Gauss–Legendre medzi zlommi (styky prvkov osi, hranice úsekov h, skoky v staničení).
+- Mimo rozsahu priebehu h sa h drží na hodnote krajného bodu, aby bol prevod spojitý na celej osi cesty.
+  Kreslenie osi mosta v pôdoryse (`bridgeAxisPlan`) berie mimo rozsahu 0.
+- Staničenie podpier a NK sa ďalej zadáva v km osi cesty (päta kolmice na os cesty).
+- Dĺžka premostenia je vzdialenosť priesečníkov prednej líce úložných prahov s osou mosta.
+- **Pozdĺžny profil** sa kreslí v zvolenej čiare: os cesty, os mosta, ľavý alebo pravý okraj NK, iná os z LandXML
+  alebo čiara v pôdoryse.
+  - x je rozvinutá dĺžka čiary `u`. Pri inej osi z LandXML je to jej staničenie, inde sa popisuje km osi cesty
+    v päte kolmice.
+  - Rez NK sa počíta z parametrov: v každej vzorke NK sa nájde priesečník čiary s rovinou prierezu, zvislica
+    v tomto odsadení pretne obrysy a dutiny prierezu.
+  - Šikmé konce NK sa riadia koncovými rovinami ako obrys NK. Okraj NK sa reže 1 mm dnu.
+  - V osi mosta sa používa presný rez v osi s x = L(s).
+
 ## Dôsledky
 
 - Ten istý profil slúži obom NK dvojice s inými parametrami (šírky, spodok).

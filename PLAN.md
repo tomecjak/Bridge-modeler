@@ -386,17 +386,19 @@ Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Po
 **Hotové, keď:** všetky doterajšie funkcie sú dostupné z ribbonu, prehliadača a vlastností, pohľady nemajú vlastné lišty a úprava podpery aj NK v mriežke má späť / znova. — *2026-10-31:* overené v prehliadači (Chrome bez okna) na SO 171-11-01 a 125-00, svetlá aj tmavá téma.
 
 #### 10b — Os mosta: dĺžky, profil v ľubovoľnej osi, merania, kóty
-- [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
-- [ ] rozpätia, dĺžka NK, dĺžka premostenia (líca úložných prahov) a celková dĺžka po osi mosta; len vzdialenosti po osi (kolmé a šikmé rieši až výkres, rozhodnutie 2026-10-31)
-- [ ] pozdĺžny profil v zvolenej osi: os cesty / os mosta / okraj NK / iná os z LandXML / čiara v pôdoryse (neskôr os prekážky); pri osi mosta x = rozvinutá dĺžka, popis v km osi cesty; rez NK z parametrov (bod čiary → `project()` → prierez na `s` → zvislica v odsadení), doplnok ADR 0007
+Rozhodnutie 2026-11-01: dĺžky po osi mosta sa merajú vodorovne (priemet do pôdorysu); „Merať“ v profile aj v pôdoryse.
+- [ ] prevod `s` osi cesty ↔ dĺžka po osi mosta (integrál √((1 − κh)² + h′²), κ > 0 oblúk doprava, Gauss–Legendre), test-first: priamka, oblúk L = Δs·(1 ∓ h/R), premenný posun, konzistencia ≤ 1e-6 m
+- [ ] rozpätia, dĺžka NK, dĺžka premostenia (líca úložných prahov v osi mosta) a celková dĺžka po osi mosta; len vzdialenosti po osi (kolmé a šikmé rieši až výkres, rozhodnutie 2026-10-31); fixtúra 212-00: predsadenie 0,90 a dĺžka prahu 2,05 sú na výkrese v osi mosta → × sin α
+- [ ] pozdĺžny profil v zvolenej osi: os cesty / os mosta / okraj NK / iná os z LandXML / čiara v pôdoryse (neskôr os prekážky); pri osi mosta x = rozvinutá dĺžka, popis v km osi cesty; rez NK z parametrov (priesečník čiary s rovinou prierezu vo vzorkách NK → zvislica v odsadení, šikmé konce), export pozdĺžneho rezu v aktívnej osi, doplnok ADR 0007
 - [ ] terén rezaný na ľavom a pravom okraji NK premietnutý do profilu v osi mosta inými farbami (vidno priečny sklon terénu)
-- [ ] odčítanie pod kurzorom v profile: niveleta, horný povrch a spodok NK, terén, výška spodku NK nad terénom
-- [ ] nástroj „Merať“ v profile: Δ dĺžka, Δ výška, sklon, prichytávanie na vrcholy, skutočné hodnoty pri prevýšení
-- [ ] zapínateľné kóty len na obrazovke (rozpätia, dĺžka NK, premostenia, celková, neskôr voľná výška) v profile a pôdoryse; do DXF nejdú (ADR 0012 platí)
+- [ ] odčítanie pod kurzorom v profile: niveleta, horný povrch a spodok NK, terén (v osi aj na okrajoch), výška spodku NK nad terénom
+- [ ] nástroj „Merať“: v profile Δ dĺžka, Δ výška, sklon (skutočné hodnoty pri prevýšení), v pôdoryse vzdialenosť, ΔE, ΔN, smerník; prichytávanie na vrcholy, Shift bez prichytávania; dočasné
+- [ ] zapínateľné kóty len na obrazovke (rozpätia, dĺžka NK, premostenie, celková, neskôr voľná výška) v profile a pôdoryse, rozloženie ako na výkrese 212-00; do DXF nejdú (ADR 0012 platí)
 
 **Hotové, keď:** na 212-00 kóty ukazujú 16,00 + 23,00 + 16,00, NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 a na posunutej osi v oblúku sedia rozpätia s dĺžkou po osi mosta (test).
 
 #### 10c — Polia v pozdĺžnom profile
+- [ ] osi uloženia (odpoveď 21, 2026-11-01): projektant najprv rozmiestni osi uloženia (rozpätia, šikmosť) a až potom na ne vloží podperu alebo oporu — upresniť v plan mode 10c (samostatný prvok alebo vlastnosť NK, väzba podpery na os uloženia)
 - [ ] pridanie podpery klikom aj v pozdĺžnom profile
 - [ ] ťahanie podpier v profile (aj v pôdoryse pozdĺž osi) s prichytávaním dĺžky poľa po osi mosta po 0,5 m (nie km), Shift = bez prichytávania, živé kóty, jeden krok späť; staničenie v editore podpery ostáva ľubovoľné
 - [ ] úprava rozpätia kliknutím na kótu a zadaním hodnoty: zmení sa len upravené pole a všetky podpery za ním (na strane od vybranej podpery) sa posunú, celková dĺžka mosta sa zmení (rozhodnutie 2026-10-31)
@@ -409,6 +411,8 @@ Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Po
 - [ ] workshop s projektantom: náčrt rezu opory v osi mosta s pomenovanými rozmermi (predsadenie prahu pred os uloženia, odsadenie konca NK od osi uloženia, medzera NK – múrik, odsadenie NK od prahu = priestor pre ložiská, šírka a výška prahu, hrúbka múrika, krídla, typ opory) → doplnok ADR 0010 alebo nové ADR
 - [ ] nová parametrizácia opory v schéme + migrácia; typy opôr vrátane rámovej a integrovanej konštrukcie (bez ložísk)
 - [ ] koniec NK odvodený od opory (os uloženia ± odsadenie konca NK), NK sa natiahne a posúva s oporou; väzba sa dá odomknúť (ručné od/do)
+- [ ] rozmery opory v pozdĺžnom smere (predsadenie prahu, dĺžka prahu, odsadenie konca NK, medzera, hrúbka múrika) sa zadávajú v osi mosta ako kóty na výkrese (rozhodnutie 2026-11-01); migrácia z merania kolmo na os opory (ADR 0010)
+- [ ] NK pripravená na zmenu prierezu okolo osi uloženia, napr. priečnik (odpoveď 21, 2026-11-01) — tvar a parametre upresniť v plan mode 10d
 - [ ] nápoveda s náčrtom (SVG schéma s kótami) pri parametroch opory; rovnaký mechanizmus neskôr pre pilier a prierez
 
 **Hotové, keď:** 212-00 dá z parametrov opory NK 56,00, premostenie 53,20 a celkovú dĺžku 65,84 (test) a posun opory posunie koniec NK.
@@ -416,7 +420,7 @@ Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Po
 #### 10e — Podpery: založenie podľa terénu, firemná knižnica
 - [ ] režimy založenia: podľa terénu (predvolený pre piliere; horná hrana základu = terén v osi podpery − krytie 0,5 m) / výška podpery / kóta základovej škáry; pri oporách volí režim projektant (plošné alebo hlbinné založenie); terén do `evaluateSupport` ako čistá funkcia, bez terénu dnešné pravidlo s upozornením; migrácia `foundationTop` → kóta
 - [ ] upozornenie, keď je základ nad terénom
-- [ ] predvolené ložiská odvodené od prierezu NK (≈ 1,4 m od okraja spodnej plochy, zaokrúhlené — upresniť v plan mode 10e)
+- [ ] predvolené ložiská odvodené od prierezu NK: v 1/4 šírky spodnej plochy od okraja (spodok 4 m → 1 m od okraja, ložiská 2 m od seba; odpoveď 20, 2026-11-01); viac trámov a komora upresniť v plan mode 10e
 - [ ] firemná knižnica podpier: pomenované typy (geometria, základ, ložiská, uloženie) s náhľadom; šablóny, projekt, súbor, D1 (formát `bridge-modeler/support-library` v1, doplnok ADR 0008 a 0015)
 - [ ] šablóny: stenový pilier, jeden stĺp, dva stĺpy, opora na pilótach (212-00), masívna opora — rozmery potvrdí projektant
 
@@ -428,7 +432,8 @@ Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Po
 - [ ] kríženie zadané aj ručne na trase (km): v pozdĺžnom profile šrafovaná čiara s označením staničenia a popisom prekážky; vloženie prechodového (voľného) prierezu cesty (nastaviteľná šírka a výška) alebo priechodného prierezu železnice — predpisy naštudovať na začiatku 10f, hodnoty potvrdí projektant
 - [ ] voľný prierez v profile v osi mosta (šírka / sin α), v priečnom reze, v 3D a v profile v osi prekážky; vodný tok = kóta hladiny Q100 + rezerva a brehové čiary (bez prietokovej plochy)
 - [ ] kontroly `ClearanceViolated` (s hodnotou), `SupportInClearance`; kóta minimálnej voľnej výšky
-- [ ] import meračky DXF: vlastná čítačka (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov), výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; nové ADR a balík `packages/survey` (doplniť do CLAUDE.md)
+- [ ] podklad mapy (ortofoto, mapa ZBGIS) aj v pôdoryse, ako v 3D (odpoveď 23, 2026-11-01)
+- [ ] import meračky DXF (len 2D podklad, bez TIN — odpoveď 23): vlastná čítačka (`POINT`, `TEXT`, `LINE`, `LWPOLYLINE`, `POLYLINE`, `INSERT` len poloha), výšky bodov z textov na zvolených hladinách (viď Zistené z podkladov), výber hladín, orezanie na oblasť mosta, uloženie do projektu na mm (vzor ADR 0011); zobrazenie v pôdoryse, 3D a v rezoch; nové ADR a balík `packages/survey` (doplniť do CLAUDE.md)
 
 **Hotové, keď:** vetva z LandXML ako prekážka „cesta“ dá km a uhol kríženia, voľný prierez sa ukáže vo všetkých pohľadoch, znížená niveleta vyvolá `ClearanceViolated` a čiara z DXF meračky sa dá použiť ako prekážka.
 
@@ -444,6 +449,7 @@ Rozhodnutie 2026-10-31: UI ako projekčná aplikácia (Revit, AutoCAD); panel Po
 - [ ] rímsa (`edgeBeam`) ako samostatný prvok na okraji NK (rozhodnutie 2026-10-30): parametrický prierez z knižnice (šírka, výška, sklon 4 % k vozovke), vedená po okraji NK v rozsahu NK; schéma + ADR
 - [ ] zobrazenie v priečnom reze, pôdoryse, pozdĺžnom reze a 3D; export DXF (hladina `RIMSY`) a STEP
 - [ ] voľná šírka na moste medzi rímsami a kontrola voči zadaniu (kategória cesty, krok 1)
+- [ ] parameter prierezu NK naviazaný na voľnú šírku zo zadania (vstavané meno vo výrazoch, napr. `freeWidth`; odpoveď 22, 2026-11-01)
 
 **Hotové, keď:** dvojica NK z rezu E–E má rímsy podľa výkresu (`Dvojica NK.png`) a voľná šírka medzi rímsami sedí s kótami (test).
 
@@ -564,11 +570,16 @@ Celkovo:
 *odpoveď* sedí
 
 Nové otázky (2026-10-31, z odpovedí vyššie):
-20. Ložiská z prierezu „≈ 1,4 m od kraja, celé číslo“: meria sa 1,4 m od okraja spodnej plochy prierezu (spodku trámu, komory)? Čo sa zaokrúhľuje na celé číslo: počet ložísk, alebo poloha (napr. na celé dm)? — pred 10e
+20. Ložiská z prierezu „≈ 1,4 m od kraja, celé číslo“: meria sa 1,4 m od okraja spodnej plochy prierezu (spodku trámu, komory)? Čo sa zaokrúhľuje na celé číslo: počet ložísk, alebo poloha (napr. na celé dm)? — pred 10e 
+*odpoveď* 1/4, čiže napr, ak spodná hrana má 4 metre, tak ložiská budú 1 meter od okraja a 1 meter od osi mosta, čiže 2 metra od seba
 21. Opora: „predsadenie pred uloženie“ = predná líca prahu pred osou uloženia (212-00: 0,90) a „odsadenie od uloženia“ = koniec NK za osou uloženia (212-00: 0,50)? — potvrdí sa na workshope 10d
+*rozhodnutie 2026-11-01 (plan mode 10b):* rozmery opory v pozdĺžnom smere sa po prerobení v 10d zadávajú v osi mosta, ako kóty na výkrese (dnes kolmo na os opory, ADR 0010).
+*odpoveď* presne tak - taktiež nech je nosná konštrukcia pripravená na zmenu prierezu, napr. pre vytvorenie priečnika, riešil by so mto najskôr tak že by som rozhodil jedntlivé osi uloženia a až potom na tie oci by som vkldal podpery/opory. Čiže aj nosná konštrukcia bude mať možnosť od oci ulaženia mož%t vytvorenia priečnika okolo osili
 22. Kategórie ciest pre krok Zadanie: zoznam kategórií (STN 73 6101) a k nim voľná šírka na moste — dodáš tabuľku, alebo ju mám naštudovať a dať na potvrdenie? — pred 10a
 *odpoveď (2026-10-31, v plan mode 10a):* voľná šírka na moste = b z označenia kategórie (C 9,5/70 → 9,5 m), vždy ručne upraviteľná; tabuľka z STN 73 6201 sa doplní neskôr. *Predpoklad:* návrhy kategórií vo výbere (`ROAD_CATEGORY_SUGGESTIONS`: C 7,5/60, C 9,5/70, C 11,5/80, R 22,5/100, R 24,5/120, D 26,5/120) sú len ukážky, kým nepríde tabuľka — oprav ich, ak nezodpovedajú platným normám.
+*odpoveď* bolo by fajn aby v rámci prierezo NK sa dal parameter naviazať na voľnú šírku na moste
 23. Meračka: robiť z bodov meračky aj terén (TIN), ktorý má v zameranom území prednosť pred DMR? Body v ukážke majú výšky len v textoch a línie sú 2D. — pred 10f
+*odpoveď* nerobiť, meračku nechávať ako 2D podkad, príjemne by bolo v 2D pôdorysnom pohľade nechať ozbraziť ortofotomapu a mapu ako aj v 3D pohľade
 
 ### Zistené z podkladov
 
@@ -678,3 +689,10 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 | Klopenie | kontrola len ak ho LandXML obsahuje (2026-10-31) |
 | Parametre vo variantoch | spoločné s možnosťou prepísať vo variante (2026-10-31) |
 | Rozhranie | ako projekčná aplikácia (Revit, AutoCAD): ribbon podľa druhu práce (Súbor, Domov, Vložiť, Upraviť, Pohľad, Správa), prehliadač projektu (pohľady + model hierarchicky), vlastnosti ako mriežka; panel Postup zrušený (2026-10-31, ADR 0016) |
+| Ložiská z prierezu | v 1/4 šírky spodnej plochy od okraja (2026-11-01) |
+| Osi uloženia | najprv sa rozmiestnia osi uloženia, potom sa na ne vkladajú podpery a opory; NK pripravená na priečnik okolo osi uloženia (2026-11-01) |
+| Rozmery opory | predsadenie, dĺžka prahu, odsadenie konca NK, medzera a múrik sa zadávajú v osi mosta (od 10d; 2026-11-01) |
+| Voľná šírka v priereze | parameter prierezu NK sa dá naviazať na voľnú šírku zo zadania (2026-11-01) |
+| Meračka | len 2D podklad, bez TIN; ortofoto a mapa aj v pôdoryse (2026-11-01) |
+| Dĺžky po osi mosta | vodorovne, priemet do pôdorysu (2026-11-01) |
+| Merať | v profile aj v pôdoryse, dočasné (2026-11-01) |
