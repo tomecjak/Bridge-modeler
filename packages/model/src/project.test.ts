@@ -98,7 +98,7 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('10');
+      expect(r.project.schemaVersion).toBe('11');
       expect(r.project.bearingLines).toEqual([]);
       expect(r.project.studyArea).toBeNull();
       expect(r.project.brief.roadCategory).toBe('');
@@ -116,12 +116,12 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '10', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '11', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '10', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '11', name: 'Starý most', parameters: [] },
     });
   });
 
@@ -258,6 +258,25 @@ describe('migrateProject', () => {
     expect(p2?.foundation.level).toBe('(z0 - 8) - (t)');
     expect(p3?.foundation.level).toBe('z0 - 8');
     expect(p1).not.toHaveProperty('foundationTop');
+  });
+
+  it('marks the first version 10 terrain for the support foundations', () => {
+    const surface = (id: string) => ({
+      id,
+      name: id,
+      source: 'landxml',
+      corridor: { halfWidth: 60, margin: 50 },
+      data: { kind: 'tin', points: [], triangles: [] },
+    });
+    const v10 = {
+      ...createEmptyProject('Most v10'),
+      schemaVersion: '10',
+      terrains: [surface('povrch'), surface('htu')],
+    };
+    const r = openProject(JSON.stringify(v10));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.terrains.map((t) => t.foundation)).toEqual([true, undefined]);
   });
 
   it('adds an empty brief and no study area to version 6 files', () => {

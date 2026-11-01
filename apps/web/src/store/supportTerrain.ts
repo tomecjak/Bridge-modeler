@@ -17,20 +17,22 @@ function tinOf(data: TerrainData): Tin {
 }
 
 /**
- * Zosúladenie terénu v strede podpier s terénom projektu po príkaze (ADR 0019): pri viacerých povrchoch najvyšší
- * v bode. Úprava draftu zapíše `foundation.terrain`; undefined, ak je projekt v súlade.
+ * Zosúladenie terénu v strede podpier s terénom projektu po príkaze (ADR 0019, 0020): povrchy s príznakom pre
+ * založenie, pri viacerých najvyšší v bode. Úprava draftu zapíše `foundation.terrain`; undefined, ak je projekt
+ * v súlade.
  */
 export function syncSupportTerrain(
   project: ProjectFile,
 ): ((draft: Draft<ProjectFile>) => void) | undefined {
   const origin = project.crs.origin;
   if (!origin || project.supports.length === 0) return undefined;
+  const forFoundation = project.terrains.filter((t) => t.foundation);
   if (
-    project.terrains.length === 0 &&
+    forFoundation.length === 0 &&
     project.supports.every((s) => s.foundation.terrain === undefined)
   )
     return undefined;
-  const surfaces = project.terrains.map((t) => tinOf(t.data));
+  const surfaces = forFoundation.map((t) => tinOf(t.data));
   const terrainAt = (x: number, y: number) => {
     let best: number | undefined;
     for (const tin of surfaces) {

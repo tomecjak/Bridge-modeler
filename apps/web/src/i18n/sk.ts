@@ -470,6 +470,7 @@ export const sk = {
     unused: 'Žiadna NK ju nepoužíva ako okraj.',
   },
   terrain: {
+    foundation: 'Pre založenie podpier',
     import: 'Importovať terén',
     dialogTitle: 'Import terénu',
     file: 'Súbor',

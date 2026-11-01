@@ -334,5 +334,7 @@ export const TerrainSurfaceSchema = z.object({
     shape: z.enum(['strip', 'rectangle']).optional(),
   }),
   data: TerrainDataSchema,
+  /** povrch pre založenie podpier (ADR 0019, 0020); pri viacerých zapnutých sa berie najvyšší v bode */
+  foundation: z.boolean().optional(),
 });
 export type TerrainSurface = z.infer<typeof TerrainSurfaceSchema>;

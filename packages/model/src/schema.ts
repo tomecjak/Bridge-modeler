@@ -12,7 +12,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '10';
+export const SCHEMA_VERSION = '11';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });

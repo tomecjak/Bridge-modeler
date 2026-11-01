@@ -240,6 +240,28 @@ describe('project store', () => {
     );
     store.getState().undo();
     expect(terrainOf('p2')).toBe(before);
+    // len povrchy pre založenie: vyšší návrhový povrch bez príznaku sa neberie
+    const higher: TerrainSurface = {
+      ...terrain,
+      id: 'htu',
+      name: 'HTU',
+      data: {
+        kind: 'tin',
+        points: corners.flatMap(([x, y]) => [x, y, plane(x, y) + 10]),
+        triangles: [0, 1, 2, 0, 2, 3],
+      },
+    };
+    store.getState().dispatch({ type: 'addElements', terrains: [higher] });
+    expect(store.getState().project.terrains.map((t) => t.foundation)).toEqual([true, undefined]);
+    expect(terrainOf('p2')).toBe(before);
+    store.getState().dispatch({
+      type: 'updateElement',
+      collection: 'terrains',
+      id: 'htu',
+      changes: { foundation: true },
+    });
+    expect(terrainOf('p2')).toBeCloseTo(before + 10, 6);
+    store.getState().dispatch({ type: 'removeElement', collection: 'terrains', id: 'htu' });
     store.getState().dispatch({ type: 'removeElement', collection: 'terrains', id: 't' });
     expect(terrainOf('p2')).toBeUndefined();
   });

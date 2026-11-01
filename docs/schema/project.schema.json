@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "10"
+      "const": "11"
     },
     "name": {
       "type": "string"
@@ -1659,6 +1659,9 @@
                 "additionalProperties": false
               }
             ]
+          },
+          "foundation": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -1729,6 +1732,6 @@
     "planLines"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-10.json",
-  "title": "Projekt modelára mostov (schemaVersion 10)"
+  "$id": "https://bridge-modeler.local/schema/project-11.json",
+  "title": "Projekt modelára mostov (schemaVersion 11)"
 }

@@ -166,6 +166,16 @@ export const MIGRATIONS: Readonly<
   '8': { to: '9', migrate: migrateAbutmentsAlongAxis },
   /** 9 → 10: režimy založenia podpier (ADR 0019) */
   '9': { to: '10', migrate: migrateFoundations },
+  /** 10 → 11: povrch terénu pre založenie podpier = prvý povrch (ADR 0020) */
+  '10': {
+    to: '11',
+    migrate: (raw) => ({
+      ...raw,
+      terrains: (Array.isArray(raw.terrains) ? (raw.terrains as RawProject[]) : []).map((t, i) =>
+        i === 0 ? { ...t, foundation: true } : t,
+      ),
+    }),
+  },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

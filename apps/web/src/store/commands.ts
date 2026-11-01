@@ -114,7 +114,14 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       draft.superstructures.push(...(command.superstructures ?? []));
       draft.bearingLines.push(...(command.bearingLines ?? []));
       draft.supports.push(...(command.supports ?? []));
-      draft.terrains.push(...(command.terrains ?? []));
+      // prvý nový povrch je pre založenie podpier, ak ním nie je žiadny iný (ADR 0020)
+      draft.terrains.push(
+        ...(command.terrains ?? []).map((t, i) =>
+          i === 0 && t.foundation === undefined && !draft.terrains.some((x) => x.foundation)
+            ? { ...t, foundation: true }
+            : t,
+        ),
+      );
       draft.planLines.push(...(command.planLines ?? []));
       return;
     case 'updateElement': {
@@ -133,7 +140,11 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
     }
     case 'replaceTerrain': {
       const i = draft.terrains.findIndex((x) => x.id === command.id);
-      if (i >= 0) draft.terrains[i] = command.terrain;
+      // nový terén (napr. znova stiahnutý DMR) si ponechá príznak pre založenie
+      const flag = draft.terrains[i]?.foundation;
+      if (i >= 0)
+        draft.terrains[i] =
+          flag === undefined ? command.terrain : { ...command.terrain, foundation: flag };
       return;
     }
     case 'removeParameter': {

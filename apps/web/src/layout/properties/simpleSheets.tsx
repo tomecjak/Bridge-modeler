@@ -170,7 +170,10 @@ export function studyAreaSheet(input: {
   };
 }
 
-/** Terén (ADR 0011): názov, zdroj, veľkosť, oblasť orezania; stiahnutý DMR sa dá stiahnuť znova. */
+/**
+ * Terén (ADR 0011, 0020): názov, zdroj, povrch pre založenie podpier, veľkosť, oblasť orezania; stiahnutý DMR sa dá
+ * stiahnuť znova.
+ */
 export function terrainSheet(input: {
   terrain: TerrainSurface;
   busy: boolean;
@@ -200,6 +203,18 @@ export function terrainSheet(input: {
               }),
           },
           { kind: 'readonly', label: t.source, value: t.sources[terrain.source] },
+          {
+            kind: 'toggle',
+            label: t.foundation,
+            value: terrain.foundation === true,
+            onChange: (foundation) =>
+              input.dispatch({
+                type: 'updateElement',
+                collection: 'terrains',
+                id: terrain.id,
+                changes: { foundation },
+              }),
+          },
           ...(terrain.attribution
             ? [{ kind: 'readonly' as const, label: t.attribution, value: terrain.attribution }]
             : []),
