@@ -16,6 +16,7 @@ import type { Command } from '../../store/commands.ts';
 import type { SectionResult } from '../../store/sections.ts';
 import type { DeckSpans } from '../../store/supports.ts';
 import { defaultGeometry } from '../../store/supports.ts';
+import { AbutmentSketch } from '../../views/AbutmentSketch.tsx';
 import { SectionResultDetails } from '../SectionPanel.tsx';
 import type { PropertyGroup, PropertyRow, PropertySheet } from './PropertyGrid.tsx';
 import { lawSummary } from './simpleSheets.tsx';
@@ -45,6 +46,7 @@ const expr = (label: string, value: string, onCommit: (value: string) => void): 
 function abutmentGroups(
   g: AbutmentGeometry,
   set: (changes: Partial<Support>) => void,
+  values: Readonly<Record<string, number | undefined>>,
 ): PropertyGroup[] {
   const dims = sk.supports.dimensions;
   const t = sk.supports.abutment;
@@ -127,6 +129,11 @@ function abutmentGroups(
           },
         ];
   return [
+    {
+      id: 'abutment-sketch',
+      title: t.sketchTitle,
+      content: <AbutmentSketch construction={g.construction} values={values} />,
+    },
     ...body,
     {
       id: 'abutment-wings',
@@ -374,7 +381,7 @@ export function supportSheet(input: {
     ...(dimensionRows.length > 0
       ? [{ id: 'support-dimensions', title: sk.properties.dimensions, rows: dimensionRows }]
       : []),
-    ...(g.type === 'abutment' ? abutmentGroups(g, set) : []),
+    ...(g.type === 'abutment' ? abutmentGroups(g, set, result?.dimensions ?? {}) : []),
     {
       id: 'support-founding',
       title: sk.properties.founding,

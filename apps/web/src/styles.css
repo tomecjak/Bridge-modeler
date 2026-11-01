@@ -1639,6 +1639,57 @@ text.dw-stationing {
 }
 
 /* vloženie NK (Fáza 10a) */
+/* náčrt opory s kótami v mriežke vlastností (ADR 0018) */
+.abutment-sketch {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  margin: 4px auto;
+}
+
+.abutment-sketch .sketch-concrete {
+  fill: var(--canvas);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.abutment-sketch .sketch-deck {
+  fill: color-mix(in srgb, var(--accent) 18%, var(--canvas));
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.abutment-sketch .sketch-bearing {
+  fill: var(--text);
+}
+
+.abutment-sketch .sketch-axis {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 8 3 2 3;
+}
+
+.abutment-sketch .sketch-dim line {
+  stroke: var(--muted);
+  stroke-width: 0.8;
+}
+
+.abutment-sketch .sketch-dim .sketch-tick {
+  stroke: var(--text);
+  stroke-width: 1.2;
+}
+
+.abutment-sketch text {
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text);
+}
+
+.abutment-sketch .sketch-note {
+  fill: var(--muted);
+  font-style: italic;
+}
+
 .span-layout-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -111,6 +111,7 @@ describe('supportSheet', () => {
     expect(groupIds(sheet)).toEqual([
       'support-identity',
       'support-position',
+      'abutment-sketch',
       'abutment-seat',
       'abutment-stem',
       'abutment-backwall',
@@ -135,9 +136,9 @@ describe('supportSheet', () => {
     expect(labels(sheet, 'abutment-seat')).toEqual([
       'Konštrukcia',
       'dĺžka (pozdĺž osi podpery)',
-      'a — predsadenie prahu pred os uloženia (v osi mosta)',
-      'e — odsadenie konca NK za os uloženia (v osi mosta)',
-      'h_p — výška úložného prahu',
+      'a — predsadenie prahu',
+      'e — odsadenie konca NK',
+      'h_p — výška prahu',
       'note',
     ]);
     const row = sheet.groups.find((g) => g.id === 'abutment-seat')?.rows?.[0];
@@ -157,12 +158,13 @@ describe('supportSheet', () => {
     expect(groupIds(monolithic)).toEqual([
       'support-identity',
       'support-position',
+      'abutment-sketch',
       'abutment-wall',
       'abutment-wings',
       'support-founding',
       'support-bearings',
     ]);
-    expect(labels(monolithic, 'abutment-wall')).toContain('t_s — hrúbka steny (v osi mosta)');
+    expect(labels(monolithic, 'abutment-wall')).toContain('t_s — hrúbka steny');
   });
 
   it('writes the station and crossing angle to its bearing line, other changes to the support', () => {
