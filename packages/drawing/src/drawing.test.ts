@@ -11,7 +11,7 @@ import {
 import { evaluateReference212 } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { type DeckDrawingData, deckDrawingData } from './deck.ts';
-import { bridgeDimensions } from './dimensions.ts';
+import { abutmentSplits, bridgeDimensions } from './dimensions.ts';
 import { type Drawing, type Entity, type TextEntity, textHeight, translate } from './model.ts';
 import { planDrawing } from './plan.ts';
 import {
@@ -316,13 +316,14 @@ describe('bridgeDimensions', () => {
         ref.sTo + 30,
       ),
     });
-    const chains = bridgeDimensions(spans, lengths, measure.lengthAt);
+    const chains = bridgeDimensions(spans, lengths, measure, abutmentSplits(ref.results));
     const values = Object.fromEntries(
       chains.map((c) => [c.kind, c.segments.map((s) => Math.round(s.value * 100) / 100)]),
     );
     expect(values).toEqual({
       overall: [65.84],
-      deck: [4.92, 56, 4.92],
+      // presah opory: krídlo 4,00 · múrik 0,84 · medzera 0,08 (ADR 0018)
+      deck: [4, 0.84, 0.08, 56, 0.08, 0.84, 4],
       spans: [0.5, 16, 23, 16, 0.5],
       bridged: [0.9, 53.2, 0.9],
     });

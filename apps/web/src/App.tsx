@@ -1,5 +1,6 @@
 import { type AlignmentIssue, formatStation } from '@bridge/alignment';
 import {
+  abutmentSplits,
   bridgeDimensions,
   type DeckDrawingData,
   type Drawing,
@@ -393,7 +394,7 @@ export function App() {
       return [
         {
           deckId: d.id,
-          chains: bridgeDimensions(spans.spans, spans.lengths, measure.lengthAt),
+          chains: bridgeDimensions(spans.spans, spans.lengths, measure, abutmentSplits(d.own)),
           ...planFrame(road, d.outline, measure.offsetAt, mid),
         },
       ];
