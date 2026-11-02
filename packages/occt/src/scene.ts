@@ -59,6 +59,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     bearingLines: project.bearingLines,
     planLines: project.planLines,
     edgeBeams: project.edgeBeams,
+    brief: project.brief,
   };
   // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
   const lines = project.bearingLines.map((l) => evaluateBearingLine(base, l));

@@ -34,6 +34,7 @@ import {
   deckChecks,
   deckEndSources,
   deckSampleStations,
+  deckScope,
   deckWidthRange,
   EDGE_BEAM_TYPOLOGY,
   edgeBeamChecks,
@@ -636,7 +637,11 @@ export function App() {
     if (selectedElement?.collection !== 'profiles') return undefined;
     const def = project.profiles.find((p) => p.id === selectedElement.id);
     if (!def) return undefined;
-    const globals = previewScope(def, globalScope(parameterState.set, sectionAt));
+    // náhľad bez NK: voľná šírka zo zadania (ADR 0023), pri rímse qNK = 0
+    const globals = previewScope(
+      def,
+      deckScope({ brief: project.brief }, {}, globalScope(parameterState.set, sectionAt)),
+    );
     const used = sections.results.find(
       (r) => r.superstructure.profile === def.id && (r.section?.parameters.size ?? 0) > 0,
     );
@@ -654,7 +659,14 @@ export function App() {
       values: profileParameterValues(def, {}, globals, sectionAt).values,
       source: sk.profileEditor.sourceDefaults,
     };
-  }, [selectedElement, project.profiles, parameterState.set, sectionAt, sections.results]);
+  }, [
+    selectedElement,
+    project.profiles,
+    project.brief,
+    parameterState.set,
+    sectionAt,
+    sections.results,
+  ]);
 
   /** Stiahne pohľad ako DXF alebo SVG (ADR 0012). */
   function exportDrawing(drawing: Drawing | undefined, view: string, format: 'dxf' | 'svg') {
@@ -686,6 +698,7 @@ export function App() {
       bridgeAxes: project.bridgeAxes,
       profiles: project.profiles,
       planLines: project.planLines,
+      brief: project.brief,
     };
     const section = evaluateSuperstructure(ctx, deck, s);
     const xs = section.loops
@@ -2392,7 +2405,9 @@ export function App() {
               briefFreeWidth: effectiveFreeWidth(project.brief),
               bridgeArea: (() => {
                 const drawing = roadDecks.find((d) => d.id === deck.id);
-                return drawing && outlineArea(drawing.bridgeOutline);
+                const area = drawing ? outlineArea(drawing.bridgeOutline) : 0;
+                // NK bez obrysu (chyba prierezu) plochu nemá
+                return area > 0 ? area : undefined;
               })(),
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
               onAddSupport: () => {

@@ -5,6 +5,7 @@ import {
   type CurveRef,
   type ModelIssue,
   type ProjectFile,
+  requiredFreeWidth,
   type Superstructure,
 } from '@bridge/model';
 import {
@@ -79,6 +80,7 @@ export function buildScene(
         planLines: project.planLines,
         surveys: project.surveys,
         edgeBeams: project.edgeBeams,
+        brief: project.brief,
       };
       if (!project.bearingLines.some((l) => l.crossbeam)) return base;
       // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
@@ -114,6 +116,8 @@ export function buildScene(
         project.alignments.find((a) => a.name === axis?.alignment),
         project.profiles.find((p) => p.id === sup?.profile),
         curves,
+        // voľná šírka pre výrazy NK (ADR 0023)
+        sup && requiredFreeWidth(sup, project.brief),
       ];
     };
 

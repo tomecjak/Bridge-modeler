@@ -1,7 +1,12 @@
 import { createAlignment, suggestOrigin } from '@bridge/alignment';
 import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { isCounterClockwise, type Vec2 } from '@bridge/geom';
-import { buildParameterSet, type EdgeBeam, type Superstructure } from '@bridge/model';
+import {
+  buildParameterSet,
+  type EdgeBeam,
+  FREE_WIDTH_VARIABLE,
+  type Superstructure,
+} from '@bridge/model';
 import { describe, expect, it } from 'vitest';
 import { deckChecks } from './deckChecks.ts';
 import { sampleSuperstructure } from './deckSampling.ts';
@@ -300,5 +305,38 @@ describe('free width check (ADR 0023)', () => {
     expect(checks.filter((i) => i.code === 'FreeWidthBelowRequired')).toEqual([
       expect.objectContaining({ owner: { kind: 'superstructure', name: 'NK' }, required: 13 }),
     ]);
+  });
+});
+
+describe('volnaSirka in the deck expressions (ADR 0023)', () => {
+  const linked = (freeWidth?: number): Superstructure => ({
+    ...deck(0.045),
+    parameterLaws: { bL: { kind: 'constant', value: `${FREE_WIDTH_VARIABLE} / 2 + 1.35` } },
+    ...(freeWidth === undefined ? {} : { freeWidth }),
+  });
+  const brief = { freeWidth: 12.75, roadCategory: '' };
+
+  it('is the required free width of the deck, from the deck or from the brief', () => {
+    const fromBrief = evaluateSuperstructure(context([], { brief }), linked(), 100);
+    expect(fromBrief.issues).toEqual([]);
+    expect(fromBrief.points.get('TL')?.x).toBeCloseTo(-(12.75 / 2 + 1.35), 12);
+    const fromDeck = evaluateSuperstructure(context([], { brief }), linked(14), 100);
+    expect(fromDeck.points.get('TL')?.x).toBeCloseTo(-(14 / 2 + 1.35), 12);
+    // aj vo vzorkách NK (3D, výkresy)
+    const samples = sampleSuperstructure(context([], { brief }), linked(), []);
+    expect('sections' in samples && samples.sections.every((s) => s.issues.length === 0)).toBe(
+      true,
+    );
+  });
+
+  it('is an unknown name when neither the deck nor the brief gives the free width', () => {
+    const r = evaluateSuperstructure(context(), linked(), 100);
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        code: 'ExpressionError',
+        parameter: 'bL',
+        error: expect.objectContaining({ code: 'UnknownIdentifier', name: FREE_WIDTH_VARIABLE }),
+      }),
+    );
   });
 });

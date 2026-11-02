@@ -1,6 +1,6 @@
 import { formatStation } from '@bridge/alignment';
 import type { ExprError } from '@bridge/expr';
-import type { ExpressionField, ModelIssue } from '@bridge/model';
+import { type ExpressionField, FREE_WIDTH_VARIABLE, type ModelIssue } from '@bridge/model';
 import { PROFILE_TEMPLATES } from '@bridge/sections';
 import { formatNumber } from '../format/number.ts';
 import { sk } from './sk.ts';
@@ -60,7 +60,9 @@ export function formatExprError(e: ExprError): string {
       return `Funkcia ${e.name}() potrebuje ${expected} argument(y), zadané ${e.actual}.`;
     }
     case 'UnknownIdentifier':
-      return `Neznámy parameter „${e.name}“.`;
+      return e.name === FREE_WIDTH_VARIABLE
+        ? `Voľná šírka na moste nie je zadaná (v zadaní ani pri NK) — „${e.name}“ nemá hodnotu.`
+        : `Neznámy parameter „${e.name}“.`;
     case 'TypeMismatch':
       return `Očakáva sa ${TYPE[e.expected]}, ale je tu ${TYPE[e.actual]}.`;
     case 'DivisionByZero':

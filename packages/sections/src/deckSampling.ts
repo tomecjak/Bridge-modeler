@@ -11,6 +11,7 @@ import { edgeBreaks } from './edge.ts';
 import { edgeBeamLaws } from './edgeBeam.ts';
 import { DEFAULT_SAMPLING, type LawRef, type SamplingOptions, sampleStations } from './sampling.ts';
 import {
+  deckScope,
   evaluateSuperstructure,
   type SectionContext,
   type SuperstructureSection,
@@ -118,7 +119,7 @@ export function sampleSuperstructure(
       laws,
       scope: (station) => {
         const values = ctx.parameters.evaluateAt(station).values;
-        return (n) => values.get(n);
+        return deckScope(ctx, sup, (n) => values.get(n));
       },
       breaks: breaks.filter((s) => Number.isFinite(s)),
       reach,

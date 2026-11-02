@@ -38,6 +38,16 @@ describe('model issue messages', () => {
     );
   });
 
+  it('explains a missing free width behind volnaSirka', () => {
+    expect(
+      formatExprError({
+        code: 'UnknownIdentifier',
+        name: 'volnaSirka',
+        span: { start: 0, end: 10 },
+      }),
+    ).toBe('Voľná šírka na moste nie je zadaná (v zadaní ani pri NK) — „volnaSirka“ nemá hodnotu.');
+  });
+
   it('hints at decimal commas', () => {
     expect(
       formatExprError({ code: 'UnexpectedToken', token: ',', span: { start: 1, end: 2 } }),

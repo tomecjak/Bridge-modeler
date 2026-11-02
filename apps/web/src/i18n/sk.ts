@@ -750,6 +750,8 @@ export const sk = {
     bridgeWidth: 'Šírka mosta (po vonkajšie hrany ríms) [mm]',
     bridgeArea: 'Plocha mosta (pôdorys) [m²]',
     widthRange: (min: string, max: string) => (min === max ? min : `${min} – ${max}`),
+    freeWidthVariable:
+      'Vo výrazoch parametrov NK je vstavané meno volnaSirka = požadovaná voľná šírka NK v m (pri NK, inak zo zadania), napr. bL = volnaSirka / 2 + 1.35.',
     widthsHint:
       'Šírky sa merajú vodorovne v rovine prierezu na koncoch NK, osiach uloženia a v stredoch polí; voľná šírka medzi vnútornými hranami ríms (ADR 0023).',
     lawDefault: (value: string) => `predvolená ${value}`,

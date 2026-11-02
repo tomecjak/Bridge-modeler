@@ -6,11 +6,13 @@ import {
   type Brief,
   type EdgeBeam,
   evaluateLaw,
+  FREE_WIDTH_VARIABLE,
   type IssueOwner,
   type ModelIssue,
   type ParameterSet,
   type PlanLine,
   type ProfileDefinition,
+  requiredFreeWidth,
   type Superstructure,
   type Survey,
 } from '@bridge/model';
@@ -71,6 +73,19 @@ export interface SuperstructureSection {
 export function globalScope(parameters: ParameterSet, station: number): Scope {
   const values = parameters.evaluateAt(station).values;
   return (n) => values.get(n);
+}
+
+/**
+ * Rozsah mien výrazov prierezu NK (ADR 0023): `scope` a vstavané `volnaSirka` = požadovaná voľná šírka NK (pri NK,
+ * inak zo zadania); bez nej sa meno nepozná (chyba výrazu).
+ */
+export function deckScope(
+  ctx: Pick<SectionContext, 'brief'>,
+  sup: Pick<Superstructure, 'freeWidth'>,
+  scope: Scope,
+): Scope {
+  const free = requiredFreeWidth(sup, ctx.brief)?.value;
+  return free === undefined ? scope : (n) => (n === FREE_WIDTH_VARIABLE ? free : scope(n));
 }
 
 /**
@@ -200,8 +215,9 @@ export function evaluateSuperstructure(
         );
       }
     : undefined;
-  const params = profileParameterValues(profile, laws, scope, station, edge);
-  const evaluated = evaluateProfileDefinition(profile, params.values, scope, station);
+  const exprScope = deckScope(ctx, sup, scope);
+  const params = profileParameterValues(profile, laws, exprScope, station, edge);
+  const evaluated = evaluateProfileDefinition(profile, params.values, exprScope, station);
   const issues: ModelIssue[] = [
     ...params.issues
       // bez osi mosta sa okraj nedá zmerať; chybu osi hlási os sama

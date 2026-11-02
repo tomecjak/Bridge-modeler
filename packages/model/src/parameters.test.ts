@@ -57,12 +57,15 @@ describe('buildParameterSet — dependencies', () => {
       p('2x', '1'),
       p('sta', '1'),
       p('sin', '1'),
+      p('volnaSirka', '12'),
     ]);
     expect(set.issues).toMatchObject([
       { code: 'DuplicateParameterName', name: 'h' },
       { code: 'InvalidParameterName', name: '2x' },
       { code: 'InvalidParameterName', name: 'sta' },
       { code: 'InvalidParameterName', name: 'sin' },
+      // vstavané meno voľnej šírky NK (ADR 0023)
+      { code: 'InvalidParameterName', name: 'volnaSirka' },
     ]);
   });
 });

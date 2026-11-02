@@ -41,6 +41,9 @@ export type Parameter = z.infer<typeof ParameterSchema>;
 /** Premenná vo výrazoch so zobrazovaným staničením. */
 export const STATION_VARIABLE = 'sta';
 
+/** Vstavané meno vo výrazoch NK: požadovaná voľná šírka na NK [m] (pri NK, inak zo zadania; ADR 0023). */
+export const FREE_WIDTH_VARIABLE = 'volnaSirka';
+
 /** Os mosta = posun osi cesty (ADR 0007). Posuny v m; predvolene h = 0, v = −hrúbka vozovky. */
 export const BridgeAxisSchema = z.object({
   id: z.string().min(1),

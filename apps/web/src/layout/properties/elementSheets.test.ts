@@ -442,7 +442,11 @@ describe('deckSheet', () => {
     const laws = sheet.groups.find((g) => g.id === 'deck-laws')?.rows ?? [];
     const h = laws.find((r) => r.kind === 'edit' && r.label.startsWith('h '));
     expect(h).toMatchObject({ value: '1.1 m' });
-    expect(laws.filter((r) => r.kind === 'note')).toHaveLength(1);
+    // neznámy parameter + nápoveda k volnaSirka (ADR 0023)
+    expect(laws.filter((r) => r.kind === 'note').map((r) => r.kind === 'note' && r.tone)).toEqual([
+      'error',
+      'muted',
+    ]);
     expect(labels(sheet, 'deck-spans')).toEqual([
       '1. pole (1 – 2)',
       'Dĺžka NK',

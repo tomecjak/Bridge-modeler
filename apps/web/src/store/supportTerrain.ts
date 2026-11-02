@@ -47,6 +47,7 @@ export function syncSupportTerrain(
     bridgeAxes: project.bridgeAxes,
     profiles: project.profiles,
     planLines: project.planLines,
+    brief: project.brief,
     superstructures: project.superstructures,
     bearingLines: project.bearingLines,
     supports: project.supports,

@@ -67,7 +67,8 @@ export function useSupportState(
   axisLengths: ReadonlyMap<string, AxisLength>,
 ): SupportState {
   const project = useProject((s) => s.project);
-  const { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines } = project;
+  const { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines, brief } =
+    project;
   return useMemo(() => {
     const base = {
       alignments,
@@ -77,6 +78,8 @@ export function useSupportState(
       superstructures,
       bearingLines,
       planLines,
+      // voľná šírka pre výrazy NK (ADR 0023)
+      brief,
     };
     const lines = bearingLines.map((l) => evaluateBearingLine(base, l));
     // pásy priečnikov (ADR 0018) menia prierez NK, a tým aj spodok NK nad ložiskami
@@ -139,6 +142,7 @@ export function useSupportState(
     bearingLines,
     supports,
     planLines,
+    brief,
   ]);
 }
 

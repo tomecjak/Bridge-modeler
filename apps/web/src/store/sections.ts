@@ -35,6 +35,7 @@ export function useSectionResults(
   const superstructures = useProject((s) => s.project.superstructures);
   const planLines = useProject((s) => s.project.planLines);
   const edgeBeams = useProject((s) => s.project.edgeBeams);
+  const brief = useProject((s) => s.project.brief);
   return useMemo(() => {
     const start = performance.now();
     const ctx: SectionContext = {
@@ -45,6 +46,7 @@ export function useSectionResults(
       planLines,
       crossbeams,
       edgeBeams,
+      brief,
     };
     const results = superstructures.map((sup): SectionResult => {
       const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
@@ -97,5 +99,6 @@ export function useSectionResults(
     station,
     crossbeams,
     edgeBeams,
+    brief,
   ]);
 }

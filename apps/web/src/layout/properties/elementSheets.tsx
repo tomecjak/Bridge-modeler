@@ -710,6 +710,7 @@ export function deckSheet(input: {
           tone: 'error',
         }),
       ),
+    { kind: 'note', text: sk.properties.freeWidthVariable, tone: 'muted' },
   ];
   const spanRows: PropertyRow[] = !spans
     ? [{ kind: 'note', text: sk.supports.noSupports }]

@@ -18,10 +18,19 @@ export function useDeckDrawings(
   crossbeams: ReadonlyMap<string, readonly CrossbeamBand[]>,
 ): DeckDrawingData[] {
   const project = useProject((s) => s.project);
-  const { bridgeAxes, profiles, superstructures, planLines, edgeBeams } = project;
+  const { bridgeAxes, profiles, superstructures, planLines, edgeBeams, brief } = project;
   const globals = project.parameters;
   return useMemo(() => {
-    const ctx = { alignments, parameters, bridgeAxes, profiles, planLines, crossbeams, edgeBeams };
+    const ctx = {
+      alignments,
+      parameters,
+      bridgeAxes,
+      profiles,
+      planLines,
+      crossbeams,
+      edgeBeams,
+      brief,
+    };
     const globalLaws = globals.map((p) => ({ law: p.law, unit: p.unit }));
     return superstructures.flatMap(
       (sup) => deckDrawingData(ctx, sup, supports, { globalLaws }, lines) ?? [],
@@ -38,5 +47,6 @@ export function useDeckDrawings(
     crossbeams,
     globals,
     edgeBeams,
+    brief,
   ]);
 }

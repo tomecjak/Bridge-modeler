@@ -67,6 +67,7 @@ export function ProfileLawDialog({
           {sk.elements.defaultOverride(def.default)}
         </button>
       )}
+      {law && law.kind !== 'edge' && <p className="hint">{sk.properties.freeWidthVariable}</p>}
       {law && (
         <ProfileLawEditor
           law={law}

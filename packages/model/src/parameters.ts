@@ -6,7 +6,12 @@ import {
   compileStationFunction,
   type ValueResult,
 } from './stationFunction.ts';
-import { type Parameter, type ParameterUnit, STATION_VARIABLE } from './types.ts';
+import {
+  FREE_WIDTH_VARIABLE,
+  type Parameter,
+  type ParameterUnit,
+  STATION_VARIABLE,
+} from './types.ts';
 
 export interface ParameterEvaluation {
   /** hodnoty platných parametrov v jednotkách výrazov (m, °, m/m) */
@@ -27,7 +32,7 @@ export interface ParameterSet {
 }
 
 const NAME = /^[\p{L}_][\p{L}\p{N}_]*$/u;
-const RESERVED = new Set([STATION_VARIABLE, ...FUNCTION_NAMES]);
+const RESERVED = new Set([STATION_VARIABLE, FREE_WIDTH_VARIABLE.toLowerCase(), ...FUNCTION_NAMES]);
 
 /** Hodnota výrazu → jednotky modelu (ADR 0006): uhly ° → rad, ostatné bez zmeny. */
 export const toModelValue = (unit: ParameterUnit, value: number): number =>
