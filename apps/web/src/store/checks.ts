@@ -73,6 +73,7 @@ const MODEL_GROUPS = {
   DuplicateBearingLineStation: 'spans',
   SpanTooShort: 'spans',
   SpanAboveEconomic: 'spans',
+  EndSpanRatio: 'spans',
   MissingBearingLines: 'spans',
   AmbiguousStation: 'geometry',
   InvalidJson: 'other',

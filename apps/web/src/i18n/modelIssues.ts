@@ -193,6 +193,8 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}pole dĺžky ${formatNumber(issue.length, 3)} m je kratšie ako minimum ${formatNumber(issue.minimum, 1)} m.`;
     case 'SpanAboveEconomic':
       return `${prefix}pole ${formatNumber(issue.length, 1)} m presahuje ekonomické rozpätie ~${formatNumber(issue.economic, 0)} m pre tento typ NK (informatívne, VŠB).`;
+    case 'EndSpanRatio':
+      return `${prefix}${issue.span === 'first' ? 'prvé' : 'posledné'} krajné pole má k susednému vnútornému poľu pomer ${formatNumber(issue.ratio, 2)}, orientačne ${formatNumber(issue.min, 2)} – ${formatNumber(issue.max, 2)} (informatívne).`;
     case 'MissingBearingLines':
       return `${prefix}NK nemá aspoň dve osi uloženia — polia sa nedajú určiť.`;
     case 'InvalidJson':

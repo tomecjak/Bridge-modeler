@@ -31,6 +31,9 @@ export function spanLines(
   }));
 }
 
+/** Orientačný pomer krajného a susedného vnútorného poľa (rozhodnutie 2026-10-31, ADR 0022) — len upozornenie. */
+export const END_SPAN_RATIO = { min: 0.7, max: 0.8 } as const;
+
 /** Predvolená minimálna dĺžka poľa [m], ak projekt nemá globálny parameter `minSpan` (ADR 0008). */
 export const DEFAULT_MIN_SPAN = 5;
 
@@ -117,5 +120,23 @@ export function evaluateSpans(
       });
     }
   }
+  issues.push(...endSpanRatioIssues(spans));
   return { lines: sorted, spans, issues: issues.map((i) => ({ owner, ...i })) };
+}
+
+/** Krajné polia mimo `END_SPAN_RATIO` voči susednému vnútornému poľu (pri ≥ 3 poliach). */
+export function endSpanRatioIssues(spans: readonly Pick<Span, 'length'>[]): ModelIssue[] {
+  if (spans.length < 3) return [];
+  const { min, max } = END_SPAN_RATIO;
+  const eps = 1e-9;
+  const pairs = [
+    ['first', spans[0], spans[1]],
+    ['last', spans[spans.length - 1], spans[spans.length - 2]],
+  ] as const;
+  return pairs.flatMap(([span, end, inner]) => {
+    const ratio = (end?.length ?? 0) / (inner?.length ?? 1);
+    return ratio < min - eps || ratio > max + eps
+      ? [{ code: 'EndSpanRatio' as const, span, ratio, min, max, severity: 'warning' as const }]
+      : [];
+  });
 }

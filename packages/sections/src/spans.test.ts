@@ -74,4 +74,31 @@ describe('evaluateSpans', () => {
       { code: 'SpanAboveEconomic', economic: 45, severity: 'warning' },
     ]);
   });
+
+  it('warns when an end span is outside 0.7 – 0.8 of the adjacent inner span', () => {
+    const deck = (lengths: number[]) => {
+      let s = 0;
+      const lines = [at('O1', 'abutment', 0)];
+      lengths.forEach((l, i) => {
+        s += l;
+        lines.push(at(`L${i + 1}`, i === lengths.length - 1 ? 'abutment' : 'pier', s));
+      });
+      return evaluateSpans({ name: 'NK' }, lines).issues.filter((i) => i.code === 'EndSpanRatio');
+    };
+    // hranice vrátane
+    expect(deck([21, 30, 24])).toEqual([]);
+    expect(deck([20, 30, 30, 26])).toEqual([
+      expect.objectContaining({
+        code: 'EndSpanRatio',
+        span: 'first',
+        min: 0.7,
+        max: 0.8,
+        severity: 'warning',
+      }),
+      expect.objectContaining({ code: 'EndSpanRatio', span: 'last', severity: 'warning' }),
+    ]);
+    expect(deck([20, 30, 30, 26])[0]).toMatchObject({ ratio: 20 / 30 });
+    // dve polia nemajú vnútorné pole
+    expect(deck([20, 30])).toEqual([]);
+  });
 });

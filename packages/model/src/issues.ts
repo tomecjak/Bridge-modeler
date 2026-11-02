@@ -110,6 +110,8 @@ export type ModelIssue = {
   | { code: 'DuplicateBearingLineStation'; station: number }
   | { code: 'SpanTooShort'; length: number; minimum: number }
   | { code: 'SpanAboveEconomic'; length: number; economic: number; typology: string }
+  /** krajné pole mimo orientačného pomeru k susednému vnútornému poľu (ADR 0022) */
+  | { code: 'EndSpanRatio'; span: 'first' | 'last'; ratio: number; min: number; max: number }
   | { code: 'MissingBearingLines' }
   | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
