@@ -4,8 +4,10 @@ import {
   bridgeAxisPlan,
   bridgeAxisProfileLine,
   bridgeLengths,
+  deckWidths,
   edgeBeamTemplate,
   evaluateSpans,
+  outlineArea,
   polylineProfileLine,
   spanLines,
 } from '@bridge/sections';
@@ -419,6 +421,19 @@ describe('edge beams in the drawings (ADR 0023)', () => {
     const p = right?.outline.right[0] as Vec2;
     const cross = (p.x - start.x) * (end0.y - start.y) - (p.y - start.y) * (end0.x - start.x);
     expect(Math.abs(cross) / plan2(start, end0)).toBeLessThan(1e-6);
+  });
+
+  it('outlines the bridge to the outer edges of the edge beams: plan area = length × bridge width', () => {
+    const bridge = withBeams.bridgeOutline;
+    expect(bridge.left).toBe(withBeams.edgeBeams[0]?.outline.left);
+    expect(bridge.right).toBe(withBeams.edgeBeams[1]?.outline.right);
+    // priama os 212-00 a šikmé konce: rovnobežník s dĺžkou NK 56 m po osi mosta
+    const mid = (ref.sFrom + ref.sTo) / 2;
+    const width = deckWidths(ctx, ref.deck, mid)?.bridge ?? Number.NaN;
+    expect(outlineArea(bridge)).toBeCloseTo(56 * width, 1);
+    expect(outlineArea(bridge) - outlineArea(withBeams.outline)).toBeCloseTo(56 * 2 * 0.35, 1);
+    // NK bez ríms: obrys mosta = obrys NK
+    expect(data.bridgeOutline).toEqual(data.outline);
   });
 
   it('draws the edge beams in plan, section and longitudinal profile on layer RIMSY', () => {

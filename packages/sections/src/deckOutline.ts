@@ -1,4 +1,4 @@
-import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
+import { type Polygon2D, signedArea, type Vec2, vec2 } from '@bridge/geom';
 import type { DeckSamples } from './deckSampling.ts';
 import type { EvaluatedLoop } from './profile.ts';
 import type { SuperstructureSection } from './superstructure.ts';
@@ -70,3 +70,23 @@ function shifted(sec: SuperstructureSection, p: Vec2, shift: number): Vec2 {
   const th = Math.hypot(t.x, t.y);
   return vec2(w.x + (shift * t.x) / th, w.y + (shift * t.y) / th);
 }
+
+/**
+ * Obrys mosta v pôdoryse (ADR 0023): okraj NK nahradí vonkajšia hrana rímsy na strane, kde rímsa je (prvá rímsa na
+ * strane); bez ríms obrys NK.
+ */
+export function bridgeOutline(
+  deck: DeckOutline,
+  edgeBeams: readonly { side: 'left' | 'right'; outline: DeckOutline }[],
+): DeckOutline {
+  const left = edgeBeams.find((b) => b.side === 'left')?.outline.left;
+  const right = edgeBeams.find((b) => b.side === 'right')?.outline.right;
+  if (!left && !right) return deck;
+  const l = left && left.length >= 2 ? left : deck.left;
+  const r = right && right.length >= 2 ? right : deck.right;
+  return { left: l, right: r, polygon: [...l, ...[...r].reverse()] };
+}
+
+/** Pôdorysná plocha obrysu [m²] (plocha mosta pre ukazovatele 10h). */
+export const outlineArea = (outline: Pick<DeckOutline, 'polygon'>): number =>
+  outline.polygon.length >= 3 ? Math.abs(signedArea(outline.polygon)) : 0;

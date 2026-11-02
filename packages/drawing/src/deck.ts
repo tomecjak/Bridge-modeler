@@ -3,6 +3,7 @@ import {
   type AxisLinePoint,
   type BearingLineResult,
   bridgeAxisPlan,
+  bridgeOutline,
   type DeckOutline,
   type DeckSamples,
   type DeckSamplingOptions,
@@ -32,6 +33,8 @@ export interface DeckDrawingData {
   lines: BearingLineResult[];
   /** rímsy NK (ADR 0023): vzorky ako NK a obrys v pôdoryse (vľavo / vpravo = krajné hrany rímsy) */
   edgeBeams: EdgeBeamDrawingData[];
+  /** obrys mosta po vonkajšie hrany ríms (bez ríms = obrys NK) */
+  bridgeOutline: DeckOutline;
 }
 
 /** Rímsa NK pre výkresy (ADR 0023). */
@@ -58,24 +61,27 @@ export function deckDrawingData(
   const samples = sampleSuperstructure(ctx, sup, own, options);
   if (!('sections' in samples)) return undefined;
   const { alignment, axis, sFrom, sTo } = samples;
+  const outline = deckOutline(samples);
+  const edgeBeams = deckEdgeBeams(ctx, sup).map((b): EdgeBeamDrawingData => {
+    const segment = sampleEdgeBeam(ctx, b, samples);
+    return {
+      id: b.id,
+      name: b.name,
+      side: b.side,
+      segment,
+      outline: deckOutline({ ...segment, endAngles: samples.endAngles }),
+    };
+  });
   return {
     id: sup.id,
     name: sup.name,
     road: alignment.name,
-    outline: deckOutline(samples),
+    outline,
     axis: bridgeAxisPlan(axis, alignment, ctx.parameters, sFrom, sTo),
     samples,
     own,
     lines: lines.filter((l) => l.line.superstructure === sup.id && l.axis),
-    edgeBeams: deckEdgeBeams(ctx, sup).map((b) => {
-      const segment = sampleEdgeBeam(ctx, b, samples);
-      return {
-        id: b.id,
-        name: b.name,
-        side: b.side,
-        segment,
-        outline: deckOutline({ ...segment, endAngles: samples.endAngles }),
-      };
-    }),
+    edgeBeams,
+    bridgeOutline: bridgeOutline(outline, edgeBeams),
   };
 }

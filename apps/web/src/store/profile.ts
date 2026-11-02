@@ -26,7 +26,8 @@ import { type TerrainTin, terrainProfilesAlong } from './terrain.ts';
 
 /**
  * Os pozdĺžneho profilu (Fáza 10b) ako hodnota výberu: `road`, `bridgeAxis`, `edge:left`, `edge:right`,
- * `alignment:<názov osi>`, `line:<id čiary>`.
+ * `bridgeEdge:left`, `bridgeEdge:right` (vonkajšia hrana rímsy, ADR 0023), `alignment:<názov osi>`,
+ * `line:<id čiary>`.
  */
 export type ProfileAxisKey = string;
 
@@ -51,7 +52,10 @@ interface ProfileSources {
   planLines: readonly PlanLine[];
 }
 
-/** Ponúkané osi profilu: os cesty, os mosta a okraje vybranej NK, ďalšie osi z LandXML a čiary v pôdoryse. */
+/**
+ * Ponúkané osi profilu: os cesty, os mosta a okraje vybranej NK (aj okraje mosta na stranách s rímsou), ďalšie osi
+ * z LandXML a čiary v pôdoryse.
+ */
 export function profileAxisOptions(src: ProfileSources): ProfileAxisOption[] {
   const a = sk.profileAxes;
   const deck = src.deck;
@@ -62,6 +66,12 @@ export function profileAxisOptions(src: ProfileSources): ProfileAxisOption[] {
           { value: 'bridgeAxis', label: a.bridgeAxis(deck.name) },
           { value: 'edge:left', label: a.edgeLeft(deck.name) },
           { value: 'edge:right', label: a.edgeRight(deck.name) },
+          ...(deck.edgeBeams.some((b) => b.side === 'left')
+            ? [{ value: 'bridgeEdge:left', label: a.bridgeEdgeLeft(deck.name) }]
+            : []),
+          ...(deck.edgeBeams.some((b) => b.side === 'right')
+            ? [{ value: 'bridgeEdge:right', label: a.bridgeEdgeRight(deck.name) }]
+            : []),
         ]
       : []),
     ...src.others.map((o) => ({ value: `alignment:${o.name}`, label: a.alignment(o.name) })),
@@ -83,6 +93,12 @@ export function buildProfileLine(key: ProfileAxisKey, src: ProfileSources): Prof
   if ((key === 'edge:left' || key === 'edge:right') && deck && measure) {
     const edge = key === 'edge:left' ? deck.outline.left : deck.outline.right;
     if (edge.length >= 2) return polylineProfileLine('deckEdge', edge, road);
+  }
+  // okraj mosta len na strane s rímsou (bez nej by bol totožný s okrajom NK)
+  if (key === 'bridgeEdge:left' || key === 'bridgeEdge:right') {
+    const side = key === 'bridgeEdge:left' ? 'left' : 'right';
+    const edge = deck?.edgeBeams.some((b) => b.side === side) ? deck.bridgeOutline[side] : [];
+    if (edge.length >= 2 && measure) return polylineProfileLine('bridgeEdge', edge, road);
   }
   if (key.startsWith('alignment:')) {
     const other = src.others.find((o) => o.name === key.slice('alignment:'.length));

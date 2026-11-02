@@ -586,6 +586,8 @@ export function deckSheet(input: {
   widths: DeckWidthRange | undefined;
   /** voľná šírka zo zadania [m] (predvolená požadovaná) */
   briefFreeWidth: number | undefined;
+  /** pôdorysná plocha mosta vrátane ríms [m²] (ADR 0023) */
+  bridgeArea: number | undefined;
   onEditLaw: (parameter: string) => void;
   onAddSupport: () => void;
   onSpanLayout: () => void;
@@ -620,6 +622,21 @@ export function deckSheet(input: {
     input.widths?.free
       ? { kind: 'readonly', label: t.freeWidth, value: range(input.widths.free) }
       : { kind: 'note', text: t.noFreeWidth, tone: 'muted' },
+    ...(input.widths
+      ? [
+          { kind: 'readonly' as const, label: t.deckWidth, value: range(input.widths.deck) },
+          { kind: 'readonly' as const, label: t.bridgeWidth, value: range(input.widths.bridge) },
+        ]
+      : []),
+    ...(input.bridgeArea === undefined
+      ? []
+      : [
+          {
+            kind: 'readonly' as const,
+            label: t.bridgeArea,
+            value: formatNumber(input.bridgeArea, 1),
+          },
+        ]),
     { kind: 'note', text: t.widthsHint, tone: 'muted' },
   ];
   const ends = { start: deck.ends?.start ?? 'abutment', end: deck.ends?.end ?? 'abutment' };

@@ -227,8 +227,8 @@ export function profileEdgeBeamLines(
 export const EDGE_TERRAIN_REACH = 30;
 
 /**
- * Ľavý a pravý okraj NK v pôdoryse na premietnutie terénu do profilu v osi mosta (Fáza 10b): body okraja z obrysu NK
- * (vrátane šikmých koncov), za koncami predĺžené o `reach` rovnobežne s osou mosta v krajnom odsadení. Hodnota `s`
+ * Ľavý a pravý okraj mosta v pôdoryse na premietnutie terénu do profilu v osi mosta (Fáza 10b): body okraja z obrysu
+ * mosta (vonkajšie hrany ríms, bez ríms okraj NK; ADR 0023) vrátane šikmých koncov, za koncami predĺžené o `reach` rovnobežne s osou mosta v krajnom odsadení. Hodnota `s`
  * bodu je dĺžka po osi mosta v päte kolmice (bod okraja leží v priečnej rovine prierezu), teda x profilu.
  */
 export function profileEdgeLines(
@@ -263,7 +263,7 @@ export function profileEdgeLines(
     ];
     return all.map((p) => ({ s: measure.lengthAt(p.s), point: p.point }));
   };
-  return { left: edge(deck.outline.left), right: edge(deck.outline.right) };
+  return { left: edge(deck.bridgeOutline.left), right: edge(deck.bridgeOutline.right) };
 }
 
 /**

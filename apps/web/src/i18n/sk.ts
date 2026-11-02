@@ -746,6 +746,9 @@ export const sk = {
     useBrief: 'Podľa zadania',
     freeWidth: 'Voľná šírka medzi rímsami [mm]',
     noFreeWidth: 'NK nemá rímsy na oboch stranách — voľná šírka sa nemeria.',
+    deckWidth: 'Šírka NK [mm]',
+    bridgeWidth: 'Šírka mosta (po vonkajšie hrany ríms) [mm]',
+    bridgeArea: 'Plocha mosta (pôdorys) [m²]',
     widthRange: (min: string, max: string) => (min === max ? min : `${min} – ${max}`),
     widthsHint:
       'Šírky sa merajú vodorovne v rovine prierezu na koncoch NK, osiach uloženia a v stredoch polí; voľná šírka medzi vnútornými hranami ríms (ADR 0023).',
@@ -933,6 +936,8 @@ export const sk = {
     bridgeAxis: (deck: string) => `Os mosta – ${deck}`,
     edgeLeft: (deck: string) => `Ľavý okraj NK – ${deck}`,
     edgeRight: (deck: string) => `Pravý okraj NK – ${deck}`,
+    bridgeEdgeLeft: (deck: string) => `Ľavý okraj mosta – ${deck}`,
+    bridgeEdgeRight: (deck: string) => `Pravý okraj mosta – ${deck}`,
     alignment: (name: string) => `Os ${name}`,
     planLine: (name: string) => `Čiara ${name}`,
   },

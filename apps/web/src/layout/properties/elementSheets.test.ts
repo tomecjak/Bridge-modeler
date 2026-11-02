@@ -339,6 +339,7 @@ describe('deckSheet', () => {
       deck: widths.deck ?? deck,
       widths: widths.widths,
       briefFreeWidth: widths.brief,
+      bridgeArea: widths.widths ? 552.3 : undefined,
       profiles: [profile],
       axes: [{ id: 'ax', name: 'Os mosta' }],
       curveName: () => '',
@@ -398,6 +399,13 @@ describe('deckSheet', () => {
     );
     expect(rows[0]).toMatchObject({ kind: 'text', value: '', placeholder: 'zo zadania 12 750' });
     expect(rows[1]).toMatchObject({ kind: 'readonly', value: '12 750 – 12 800' });
+    expect(
+      rows.slice(2, 5).map((r) => (r.kind === 'readonly' ? [r.label, r.value] : r.kind)),
+    ).toEqual([
+      ['Šírka NK [mm]', '12 750 – 12 800'],
+      ['Šírka mosta (po vonkajšie hrany ríms) [mm]', '12 750 – 12 800'],
+      ['Plocha mosta (pôdorys) [m²]', '552,3'],
+    ]);
     if (rows[0]?.kind === 'text') rows[0].onCommit('13 000');
     expect(commands.at(-1)).toMatchObject({ changes: { freeWidth: 13 } });
     const own = rowsOf(sheetOf([], commands, { deck: { ...deck, freeWidth: 13 }, brief: 12.75 }));

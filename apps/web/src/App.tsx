@@ -43,6 +43,7 @@ import {
   globalScope,
   layoutStations,
   moveLine,
+  outlineArea,
   previewScope,
   profileParameterValues,
   SPAN_SNAP,
@@ -2389,6 +2390,10 @@ export function App() {
               station: sectionAt,
               widths: deckWidthRanges.get(deck.id),
               briefFreeWidth: effectiveFreeWidth(project.brief),
+              bridgeArea: (() => {
+                const drawing = roadDecks.find((d) => d.id === deck.id);
+                return drawing && outlineArea(drawing.bridgeOutline);
+              })(),
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
               onAddSupport: () => {
                 setMode('2d');

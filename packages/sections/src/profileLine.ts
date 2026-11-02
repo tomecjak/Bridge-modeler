@@ -3,7 +3,13 @@ import { type Vec2, vec2 } from '@bridge/geom';
 import type { AxisLength } from './axisLength.ts';
 
 /** Druh čiary pozdĺžneho profilu (Fáza 10b, ADR 0007). */
-export type ProfileLineKind = 'road' | 'bridgeAxis' | 'deckEdge' | 'alignment' | 'planLine';
+export type ProfileLineKind =
+  | 'road'
+  | 'bridgeAxis'
+  | 'deckEdge'
+  | 'bridgeEdge'
+  | 'alignment'
+  | 'planLine';
 
 export interface ProfileLinePoint {
   /** rozvinutá dĺžka čiary = x profilu [m] */
@@ -146,11 +152,11 @@ export function bridgeAxisProfileLine(road: Alignment, measure: AxisLength, step
 }
 
 /**
- * Lomená čiara v pôdoryse (okraj NK, čiara v pôdoryse): u = dĺžka od prvého vrcholu, úseky zahustené na ≤ `step`
- * kvôli premietnutiu na os cesty.
+ * Lomená čiara v pôdoryse (okraj NK, okraj mosta, čiara v pôdoryse): u = dĺžka od prvého vrcholu, úseky zahustené na
+ * ≤ `step` kvôli premietnutiu na os cesty.
  */
 export function polylineProfileLine(
-  kind: 'deckEdge' | 'planLine',
+  kind: 'deckEdge' | 'bridgeEdge' | 'planLine',
   vertices: readonly Vec2[],
   road: Alignment,
   step = 1,
