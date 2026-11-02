@@ -157,6 +157,102 @@ export const sk = {
     removeTitle: 'Odstrániť aktívny variant (Späť ho vráti); posledný variant ostane',
     duplicated: (name: string) => `Nový variant ${name} je aktívny`,
     removed: (name: string) => `Variant ${name} odstránený (Späť ho vráti)`,
+    groups: {
+      layout: 'Dispozícia',
+      areas: 'Plochy a objemy',
+      supports: 'Podpery',
+      checks: 'Kontroly',
+    },
+    /** ukazovatele (ADR 0024): popis v tabuľke a vysvetlivka */
+    indicators: {
+      spanCount: {
+        label: 'Počet polí',
+        hint: 'Počet polí NK medzi osami uloženia (pri viacerých NK najväčší).',
+      },
+      spans: {
+        label: 'Rozpätia [m]',
+        hint: 'Dĺžky polí vodorovne v osi mosta medzi osami uloženia, po NK.',
+      },
+      maxSpan: { label: 'Najdlhšie pole [m]', hint: 'Najdlhšie pole v osi mosta.' },
+      economicSpan: {
+        label: 'Ekonomické rozpätie [m]',
+        hint: 'Informatívne ekonomické rozpätie medziľahlých polí pre typológiu NK s najdlhším poľom (VŠB-TU Ostrava).',
+      },
+      piers: { label: 'Piliere', hint: 'Počet pilierov; menej je lepšie.' },
+      abutments: { label: 'Opory', hint: 'Počet opôr.' },
+      deckLength: { label: 'Dĺžka NK [m]', hint: 'Dĺžka NK v osi mosta (od – do).' },
+      bridgedLength: {
+        label: 'Dĺžka premostenia [m]',
+        hint: 'Vzdialenosť predných líc úložných prahov oboch opôr v osi mosta.',
+      },
+      overallLength: {
+        label: 'Celková dĺžka [m]',
+        hint: 'Dĺžka mosta po konce krídel opôr v osi mosta.',
+      },
+      deckWidth: { label: 'Šírka NK [m]', hint: 'Šírka NK po okraje prierezu, rozsah po dĺžke.' },
+      bridgeWidth: {
+        label: 'Šírka mosta [m]',
+        hint: 'Šírka po vonkajšie hrany ríms (bez rímsy po okraj NK), rozsah po dĺžke.',
+      },
+      freeWidth: {
+        label: 'Voľná šírka [m]',
+        hint: 'Voľná šírka medzi vnútornými hranami ríms, rozsah po dĺžke (ADR 0023).',
+      },
+      minCrossingAngle: {
+        label: 'Min. uhol kríženia [°]',
+        hint: 'Najmenší ostrý uhol osi uloženia s osou mosta (90° = kolmý most); väčší je lepší.',
+      },
+      bridgeArea: {
+        label: 'Plocha mosta [m²]',
+        hint: 'Pôdorys vrátane ríms medzi prednými lícami úložných prahov; pri konštantnej šírke dĺžka premostenia × šírka mosta. Hviezdička = celá NK, chýbajú opory.',
+      },
+      deckPlanArea: {
+        label: 'Pôdorysná plocha NK [m²]',
+        hint: 'Pôdorys NK po okraje prierezu po celej dĺžke NK.',
+      },
+      deckVolume: {
+        label: 'Objem NK [m³]',
+        hint: '∫A·dL prierezu NK po osi mosta vrátane priečnikov, bez ríms.',
+      },
+      edgeBeamVolume: { label: 'Objem ríms [m³]', hint: '∫A·dL prierezov ríms po dĺžke NK.' },
+      substructureVolume: {
+        label: 'Objem spodnej stavby [m³]',
+        hint: 'Betón podpier vrátane základov, bez ložísk a pilót.',
+      },
+      equivalentThickness: {
+        label: 'Ekvivalentná hrúbka NK [m]',
+        hint: 'Objem NK / pôdorysná plocha NK.',
+      },
+      pierHeights: {
+        label: 'Výšky pilierov [m]',
+        hint: 'Od hornej hrany základu po hornú hranu piliera, rozsah.',
+      },
+      supportsInObstacle: {
+        label: 'Podpery v prekážke',
+        hint: 'Počet podpier, ktorých pôdorys zasahuje do voľného prierezu prekážky.',
+      },
+      bearings: { label: 'Ložiská', hint: 'Počet ložísk na podperách so spojom „ložisko“.' },
+      freeHeight: {
+        label: 'Najmenšia voľná výška [m]',
+        hint: 'Najmenšia voľná výška pod NK nad voľnými prierezmi prekážok.',
+      },
+      freeHeightReserve: {
+        label: 'Rezerva voľnej výšky [m]',
+        hint: 'Voľná výška mínus požadovaná výška voľného prierezu; záporná = nesplnené.',
+      },
+      slenderness: {
+        label: 'Štíhlosť L/h',
+        hint: 'Najdlhšie pole / konštrukčná výška NK v jeho strede.',
+      },
+      slendernessRange: {
+        label: 'Orientačná štíhlosť typológie',
+        hint: 'Rozsah L/h pre typológiu NK (orientačné hodnoty, TODO statik, ADR 0022).',
+      },
+      endSpanRatios: {
+        label: 'Krajné / vnútorné pole',
+        hint: 'Krajné pole / susedné vnútorné na začiatku a na konci (orientačne 0,7 – 0,8).',
+      },
+    },
     dialog: {
       duplicate: 'Duplikovať variant',
       rename: 'Premenovať variant',

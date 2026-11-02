@@ -14,6 +14,7 @@ export * from './deckSampling.ts';
 export * from './edge.ts';
 export * from './edgeBeam.ts';
 export * from './expressions.ts';
+export * from './indicators.ts';
 export * from './longitudinal.ts';
 export * from './obstacles.ts';
 export * from './profile.ts';
