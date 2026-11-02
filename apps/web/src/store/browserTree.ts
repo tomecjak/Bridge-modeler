@@ -6,7 +6,7 @@ import type { IconName } from '../icons/Icon.tsx';
 import type { ElementCollection } from './commands.ts';
 
 /** Pohľad aplikácie (zhodné s `ViewMode` vo `Viewport`). */
-export type BrowserView = '3d' | '2d' | 'section' | 'parameters' | 'checks';
+export type BrowserView = '3d' | '2d' | 'section' | 'parameters' | 'checks' | 'variants';
 
 /** Čo vyberie klik na položku prehliadača. */
 export type BrowserTarget =
@@ -66,6 +66,7 @@ const VIEW_ICONS: Record<BrowserView, IconName> = {
   section: 'section',
   parameters: 'parameters',
   checks: 'checks',
+  variants: 'variants',
 };
 
 const element = (collection: ElementCollection, id: string): BrowserTarget => ({

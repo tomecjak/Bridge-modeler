@@ -1,8 +1,9 @@
 import type { Alignment } from '@bridge/alignment';
-import { type DeckDrawingData, deckDrawingData } from '@bridge/drawing';
-import { effectiveParameters, type ProjectFile } from '@bridge/model';
+import { type DeckDrawingData, type Drawing, deckDrawingData } from '@bridge/drawing';
+import { effectiveParameters, type ProjectFile, variantProject } from '@bridge/model';
 import {
   type AxisLength,
+  bridgeAxisProfileLine,
   type ClearanceCheck,
   checkClearance,
   type DeckIndicators,
@@ -16,9 +17,15 @@ import {
   supportVolume,
 } from '@bridge/sections';
 import { produce } from 'immer';
+import { useMemo } from 'react';
 import { alignmentsOf, measureOf, parametersOf } from './modelCache.ts';
-import { normalizeProject } from './projectStore.ts';
+import { profileViewDrawing } from './profile.ts';
+import { normalizeProject, useProject } from './projectStore.ts';
 import { supportStateOf } from './supports.ts';
+import type { TerrainTin } from './terrain.ts';
+
+/** Orientačná cena sa zaokrúhľuje na tisíce € (zástupné ceny, presnejšie číslo by zavádzalo). */
+const COST_ROUNDING = 1000;
 
 /** Tolerancia merania výšky prierezu pre štíhlosť [m] (ako v kontrolách, ADR 0022). */
 const DEPTH_EPS = 1e-6;
@@ -131,6 +138,8 @@ export interface IndicatorDef {
   unit: IndicatorUnit;
   /** lepšia hodnota pri porovnaní (len číselné riadky); bez nej sa nezvýrazňuje */
   better?: 'min' | 'max';
+  /** počet desatinných miest, ak sa líši od jednotky */
+  decimals?: number;
 }
 
 /** Ukazovatele v poradí tabuľky (ADR 0024); texty a vysvetlivky sú v `sk.variants.indicators`. */
@@ -138,7 +147,7 @@ export const INDICATORS = [
   { key: 'spanCount', group: 'layout', unit: 'count' },
   { key: 'spans', group: 'layout', unit: 'm' },
   { key: 'maxSpan', group: 'layout', unit: 'm' },
-  { key: 'economicSpan', group: 'layout', unit: 'm' },
+  { key: 'economicSpan', group: 'layout', unit: 'm', decimals: 0 },
   { key: 'piers', group: 'layout', unit: 'count', better: 'min' },
   { key: 'abutments', group: 'layout', unit: 'count' },
   { key: 'deckLength', group: 'layout', unit: 'm' },
@@ -159,8 +168,8 @@ export const INDICATORS = [
   { key: 'bearings', group: 'supports', unit: 'count', better: 'min' },
   { key: 'freeHeight', group: 'checks', unit: 'm', better: 'max' },
   { key: 'freeHeightReserve', group: 'checks', unit: 'm', better: 'max' },
-  { key: 'slenderness', group: 'checks', unit: 'ratio' },
-  { key: 'slendernessRange', group: 'checks', unit: 'ratio' },
+  { key: 'slenderness', group: 'checks', unit: 'ratio', decimals: 1 },
+  { key: 'slendernessRange', group: 'checks', unit: 'ratio', decimals: 0 },
   { key: 'endSpanRatios', group: 'checks', unit: 'ratio' },
   { key: 'cost', group: 'cost', unit: 'eur', better: 'min' },
 ] as const satisfies readonly IndicatorDef[];
@@ -255,7 +264,10 @@ export function variantIndicators(model: VariantModel): Indicators {
     slenderness: num(slenderness?.ratio),
     slendernessRange: slenderness?.range && range(slenderness.range),
     // NK bez ceny typológie → cena z ostatných NK, označená ako čiastočná
-    cost: costs.length > 0 ? num(sum(costs), costs.length < decks.length) : undefined,
+    cost:
+      costs.length > 0
+        ? num(Math.round(sum(costs) / COST_ROUNDING) * COST_ROUNDING, costs.length < decks.length)
+        : undefined,
     endSpanRatios: longest?.endSpanRatios && {
       kind: 'ratios',
       values: longest.endSpanRatios,
@@ -280,4 +292,64 @@ export function bestVariants(
   const tol = 1e-9 * Math.max(1, Math.abs(best));
   if (defined.every((v) => Math.abs(v - best) <= tol)) return [];
   return numbers.flatMap((v, i) => (v !== undefined && Math.abs(v - best) <= tol ? [i] : []));
+}
+
+/** Variant v porovnaní (ADR 0024): meno, či je aktívny, vyhodnotený model (bez počiatku nie je) a ukazovatele. */
+export interface ComparedVariant {
+  id: string;
+  name: string;
+  active: boolean;
+  model: VariantModel | undefined;
+  indicators: Indicators;
+}
+
+/** Všetky varianty projektu vyhodnotené tými istými čistými funkciami, v poradí variantov. */
+export function compareVariants(project: ProjectFile): ComparedVariant[] {
+  return project.variants.map((v) => {
+    const model = evaluateVariant(variantProject(project, v.id));
+    return {
+      id: v.id,
+      name: v.name,
+      active: v.id === project.activeVariant,
+      model,
+      indicators: model ? variantIndicators(model) : {},
+    };
+  });
+}
+
+/** Porovnanie variantov; počíta sa len pri otvorenom pohľade Varianty (`enabled`). */
+export function useVariantComparison(enabled: boolean): ComparedVariant[] | undefined {
+  const project = useProject((s) => s.project);
+  return useMemo(() => (enabled ? compareVariants(project) : undefined), [enabled, project]);
+}
+
+/** Pozdĺžny profil variantu v osi mosta a úsek mosta v dĺžke po osi mosta (po konce krídel, inak NK). */
+export interface VariantProfile {
+  drawing: Drawing;
+  from: number;
+  to: number;
+}
+
+/**
+ * Pozdĺžny profil variantu v osi mosta NK `deckId` (inak prvej NK) ako v pohľade 2D: rez NK, podpery, terén,
+ * prekážky a rímsy. Bez NK undefined.
+ */
+export function variantProfile(
+  model: VariantModel,
+  deckId: string | undefined,
+  tins: readonly TerrainTin[],
+): VariantProfile | undefined {
+  const deck = model.decks.find((d) => d.drawing.id === deckId) ?? model.decks[0];
+  if (!deck) return undefined;
+  const { samples } = deck.drawing;
+  const measure = model.axisLengths.get(samples.axis.id);
+  if (!measure) return undefined;
+  const line = bridgeAxisProfileLine(samples.alignment, measure);
+  const { drawing } = profileViewDrawing(line, deck.drawing, measure, tins, model.obstacles);
+  const overall = deck.indicators.lengths?.overall;
+  return {
+    drawing,
+    from: overall?.lFrom ?? measure.lengthAt(samples.sFrom),
+    to: overall?.lTo ?? measure.lengthAt(samples.sTo),
+  };
 }

@@ -2441,6 +2441,110 @@ text.dw-stationing {
   overflow: auto;
 }
 
+/* porovnanie variantov (ADR 0024) */
+.variants-view {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 12px 16px;
+  background: var(--panel);
+}
+
+.variants-csv {
+  margin-left: auto;
+}
+
+.variants-view .panel-title {
+  white-space: nowrap;
+}
+
+.mini-table.variants-table {
+  width: auto;
+  min-width: 480px;
+  margin: 12px 0 8px;
+}
+
+.mini-table.variants-table tr th,
+.mini-table.variants-table tr td {
+  padding: 3px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mini-table.variants-table tr th[scope="row"] {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.variants-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-table.variants-table .variants-group th {
+  padding-top: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.variants-table .variant-best {
+  font-weight: 600;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+
+.variants-table .tag {
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--warning);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+
+.variants-table thead .tag {
+  color: var(--accent);
+}
+
+.variants-help {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: help;
+}
+
+.variant-profile {
+  margin: 8px 0 16px;
+}
+
+.variant-profile figcaption {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.variant-profile-svg {
+  display: block;
+  width: 100%;
+  max-width: 1200px;
+  height: auto;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+}
+
 /* panel Kontroly (ADR 0022) */
 .checks-view {
   position: absolute;

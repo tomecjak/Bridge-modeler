@@ -179,6 +179,7 @@ import {
   terrainProfilesAlong,
   useTerrainTins,
 } from './store/terrain.ts';
+import { compareVariants, useVariantComparison, variantProfile } from './store/variants.ts';
 import { BASEMAPS, type BasemapKind } from './viewer/basemap.ts';
 import type { Cut } from './viewer/sceneView.ts';
 import { ChecksView } from './views/ChecksView.tsx';
@@ -190,6 +191,8 @@ import type { PlanDimensionSet } from './views/PlanView.tsx';
 import { ProfileEditorView, type ProfileTool } from './views/ProfileEditorView.tsx';
 import { SectionView } from './views/SectionView.tsx';
 import { StationControl } from './views/StationControl.tsx';
+import { VariantsView } from './views/VariantsView.tsx';
+import { comparisonCsv } from './views/variantTable.ts';
 import type { FitRequest, ViewTool } from './views/viewState.ts';
 
 // three.js je veľký → 3D náhľad sa načíta až pri otvorení záložky (samostatný chunk)
@@ -291,6 +294,8 @@ export function App() {
   const [tool, setTool] = useState<ViewTool>('none');
   const [fitRequest, setFitRequest] = useState<FitRequest>({ whole: false, nonce: 0 });
   const [exaggeration, setExaggeration] = useState(10);
+  /** prevýšenie profilov v porovnaní variantov (len okolie mosta, preto menšie ako v 2D) */
+  const [variantExaggeration, setVariantExaggeration] = useState(1);
   const [view3d, setView3dState] = useState<View3dState>({
     cut: false,
     terrain: true,
@@ -525,6 +530,15 @@ export function App() {
     supportState.crossbeams,
   );
   const roadDecks = deckDrawings.filter((d) => d.road === item?.data.name);
+  /** porovnanie variantov (ADR 0024): počíta sa len v pohľade Varianty */
+  const comparison = useVariantComparison(mode === 'variants');
+  const variantProfiles = useMemo(
+    () =>
+      comparison?.map(
+        (v) => v.model && variantProfile(v.model, profileDeckId ?? selectedSuperstructureId, tins),
+      ) ?? [],
+    [comparison, profileDeckId, selectedSuperstructureId, tins],
+  );
   const profileDeck =
     roadDecks.find((d) => d.id === (profileDeckId ?? selectedSuperstructureId)) ?? roadDecks[0];
   /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
@@ -686,6 +700,14 @@ export function App() {
     const file = drawingFileName(project.name, view, format);
     if (format === 'dxf') downloadText(toDxf(drawing), file, 'application/dxf');
     else downloadText(toSvg(drawing), file, 'image/svg+xml');
+    setMessage(sk.export.done(file));
+  }
+
+  /** Porovnanie variantov do CSV pre Excel (ADR 0024); mimo pohľadu Varianty sa vyhodnotí na požiadanie. */
+  function exportComparisonCsv() {
+    const variants = comparison ?? compareVariants(projectStore.getState().project);
+    const file = sk.variants.csvName(project.name);
+    downloadText(comparisonCsv(variants), file, 'text/csv');
     setMessage(sk.export.done(file));
   }
 
@@ -1756,6 +1778,11 @@ export function App() {
           onClick: () =>
             exportDrawing(sectionView, sk.export.names.section(formatStation(sectionAt, 3)), 'svg'),
         },
+        {
+          label: menuText.variantsCsv,
+          disabled: !project.crs.origin,
+          onClick: exportComparisonCsv,
+        },
       ],
     },
     {
@@ -2531,8 +2558,12 @@ export function App() {
       <PropertiesPalette
         sheet={viewSheet({
           mode,
-          exaggeration,
-          setExaggeration,
+          variants: project.variants.map((v) => ({
+            name: v.name,
+            active: v.id === project.activeVariant,
+          })),
+          exaggeration: mode === 'variants' ? variantExaggeration : exaggeration,
+          setExaggeration: mode === 'variants' ? setVariantExaggeration : setExaggeration,
           decks: roadDecks,
           profileDeckId: profileDeck?.id,
           setProfileDeckId,
@@ -2685,6 +2716,20 @@ export function App() {
         planDimensions={deckDimensions}
         profileDimensions={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.chains}
         profileFreeHeights={dimensionsOn ? profile.freeHeights : undefined}
+        variantsView={
+          comparison && (
+            <VariantsView
+              variants={comparison}
+              profiles={variantProfiles}
+              exaggeration={variantExaggeration}
+              onActivate={(id) =>
+                projectStore.getState().dispatch({ type: 'setActiveVariant', id })
+              }
+              onExportCsv={exportComparisonCsv}
+              noOrigin={!project.crs.origin}
+            />
+          )
+        }
         checksView={
           <ChecksView
             items={checks}

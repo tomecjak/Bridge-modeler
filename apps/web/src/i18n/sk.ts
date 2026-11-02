@@ -147,6 +147,22 @@ export const sk = {
     parameter: 'Parameter',
   },
   variants: {
+    tab: 'Varianty',
+    title: 'Porovnanie variantov',
+    hint: 'Ukazovatele variantov nad tými istými podkladmi; zvýraznená je lepšia hodnota. Vysvetlivku ukáže kurzor nad ukazovateľom.',
+    indicator: 'Ukazovateľ',
+    active: 'aktívny',
+    activateTitle: 'Prepnúť na tento variant',
+    exportCsv: 'Export CSV',
+    csvName: (project: string) => `${project} – porovnanie variantov.csv`,
+    partial: '* hodnota len z časti — pozri vysvetlivku ukazovateľa',
+    noOrigin:
+      'Projekt nemá os z LandXML — ukazovatele sa počítajú z NK, podpier a prekážok na osi.',
+    profiles: 'Pozdĺžne profily v osi mosta',
+    profilesHint: (exaggeration: number) =>
+      `Rovnaká mierka pre všetky varianty, prevýšenie ${exaggeration}× (panel Vlastnosti).`,
+    noProfile: 'Variant nemá NK.',
+    sheetVariants: 'Varianty',
     status: (name: string) => `Variant: ${name}`,
     duplicate: 'Duplikovať',
     duplicateTitle:
@@ -253,7 +269,7 @@ export const sk = {
       },
       cost: {
         label: 'Orientačná cena [€]',
-        hint: 'Plocha mosta × jednotková cena €/m² podľa typológie NK. ZÁSTUPNÉ ceny na porovnanie variantov, skutočné doplní projektant. Hviezdička = NK bez ceny typológie nie je zarátaná.',
+        hint: 'Plocha mosta × jednotková cena €/m² podľa typológie NK, zaokrúhlené na tisíce €. ZÁSTUPNÉ ceny na porovnanie variantov, skutočné doplní projektant. Hviezdička = NK bez ceny typológie nie je zarátaná.',
       },
       endSpanRatios: {
         label: 'Krajné / vnútorné pole',
@@ -840,6 +856,7 @@ export const sk = {
       section: 'Priečny rez',
       parameters: 'Parametre',
       checks: 'Kontroly',
+      variants: 'Porovnanie variantov',
     },
     plan: 'Pôdorys',
     longitudinal: 'Pozdĺžny profil',
@@ -1206,6 +1223,7 @@ export const sk = {
       profileSvg: 'Pozdĺžny rez — SVG',
       sectionDxf: 'Priečny rez — DXF',
       sectionSvg: 'Priečny rez — SVG',
+      variantsCsv: 'Porovnanie variantov — CSV',
       model: 'Presný model',
       stepSjtsk: 'STEP v S-JTSK',
       stepLocal: 'STEP v lokálnych súradniciach',

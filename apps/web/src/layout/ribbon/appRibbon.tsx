@@ -92,6 +92,7 @@ const VIEW_ICONS = {
   section: 'section',
   parameters: 'parameters',
   checks: 'checks',
+  variants: 'variants',
 } as const;
 
 /** Karty ribbonu podľa druhu práce ako v Revite (ADR 0016). */

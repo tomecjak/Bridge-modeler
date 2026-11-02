@@ -56,14 +56,11 @@ describe('variant comparison of 212-00 (ADR 0024)', () => {
   });
 
   it('prices the bridge area with the placeholder unit price of the deck typology', () => {
-    expect(number(a, 'cost')).toBeCloseTo(
-      (number(a, 'bridgeArea') ?? 0) * (UNIT_PRICES.singleBeamHaunched ?? 0),
-      3,
-    );
-    expect(number(b, 'cost')).toBeCloseTo(
-      (number(b, 'bridgeArea') ?? 0) * (UNIT_PRICES.box ?? 0),
-      3,
-    );
+    // zaokrúhlené na tisíce €
+    const priced = (area: number | undefined, price: number | undefined) =>
+      Math.round(((area ?? 0) * (price ?? 0)) / 1000) * 1000;
+    expect(number(a, 'cost')).toBe(priced(number(a, 'bridgeArea'), UNIT_PRICES.singleBeamHaunched));
+    expect(number(b, 'cost')).toBe(priced(number(b, 'bridgeArea'), UNIT_PRICES.box));
   });
 
   it('integrates the deck volume of both variants to A·L of their constant sections', () => {

@@ -14,7 +14,7 @@ import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
 
-export type ViewMode = '3d' | '2d' | 'section' | 'parameters' | 'checks';
+export type ViewMode = '3d' | '2d' | 'section' | 'parameters' | 'checks' | 'variants';
 
 interface Props {
   mode: ViewMode;
@@ -35,6 +35,8 @@ interface Props {
   parametersView: ReactNode;
   /** panel Kontroly (ADR 0022) */
   checksView: ReactNode;
+  /** porovnanie variantov (ADR 0024) */
+  variantsView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
   /** mapový podklad pôdorysu a počiatok projektu v S-JTSK (odpoveď 23) */
@@ -78,6 +80,7 @@ export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
   { mode: 'section', label: sk.section.tab },
   { mode: 'parameters', label: sk.parameters.tab },
   { mode: 'checks', label: sk.checks.tab },
+  { mode: 'variants', label: sk.variants.tab },
 ];
 
 /** Karty pohľadov a aktívny pohľad; nástroje pohľadov sú v ribbone (ADR 0016). */
@@ -95,6 +98,7 @@ export function Viewport({
   profileFreeHeights,
   parametersView,
   checksView,
+  variantsView,
   sectionView,
   plan,
   planBasemap,
@@ -141,6 +145,7 @@ export function Viewport({
         {mode === '3d' && view3d}
         {mode === 'parameters' && parametersView}
         {mode === 'checks' && checksView}
+        {mode === 'variants' && variantsView}
         {mode === 'section' && sectionView}
         {mode === '2d' && !alignment && (
           <p className="panel-empty centered">{sk.viewport.empty2d}</p>

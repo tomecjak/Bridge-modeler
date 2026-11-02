@@ -25,6 +25,7 @@ const PATHS = {
   /** rímsy: NK s blokmi na okrajoch */
   edgeBeam: <path d="M2 5h4v4H2zM18 5h4v4h-4zM6 7h12M2 9h20v2h-3l-2 7H7l-2-7H2z" />,
   /** kontroly: podložka so zaškrtnutím */
+  variants: <path d="M3 4h7v16H3zM14 4h7v16h-7zM5 8h3M5 12h3M5 16h3M16 8h3M16 12h3M16 16h3" />,
   checks: <path d="M9 3h6v3H9zM8 4.5H5V21h14V4.5h-3M8.5 13.5l2.5 2.5 4.5-5" />,
   /** meračka: statív s bodom */
   survey: (
