@@ -14,7 +14,7 @@ import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
 
-export type ViewMode = '3d' | '2d' | 'section' | 'parameters';
+export type ViewMode = '3d' | '2d' | 'section' | 'parameters' | 'checks';
 
 interface Props {
   mode: ViewMode;
@@ -33,6 +33,8 @@ interface Props {
   /** voľné výšky prekážok v profile (ADR 0020), len pri zapnutých kótach */
   profileFreeHeights: readonly ProfileFreeHeight[] | undefined;
   parametersView: ReactNode;
+  /** panel Kontroly (ADR 0022) */
+  checksView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
   /** mapový podklad pôdorysu a počiatok projektu v S-JTSK (odpoveď 23) */
@@ -75,6 +77,7 @@ export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
   { mode: '2d', label: sk.viewport.tabs.view2d },
   { mode: 'section', label: sk.section.tab },
   { mode: 'parameters', label: sk.parameters.tab },
+  { mode: 'checks', label: sk.checks.tab },
 ];
 
 /** Karty pohľadov a aktívny pohľad; nástroje pohľadov sú v ribbone (ADR 0016). */
@@ -91,6 +94,7 @@ export function Viewport({
   profileDimensions,
   profileFreeHeights,
   parametersView,
+  checksView,
   sectionView,
   plan,
   planBasemap,
@@ -136,6 +140,7 @@ export function Viewport({
       >
         {mode === '3d' && view3d}
         {mode === 'parameters' && parametersView}
+        {mode === 'checks' && checksView}
         {mode === 'section' && sectionView}
         {mode === '2d' && !alignment && (
           <p className="panel-empty centered">{sk.viewport.empty2d}</p>

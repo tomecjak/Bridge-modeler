@@ -111,6 +111,40 @@ export const sk = {
     stepDone: (file: string) => `Exportované: ${file}`,
     stepFailed: 'Export STEP zlyhal.',
   },
+  checks: {
+    tab: 'Kontroly',
+    title: 'Kontroly',
+    groups: {
+      geometry: 'Geometria',
+      spans: 'Rozpätia a podpery na osiach',
+      slenderness: 'Štíhlosť NK',
+      clearance: 'Voľná výška a podpery v prekážke',
+      superelevation: 'Klopenie',
+      foundation: 'Založenie',
+      other: 'Parametre, výrazy a ostatné',
+    },
+    severity: 'Závažnosť',
+    owner: 'Prvok',
+    message: 'Problém',
+    summary: (errors: number, warnings: number) =>
+      errors + warnings === 0
+        ? 'bez problémov'
+        : [
+            errors > 0 ? `${errors} ${errors === 1 ? 'chyba' : errors < 5 ? 'chyby' : 'chýb'}` : '',
+            warnings > 0
+              ? `${warnings} ${warnings === 1 ? 'upozornenie' : warnings < 5 ? 'upozornenia' : 'upozornení'}`
+              : '',
+          ]
+            .filter((x) => x !== '')
+            .join(' · '),
+    summaryTitle: 'Súhrn',
+    empty: 'Model prešiel všetkými kontrolami.',
+    hint: 'Klik na riadok vyberie prvok (vlastnosti vpravo), dvojklik ho ukáže v pohľade. Prierez NK sa kontroluje na koncoch NK, na osiach uloženia a v stredoch polí. Orientačné hodnoty (ekonomické rozpätie, štíhlosť, pomer polí) sú len upozornenia.',
+    status: (errors: number, warnings: number) => `✖ ${errors} · ⚠ ${warnings}`,
+    statusTitle: 'Otvoriť kontroly',
+    landxmlFile: 'Súbor LandXML',
+    parameter: 'Parameter',
+  },
   parameters: {
     tab: 'Parametre',
     add: 'Pridať parameter',
@@ -674,6 +708,7 @@ export const sk = {
       '2d': 'Pôdorys a pozdĺžny profil',
       section: 'Priečny rez',
       parameters: 'Parametre',
+      checks: 'Kontroly',
     },
     plan: 'Pôdorys',
     longitudinal: 'Pozdĺžny profil',

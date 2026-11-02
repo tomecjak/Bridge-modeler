@@ -447,7 +447,9 @@ export function bridgeAxisSheet(input: {
 
 /** Vlastnosti aktívneho pohľadu, keď nie je nič vybrané (ako v Revite). */
 export function viewSheet(input: {
-  mode: '3d' | '2d' | 'section' | 'parameters';
+  mode: '3d' | '2d' | 'section' | 'parameters' | 'checks';
+  /** súhrn kontrol po skupinách (karta Kontroly, ADR 0022) */
+  checks?: readonly { label: string; errors: number; warnings: number }[];
   exaggeration: number;
   setExaggeration: (value: number) => void;
   decks: readonly { id: string; name: string }[];
@@ -638,6 +640,25 @@ export function viewSheet(input: {
             title: p.view,
             rows: [{ kind: 'note', text: p.nothingSelected }],
           },
+        ],
+      };
+    case 'checks':
+      return {
+        heading: { icon: 'checks', label: heading.label },
+        groups: [
+          {
+            id: 'view-checks',
+            title: sk.checks.summaryTitle,
+            rows:
+              (input.checks ?? []).length === 0
+                ? [{ kind: 'note', text: sk.checks.empty }]
+                : (input.checks ?? []).map((c) => ({
+                    kind: 'readonly' as const,
+                    label: c.label,
+                    value: sk.checks.summary(c.errors, c.warnings),
+                  })),
+          },
+          { id: 'view-checks-hint', title: p.view, rows: [{ kind: 'note', text: sk.checks.hint }] },
         ],
       };
   }

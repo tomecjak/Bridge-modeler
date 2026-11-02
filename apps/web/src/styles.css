@@ -464,6 +464,27 @@ body {
   color: var(--text);
 }
 
+/* kontroly (ADR 0022) */
+.status-checks {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0 6px;
+  font: inherit;
+  color: var(--warning);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.status-checks.has-errors {
+  color: var(--error);
+}
+
+.status-checks:hover {
+  border-color: var(--border);
+}
+
 .toolbar {
   display: flex;
   gap: 6px;
@@ -2371,4 +2392,51 @@ text.dw-stationing {
 .dialog-body {
   max-height: 70vh;
   overflow: auto;
+}
+
+/* panel Kontroly (ADR 0022) */
+.checks-view {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 12px 16px;
+  background: var(--panel);
+}
+
+.checks-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.checks-group {
+  margin: 12px 0 16px;
+}
+
+.mini-table.checks-table tr td {
+  padding: 3px 6px;
+}
+
+.checks-table .checks-severity {
+  width: 110px;
+}
+
+.checks-table .checks-owner {
+  width: 220px;
+}
+
+.checks-table .issue-error strong {
+  color: var(--error);
+}
+
+.checks-table .issue-warning strong {
+  color: var(--warning);
+}
+
+.checks-table .checks-row {
+  cursor: pointer;
+}
+
+.checks-table .checks-row:hover td {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
 }

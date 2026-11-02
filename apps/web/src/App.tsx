@@ -16,6 +16,7 @@ import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
 import {
   type BearingLine,
   createEmptyProject,
+  type ModelIssue,
   type Obstacle,
   openProject,
   type Support,
@@ -29,6 +30,7 @@ import {
   crossbeamBlock,
   type DeckRange,
   deckBearingsAt,
+  deckChecks,
   deckEndSources,
   evaluateObstacle,
   evaluateSuperstructure,
@@ -126,6 +128,7 @@ import { downloadProject, downloadText } from './persistence/fileIO.ts';
 import { drawingFileName } from './persistence/fileName.ts';
 import { nextLineName } from './store/bearingLines.ts';
 import { type BrowserTarget, browserTree } from './store/browserTree.ts';
+import { CHECK_GROUPS, checkCounts, collectChecks } from './store/checks.ts';
 import type { Command, ElementCollection } from './store/commands.ts';
 import { curveFromKey, surveyLineOptions } from './store/curves.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
@@ -160,6 +163,7 @@ import {
 } from './store/terrain.ts';
 import { BASEMAPS, type BasemapKind } from './viewer/basemap.ts';
 import type { Cut } from './viewer/sceneView.ts';
+import { ChecksView } from './views/ChecksView.tsx';
 import { deckReach, planFrame } from './views/Dimensions.tsx';
 import { GoToStation } from './views/GoToStation.tsx';
 import type { LineEditing, LineHandle, LinePreview } from './views/lineEdit.ts';
@@ -342,6 +346,20 @@ export function App() {
     project.superstructures,
     supportState.supports,
   );
+  /** kontroly NK nad celou dĺžkou (prierez na vzorkách, ADR 0022) */
+  const deckIssues = useMemo(
+    () =>
+      new Map(
+        checkContext
+          ? project.superstructures.map(
+              (d) => [d.id, deckChecks(checkContext, d, supportState.spans.get(d.id))] as const,
+            )
+          : [],
+      ),
+    [checkContext, project.superstructures, supportState.spans],
+  );
+  /** riadok vybraný v paneli Kontroly */
+  const [checkRow, setCheckRow] = useState<string>();
   const sections = useSectionResults(
     alignmentMap,
     parameterState.set,
@@ -1322,6 +1340,67 @@ export function App() {
     setSelectedElement(undefined);
   }
 
+  /** Kontroly na jednom mieste (ADR 0022): problémy osí, parametrov, NK, osí uloženia, podpier a prekážok. */
+  const checks = useMemo(() => {
+    const titles = sk.elements.titles;
+    const named = (title: string, name: string) => `${title} ${name}`;
+    const element = (collection: ElementCollection, id: string) =>
+      ({ type: 'element', collection, id }) as const;
+    const paramId = new Map(project.parameters.map((p) => [p.name, p.id]));
+    const byParameter = new Map<string, ModelIssue[]>();
+    for (const i of parameterState.issues) {
+      const key = i.parameter ?? '';
+      byParameter.set(key, [...(byParameter.get(key) ?? []), i]);
+    }
+    return collectChecks([
+      { owner: sk.checks.landxmlFile, alignment: lastImport.fileIssues },
+      ...alignments.map((a, index) => ({
+        owner: named(sk.properties.alignment, a.data.name),
+        target: { type: 'alignment', index } as const,
+        alignment: [...lastImport.issues.filter((i) => i.alignment === a.data.name), ...a.issues],
+      })),
+      ...[...byParameter].map(([name, model]) => {
+        const id = paramId.get(name);
+        return {
+          owner: name ? named(sk.checks.parameter, name) : sk.parameters.tab,
+          target: id ? ({ type: 'parameter', id } as const) : undefined,
+          model,
+        };
+      }),
+      ...project.superstructures.map((d) => ({
+        owner: named(titles.superstructures, d.name),
+        target: element('superstructures', d.id),
+        model: [...(deckIssues.get(d.id) ?? []), ...(supportState.spans.get(d.id)?.issues ?? [])],
+      })),
+      ...supportState.lines.map((r) => ({
+        owner: named(titles.bearingLines, r.line.name),
+        target: element('bearingLines', r.line.id),
+        model: r.issues,
+      })),
+      ...supportState.supports.map((r) => ({
+        owner: named(titles.supports, r.support.name),
+        target: element('supports', r.support.id),
+        model: r.issues,
+      })),
+      ...obstacleState.map((r) => ({
+        owner: named(titles.obstacles, r.obstacle.name),
+        target: element('obstacles', r.obstacle.id),
+        model: [...r.issues, ...(clearanceChecks.get(r.obstacle.id)?.issues ?? [])],
+      })),
+    ]);
+  }, [
+    project.parameters,
+    project.superstructures,
+    parameterState.issues,
+    lastImport,
+    alignments,
+    deckIssues,
+    supportState,
+    obstacleState,
+    clearanceChecks,
+  ]);
+  const checkTotals = checkCounts(checks);
+
   /** Strom prehliadača projektu z projektu a výsledkov výpočtu (ADR 0016). */
   const browser = useMemo(() => {
     const elementIssues = new Map<string, number>();
@@ -2288,6 +2367,10 @@ export function App() {
           setView3d,
           hasTerrain: project.terrains.length > 0,
           hasDeck: project.superstructures.length > 0,
+          checks: CHECK_GROUPS.flatMap((g) => {
+            const rows = checks.filter((c) => c.group === g);
+            return rows.length > 0 ? [{ label: sk.checks.groups[g], ...checkCounts(rows) }] : [];
+          }),
         })}
       />
     );
@@ -2412,6 +2495,15 @@ export function App() {
         planDimensions={deckDimensions}
         profileDimensions={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.chains}
         profileFreeHeights={dimensionsOn ? profile.freeHeights : undefined}
+        checksView={
+          <ChecksView
+            items={checks}
+            onSelect={selectTarget}
+            onOpen={openTarget}
+            selected={checkRow}
+            onSelectRow={setCheckRow}
+          />
+        }
         parametersView={
           <ParameterTable
             parameters={project.parameters}
@@ -2562,6 +2654,16 @@ export function App() {
       {rightPanel()}
       <footer className="app-status">
         <span className="status-main">{statusText()}</span>
+        {checks.length > 0 && (
+          <button
+            type="button"
+            className={`status-checks${checkTotals.errors > 0 ? ' has-errors' : ''}`}
+            title={sk.checks.statusTitle}
+            onClick={() => setMode('checks')}
+          >
+            {sk.checks.status(checkTotals.errors, checkTotals.warnings)}
+          </button>
+        )}
         {message && <span className="status-message">{message}</span>}
       </footer>
       {dragging && <div className="drop-overlay">{sk.import.dropHint}</div>}

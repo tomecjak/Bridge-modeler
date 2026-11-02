@@ -22,6 +22,8 @@ const PATHS = {
   open: <path d="M3 6h6l2 2h10v12H3z" />,
   export: <path d="M12 15V3M8 7l4-4 4 4M4 15v6h16v-6" />,
   deck: <path d="M2 7h20v2h-3l-2 8H7L5 9H2z" />,
+  /** kontroly: podložka so zaškrtnutím */
+  checks: <path d="M9 3h6v3H9zM8 4.5H5V21h14V4.5h-3M8.5 13.5l2.5 2.5 4.5-5" />,
   /** meračka: statív s bodom */
   survey: (
     <>
