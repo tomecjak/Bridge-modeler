@@ -110,6 +110,21 @@ export type ModelIssue = {
   | { code: 'DuplicateBearingLineStation'; station: number }
   | { code: 'SpanTooShort'; length: number; minimum: number }
   | { code: 'SpanAboveEconomic'; length: number; economic: number; typology: string }
+  /**
+   * štíhlosť NK L/h mimo orientačného rozsahu typológie (ADR 0022): v strede poľa (`label` = číslo poľa) alebo nad
+   * podperou (`label` = os uloženia)
+   */
+  | {
+      code: 'Slenderness';
+      where: 'field' | 'support';
+      label: string;
+      depth: number;
+      length: number;
+      ratio: number;
+      min: number;
+      max: number;
+      typology: string;
+    }
   /** krajné pole mimo orientačného pomeru k susednému vnútornému poľu (ADR 0022) */
   | { code: 'EndSpanRatio'; span: 'first' | 'last'; ratio: number; min: number; max: number }
   | { code: 'MissingBearingLines' }

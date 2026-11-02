@@ -16,8 +16,10 @@ describe('deck checks over the whole deck', () => {
     expect(stations).toContainEqual(((l[0] as number) + (l[1] as number)) / 2);
   });
 
-  it('finds no problems on the reference bridge 212-00', () => {
-    expect(deckChecks(ctx, deck, spans)).toEqual([]);
+  it('finds no section problems on the reference bridge 212-00, only its slenderness', () => {
+    const issues = deckChecks(ctx, deck, spans);
+    expect(issues.filter((i) => i.code !== 'Slenderness')).toEqual([]);
+    expect(issues.filter((i) => i.code === 'Slenderness')).toHaveLength(3);
   });
 
   it('reports a problem found at several stations once', () => {

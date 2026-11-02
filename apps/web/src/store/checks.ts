@@ -74,6 +74,7 @@ const MODEL_GROUPS = {
   SpanTooShort: 'spans',
   SpanAboveEconomic: 'spans',
   EndSpanRatio: 'spans',
+  Slenderness: 'slenderness',
   MissingBearingLines: 'spans',
   AmbiguousStation: 'geometry',
   InvalidJson: 'other',

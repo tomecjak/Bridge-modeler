@@ -1,4 +1,5 @@
 import type { ModelIssue, Superstructure } from '@bridge/model';
+import { slendernessIssues } from './slenderness.ts';
 import type { SpanResult } from './spans.ts';
 import { evaluateSuperstructure, type SectionContext } from './superstructure.ts';
 
@@ -38,14 +39,17 @@ function issueKey(issue: ModelIssue): string {
   return JSON.stringify(rest);
 }
 
+/** Tolerancia polohy zvislice pri meraní hrúbky prierezu [m]. */
+const DEPTH_EPS = 1e-6;
+
 /**
  * Kontroly NK nad celou jej dĺžkou (ADR 0022): problémy prierezu na vzorkách `deckSampleStations` (bez duplicít,
- * prvý výskyt so staničením). Problémy polí sú v `SpanResult`, tu sa neopakujú.
+ * prvý výskyt so staničením) a štíhlosť polí. Problémy polí sú v `SpanResult`, tu sa neopakujú.
  */
 export function deckChecks(
   ctx: SectionContext,
   sup: Superstructure,
-  spans: Pick<SpanResult, 'lines'> | undefined,
+  spans: Pick<SpanResult, 'lines' | 'spans'> | undefined,
 ): ModelIssue[] {
   const stations = deckSampleStations(ctx, sup, spans);
   if (stations.length === 0) {
@@ -71,5 +75,8 @@ export function deckChecks(
       issues.push(issue);
     }
   }
+  const owner = { kind: 'superstructure' as const, name: sup.name };
+  if (spans)
+    issues.push(...slendernessIssues(ctx, sup, spans, DEPTH_EPS).map((i) => ({ owner, ...i })));
   return issues;
 }

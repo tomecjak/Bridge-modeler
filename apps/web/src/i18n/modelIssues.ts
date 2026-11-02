@@ -1,6 +1,7 @@
 import { formatStation } from '@bridge/alignment';
 import type { ExprError } from '@bridge/expr';
 import type { ExpressionField, ModelIssue } from '@bridge/model';
+import { PROFILE_TEMPLATES } from '@bridge/sections';
 import { formatNumber } from '../format/number.ts';
 import { sk } from './sk.ts';
 
@@ -193,6 +194,13 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}pole dĺžky ${formatNumber(issue.length, 3)} m je kratšie ako minimum ${formatNumber(issue.minimum, 1)} m.`;
     case 'SpanAboveEconomic':
       return `${prefix}pole ${formatNumber(issue.length, 1)} m presahuje ekonomické rozpätie ~${formatNumber(issue.economic, 0)} m pre tento typ NK (informatívne, VŠB).`;
+    case 'Slenderness': {
+      const name =
+        PROFILE_TEMPLATES.find((t) => t.typology === issue.typology)?.name.toLowerCase() ??
+        issue.typology;
+      const where = issue.where === 'field' ? `pole ${issue.label}` : `nad podperou ${issue.label}`;
+      return `${prefix}${where}: L/h = ${formatNumber(issue.length, 1)} / ${formatNumber(issue.depth, 2)} = ${formatNumber(issue.ratio, 1)}, orientačne L/${issue.min} – L/${issue.max} (${name}) — NK je ${issue.ratio > issue.max ? 'štíhlejšia' : 'masívnejšia'} (informatívne, hodnoty potvrdí statik).`;
+    }
     case 'EndSpanRatio':
       return `${prefix}${issue.span === 'first' ? 'prvé' : 'posledné'} krajné pole má k susednému vnútornému poľu pomer ${formatNumber(issue.ratio, 2)}, orientačne ${formatNumber(issue.min, 2)} – ${formatNumber(issue.max, 2)} (informatívne).`;
     case 'MissingBearingLines':
