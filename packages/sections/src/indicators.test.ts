@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { bridgeAxisLength } from './axisLength.ts';
 import { deckOutline } from './deckOutline.ts';
 import { sampleSuperstructure } from './deckSampling.ts';
-import { deckIndicators, segmentVolume, supportVolume } from './indicators.ts';
+import { deckIndicators, segmentVolume, supportVolume, UNIT_PRICES } from './indicators.ts';
 import { evaluateSpans, spanLines } from './spans.ts';
 import { evaluateSuperstructure } from './superstructure.ts';
 import { supportParts } from './supportGeometry.ts';
@@ -95,5 +95,8 @@ describe('indicators (ADR 0024)', () => {
     expect(d.slenderness?.depth).toBeCloseTo(1.2, 6);
     expect(d.slenderness?.ratio).toBeCloseTo(23 / 1.2, 6);
     expect(d.endSpanRatios?.map((r) => r.toFixed(4))).toEqual(['0.6957', '0.6957']);
+    // zástupná cena jednotrámu s nábehmi × plocha mosta
+    expect(d.typology).toBe('singleBeamHaunched');
+    expect(d.cost).toBeCloseTo(53.2 * 16.5 * (UNIT_PRICES.singleBeamHaunched ?? 0), 3);
   });
 });

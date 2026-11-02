@@ -109,10 +109,10 @@ export function evaluateVariant(raw: ProjectFile): VariantModel | undefined {
 }
 
 /** Skupiny ukazovateľov v tabuľke porovnania. */
-export type IndicatorGroup = 'layout' | 'areas' | 'supports' | 'checks';
+export type IndicatorGroup = 'layout' | 'areas' | 'supports' | 'checks' | 'cost';
 
 /** Jednotka hodnoty na zobrazenie (uhly sú v rad, zobrazujú sa v °). */
-export type IndicatorUnit = 'count' | 'm' | 'm2' | 'm3' | 'angle' | 'ratio';
+export type IndicatorUnit = 'count' | 'm' | 'm2' | 'm3' | 'angle' | 'ratio' | 'eur';
 
 export type IndicatorValue =
   | {
@@ -162,6 +162,7 @@ export const INDICATORS = [
   { key: 'slenderness', group: 'checks', unit: 'ratio' },
   { key: 'slendernessRange', group: 'checks', unit: 'ratio' },
   { key: 'endSpanRatios', group: 'checks', unit: 'ratio' },
+  { key: 'cost', group: 'cost', unit: 'eur', better: 'min' },
 ] as const satisfies readonly IndicatorDef[];
 
 export type IndicatorKey = (typeof INDICATORS)[number]['key'];
@@ -206,6 +207,7 @@ export function variantIndicators(model: VariantModel): Indicators {
   const deckVolume = sum(decks.map((d) => d.deckVolume));
   const deckPlanArea = sum(decks.map((d) => d.deckPlanArea));
   const slenderness = longest?.slenderness;
+  const costs = values((d) => d.cost);
   const out: Indicators = {
     spanCount: num(max(decks.map((d) => d.spans.length))),
     spans: decks.length > 0 ? { kind: 'spans', decks: decks.map((d) => d.spans) } : undefined,
@@ -252,6 +254,8 @@ export function variantIndicators(model: VariantModel): Indicators {
     ),
     slenderness: num(slenderness?.ratio),
     slendernessRange: slenderness?.range && range(slenderness.range),
+    // NK bez ceny typológie → cena z ostatných NK, označená ako čiastočná
+    cost: costs.length > 0 ? num(sum(costs), costs.length < decks.length) : undefined,
     endSpanRatios: longest?.endSpanRatios && {
       kind: 'ratios',
       values: longest.endSpanRatios,

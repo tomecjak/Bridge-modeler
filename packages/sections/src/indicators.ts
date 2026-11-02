@@ -79,7 +79,24 @@ export function supportVolume(r: SupportResult): number {
   return supportParts(r).reduce((sum, part) => sum + partVolume(r, part), 0);
 }
 
-/** Ukazovatele jednej NK (ADR 0024); dĺžky v m, plochy v m², objemy v m³, uhly v rad. */
+/**
+ * Orientačné jednotkové ceny mosta [€/m² plochy mosta] podľa typológie hlavného prierezu NK — **ZÁSTUPNÉ hodnoty**
+ * (odpoveď 11, ADR 0024); skutočné dodá projektant a zmení sa len táto tabuľka.
+ */
+export const UNIT_PRICES: Readonly<Record<string, number>> = {
+  slab: 1100,
+  voidedSlab: 1200,
+  slabBeam: 1250,
+  singleBeam: 1300,
+  singleBeamHaunched: 1400,
+  twinBeam: 1350,
+  urbanViaduct: 1500,
+  precast: 1150,
+  box: 1600,
+  boxHaunched: 1900,
+};
+
+/** Ukazovatele jednej NK (ADR 0024); dĺžky v m, plochy v m², objemy v m³, uhly v rad, cena v €. */
 export interface DeckIndicators {
   typology: string | undefined;
   /** dĺžky polí v osi mosta */
@@ -104,6 +121,8 @@ export interface DeckIndicators {
     | undefined;
   /** pomer krajného a susedného vnútorného poľa na začiatku a na konci (pri ≥ 3 poliach) */
   endSpanRatios: readonly [number, number] | undefined;
+  /** orientačná cena = plocha mosta × `UNIT_PRICES` typológie (zástupné ceny); typológia bez ceny → undefined */
+  cost: number | undefined;
 }
 
 export interface DeckIndicatorInput {
@@ -169,6 +188,8 @@ export function deckIndicators(input: DeckIndicatorInput): DeckIndicators {
   const ratio = (a: number | undefined, b: number | undefined) =>
     a !== undefined && b !== undefined && b > 0 ? a / b : Number.NaN;
 
+  const area = bridgeArea(input.bridgeOutline, input.supports);
+  const price = typology ? UNIT_PRICES[typology] : undefined;
   return {
     typology,
     spans: lengths,
@@ -181,7 +202,7 @@ export function deckIndicators(input: DeckIndicatorInput): DeckIndicators {
     lengths: input.spans.lengths,
     widths: input.widths,
     minCrossingAngle: angles.length > 0 ? Math.min(...angles) : undefined,
-    bridgeArea: bridgeArea(input.bridgeOutline, input.supports),
+    bridgeArea: area,
     deckPlanArea,
     deckVolume,
     edgeBeamVolume,
@@ -189,5 +210,6 @@ export function deckIndicators(input: DeckIndicatorInput): DeckIndicators {
     slenderness,
     endSpanRatios:
       n >= 3 ? [ratio(lengths[0], lengths[1]), ratio(lengths[n - 1], lengths[n - 2])] : undefined,
+    cost: price === undefined ? undefined : area.value * price,
   };
 }

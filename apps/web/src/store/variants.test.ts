@@ -1,5 +1,5 @@
 import { type ProjectFile, variantProject } from '@bridge/model';
-import { profileTemplate } from '@bridge/sections';
+import { profileTemplate, UNIT_PRICES } from '@bridge/sections';
 import { reference212Project } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { sk } from '../i18n/sk.ts';
@@ -53,6 +53,17 @@ describe('variant comparison of 212-00 (ADR 0024)', () => {
     expect([number(a, 'bearings'), number(b, 'bearings')]).toEqual([8, 4]);
     expect(number(a, 'bridgeArea')).toBeCloseTo(53.2 * 16.5, 6);
     expect(number(a, 'economicSpan')).toBeGreaterThan(0);
+  });
+
+  it('prices the bridge area with the placeholder unit price of the deck typology', () => {
+    expect(number(a, 'cost')).toBeCloseTo(
+      (number(a, 'bridgeArea') ?? 0) * (UNIT_PRICES.singleBeamHaunched ?? 0),
+      3,
+    );
+    expect(number(b, 'cost')).toBeCloseTo(
+      (number(b, 'bridgeArea') ?? 0) * (UNIT_PRICES.box ?? 0),
+      3,
+    );
   });
 
   it('integrates the deck volume of both variants to A·L of their constant sections', () => {

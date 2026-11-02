@@ -162,7 +162,10 @@ export const sk = {
       areas: 'Plochy a objemy',
       supports: 'Podpery',
       checks: 'Kontroly',
+      cost: 'Cena',
     },
+    /** štítok pri cene: jednotkové ceny sú zatiaľ zástupné (ADR 0024) */
+    placeholderPrices: 'zástupné ceny',
     /** ukazovatele (ADR 0024): popis v tabuľke a vysvetlivka */
     indicators: {
       spanCount: {
@@ -247,6 +250,10 @@ export const sk = {
       slendernessRange: {
         label: 'Orientačná štíhlosť typológie',
         hint: 'Rozsah L/h pre typológiu NK (orientačné hodnoty, TODO statik, ADR 0022).',
+      },
+      cost: {
+        label: 'Orientačná cena [€]',
+        hint: 'Plocha mosta × jednotková cena €/m² podľa typológie NK. ZÁSTUPNÉ ceny na porovnanie variantov, skutočné doplní projektant. Hviezdička = NK bez ceny typológie nie je zarátaná.',
       },
       endSpanRatios: {
         label: 'Krajné / vnútorné pole',
