@@ -509,7 +509,8 @@ Rozhodnutia 2026-11-02 (plan mode): panel = karta „Kontroly“ vo výreze, po�
 **Hotové, keď:** všetky kontroly sú na jednom mieste a interpretáciu klopenia overí golden test na podklade s výkazom klopenia. — *2026-11-02:* kontroly sú na jednom mieste (karta Kontroly) a overené testami aj v prehliadači; **golden test klopenia čaká na výkaz klopenia** (Referenčné dáta, bod 8; `packages/alignment/test/superelevation-125-00.test.ts` má `it.todo`), dovtedy je interpretácia a znamienko predpoklad (otázka 26).
   - *Ostáva:* kontrola klopenia mimo plného klopenia a nábehov (normálny strechovitý sklon) sa nerobí; štíhlosť a pomer polí sú orientačné (TODO statik).
 
-#### 10i — Rímsy (pred 10h)
+#### 10i — Rímsy (pred 10h, ADR 0023)
+Rozhodnutia 2026-11-02 (plan mode): šablóna rímsy = L-tvar s nosom cez koniec konzoly, spodok na hornom povrchu NK, zástupné rozmery b 0,90 / c 0,35 / hI 0,25 / hN 0,40 m, sklon hornej plochy 4 % k vozovke; prierez sa definuje pre pravú stranu a pre ľavú zrkadlí; požadovaná voľná šírka pri NK (voliteľná, inak zo zadania), kontrola aj väzba vo výrazoch berú hodnotu NK; upozornenie len ak je voľná šírka menšia o viac ako 1 mm; vstavané meno vo výrazoch `volnaSirka`.
 - [ ] rímsa (`edgeBeam`) ako samostatný prvok na okraji NK (rozhodnutie 2026-10-30): parametrický prierez z knižnice (šírka, výška, sklon 4 % k vozovke), vedená po okraji NK v rozsahu NK; schéma + ADR
 - [ ] zobrazenie v priečnom reze, pôdoryse, pozdĺžnom reze a 3D; export DXF (hladina `RIMSY`) a STEP
 - [ ] voľná šírka na moste medzi rímsami a kontrola voči zadaniu (kategória cesty, krok 1)
@@ -657,6 +658,9 @@ Nové otázky (2026-11-02, import meračky — zatiaľ predpoklady, oprav ich):
 Nové otázky (2026-11-02, Fáza 10g — predpoklady, oprav ich):
 26. Klopenie z LandXML: znamienko `FullSuperelev` kladné = klesá doprava (ako `q`; rozhodnutie z plan mode podľa 125-00), staničenia v `Superelevation` sú spojité (staStart + s, ako PVI), plné klopenie musí ležať v rozsahu prvku `Superelevation` ± 1 m, inak sa os považuje za nekonzistentnú. Overí sa na výkaze klopenia (Referenčné dáta, bod 8).
 27. Kontroly NK sa robia na vzorkách (konce NK, osi uloženia, stredy polí); problém prierezu medzi vzorkami (napr. okraj podľa krivky, ktorá chýba len na krátkom úseku) sa v paneli neukáže — stačí to, alebo zhustiť vzorky (napr. po 1 m)?
+
+Nové otázky (2026-11-02, Fáza 10i — predpoklady, oprav ich):
+28. Rímsy (ADR 0023): spodok rímsy je priamka so sklonom horného povrchu NK pri okraji (zlom horného povrchu pod rímsou sa zanedbá); vnútorná líca je zvislá a voľná šírka sa meria vodorovne kolmo na os mosta medzi vnútornými hornými hranami ríms; nos rímsy sa do kontroly voľnej výšky pod mostom zatiaľ nezapočítava; rozmery šablóny sú zástupné, kým nepríde firemný detail rímsy (šírka, výška vnútornej líca, nos, odkvapový nos).
 
 ### Zistené z podkladov
 
