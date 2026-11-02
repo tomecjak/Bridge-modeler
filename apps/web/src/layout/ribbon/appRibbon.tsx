@@ -74,6 +74,10 @@ export interface RibbonContext {
   view3d: View3dState;
   setView3d: (changes: Partial<View3dState>) => void;
   onProjectInfo: () => void;
+  /** varianty návrhu (ADR 0024) a aktívny variant */
+  variants: readonly { id: string; name: string }[];
+  activeVariant: string;
+  setActiveVariant: (id: string) => void;
 }
 
 /** Ponúkané prevýšenia pozdĺžneho profilu (výšky : dĺžky); export je vždy 1 : 1. */
@@ -123,6 +127,21 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
       id: 'home',
       label: t.tabs.home,
       groups: [
+        {
+          label: t.groups.variant,
+          items: [
+            {
+              kind: 'select',
+              id: 'variant',
+              label: t.variant,
+              title: t.variantTitle,
+              value: c.activeVariant,
+              options: c.variants.map((v) => ({ value: v.id, label: v.name })),
+              onChange: c.setActiveVariant,
+              disabled: c.variants.length < 2,
+            },
+          ],
+        },
         {
           label: t.groups.bridge,
           items: [

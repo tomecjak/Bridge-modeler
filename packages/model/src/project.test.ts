@@ -98,7 +98,8 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('15');
+      expect(r.project.schemaVersion).toBe('16');
+      expect(r.project.variants.map((v) => v.name)).toEqual(['Variant A']);
       expect(r.project.edgeBeams).toEqual([]);
       expect(r.project.obstacles).toEqual([]);
       expect(r.project.surveys).toEqual([]);
@@ -119,12 +120,12 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '15', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '16', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '15', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '16', name: 'Starý most', parameters: [] },
     });
   });
 
@@ -280,6 +281,23 @@ describe('migrateProject', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.project.terrains.map((t) => t.foundation)).toEqual([true, undefined]);
+  });
+
+  it('makes the bridge elements of a version 15 file the active variant A', () => {
+    const {
+      variants: _variants,
+      activeVariant: _active,
+      ...v15
+    } = { ...createEmptyProject('Most v15'), schemaVersion: '15' };
+    v15.parameters = [
+      { id: 'p', name: 'h0', unit: 'length', law: { kind: 'constant', value: '1' } },
+    ];
+    const r = openProject(JSON.stringify(v15));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.activeVariant).toBe('variant-a');
+    expect(r.project.variants).toEqual([{ id: 'variant-a', name: 'Variant A', parameters: {} }]);
+    expect(r.project.parameters).toHaveLength(1);
   });
 
   it('adds no edge beams to version 14 files and keeps edge beams with the required free width', () => {

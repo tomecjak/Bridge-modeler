@@ -3,6 +3,7 @@ import type { Vec3 } from '@bridge/geom';
 import {
   buildParameterSet,
   type CurveRef,
+  effectiveParameters,
   type ModelIssue,
   type ProjectFile,
   requiredFreeWidth,
@@ -68,7 +69,9 @@ export function buildScene(
   const seen = new Set<string>();
   if (origin) {
     const alignments = lazy(() => buildAlignments(project, origin));
-    const parameters = lazy(() => buildParameterSet(project.parameters));
+    // globálne parametre s prepismi aktívneho variantu (ADR 0024)
+    const globals = effectiveParameters(project);
+    const parameters = lazy(() => buildParameterSet(globals));
     const ctx = lazy((): SupportContext => {
       const base: SupportContext = {
         alignments: alignments(),
@@ -101,8 +104,8 @@ export function buildScene(
         .flatMap((b) => Object.values(b.parameterLaws).filter((l) => l.kind === 'piecewise'));
     /** NK podľa id osi uloženia (podpera patrí NK cez os, ADR 0017) */
     const lineDeck = new Map(project.bearingLines.map((l) => [l.id, l.superstructure]));
-    const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
-    const params = JSON.stringify(project.parameters);
+    const globalLaws: LawRef[] = globals.map((p) => ({ law: p.law, unit: p.unit }));
+    const params = JSON.stringify(globals);
     const base = (sup: Superstructure | undefined) => {
       const axis = project.bridgeAxes.find((a) => a.id === sup?.bridgeAxis);
       // krivky okrajov NK (osi z LandXML, čiary v pôdoryse), na ktoré sa odkazujú priebehy parametrov

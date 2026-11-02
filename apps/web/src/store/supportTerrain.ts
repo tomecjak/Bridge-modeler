@@ -1,4 +1,4 @@
-import type { ProjectFile, TerrainData } from '@bridge/model';
+import { effectiveParameters, type ProjectFile, type TerrainData } from '@bridge/model';
 import { resolveSupportTerrain } from '@bridge/sections';
 import { type Tin, terrainTin } from '@bridge/terrain';
 import type { Draft } from 'immer';
@@ -43,7 +43,7 @@ export function syncSupportTerrain(
   };
   const changes = resolveSupportTerrain({
     alignments: alignmentsOf(project, origin),
-    parameters: parametersOf(project.parameters),
+    parameters: parametersOf(effectiveParameters(project)),
     bridgeAxes: project.bridgeAxes,
     profiles: project.profiles,
     planLines: project.planLines,

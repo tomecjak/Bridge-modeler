@@ -1,6 +1,6 @@
 import type { Alignment } from '@bridge/alignment';
 import { type DeckDrawingData, deckDrawingData } from '@bridge/drawing';
-import type { ParameterSet } from '@bridge/model';
+import { effectiveParameters, type ParameterSet } from '@bridge/model';
 import type { BearingLineResult, CrossbeamBand, SupportResult } from '@bridge/sections';
 import { useMemo } from 'react';
 import { useProject } from './projectStore.ts';
@@ -19,7 +19,8 @@ export function useDeckDrawings(
 ): DeckDrawingData[] {
   const project = useProject((s) => s.project);
   const { bridgeAxes, profiles, superstructures, planLines, edgeBeams, brief } = project;
-  const globals = project.parameters;
+  // globálne parametre s prepismi aktívneho variantu (ADR 0024)
+  const globals = effectiveParameters(project);
   return useMemo(() => {
     const ctx = {
       alignments,

@@ -146,6 +146,10 @@ export const sk = {
     landxmlFile: 'Súbor LandXML',
     parameter: 'Parameter',
   },
+  variants: {
+    status: (name: string) => `Variant: ${name}`,
+    switched: (name: string) => `Aktívny variant: ${name}`,
+  },
   parameters: {
     tab: 'Parametre',
     add: 'Pridať parameter',
@@ -163,6 +167,11 @@ export const sk = {
     kinds: { constant: 'konštanta', piecewise: 'po častiach', expression: 'výraz so sta' },
     segments: (n: number) =>
       `po častiach: ${n} ${n === 1 ? 'úsek' : n < 5 ? 'úseky' : 'úsekov'} — upraviť`,
+    override: 'Len vo variante',
+    overrideTitle: (variant: string) =>
+      `Prepísať priebeh len vo variante ${variant}; ostatné varianty ponechajú spoločnú hodnotu (ADR 0024).`,
+    overrideNote: (variant: string, shared: string) =>
+      `Priebeh platí len vo variante ${variant}. Spoločná hodnota pre ostatné varianty: ${shared}.`,
   },
   stationFunction: {
     title: 'Priebeh po staničení',
@@ -956,7 +965,11 @@ export const sk = {
       view: 'Pohľad',
       manage: 'Správa',
     },
+    variant: 'Aktívny',
+    variantTitle:
+      'Aktívny variant návrhu mosta (ADR 0024): prvky mosta má každý variant vlastné, podklady sú spoločné',
     groups: {
+      variant: 'Variant',
       obstacle: 'Prekážky',
       tools: 'Nástroje',
       support: 'Podpera',

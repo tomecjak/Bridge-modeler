@@ -10,12 +10,15 @@ import {
   type PlanLine,
   type ProfileDefinition,
   type ProjectFile,
+  renameInStationFunction,
   renameParameter,
+  type StationFunction,
   type StudyArea,
   type Superstructure,
   type Support,
   type Survey,
   type TerrainSurface,
+  variantElements,
 } from '@bridge/model';
 
 /** Kolekcie prvkov mosta s rovnakými príkazmi (pridať / upraviť / odstrániť). */
@@ -53,8 +56,12 @@ export type Command =
   | { type: 'addParameter'; parameter: Parameter }
   | { type: 'updateParameter'; id: string; changes: Partial<Omit<Parameter, 'id'>> }
   | { type: 'removeParameter'; id: string }
-  /** premenovanie vrátane prepisu odkazov v ostatných výrazoch */
+  /** premenovanie vrátane prepisu odkazov v ostatných výrazoch aj v prepisoch variantov */
   | { type: 'renameParameter'; id: string; name: string }
+  /** prepis priebehu globálneho parametra v aktívnom variante (ADR 0024); null prepis zruší */
+  | { type: 'setParameterOverride'; id: string; law: StationFunction | null }
+  /** prepnutie aktívneho variantu = výmena prvkov mosta s pracovnou kópiou (ADR 0024) */
+  | { type: 'setActiveVariant'; id: string }
   /** pridá prvky naraz (napr. príklad dvojice NK) — jeden krok späť/znova */
   | {
       type: 'addElements';
@@ -110,6 +117,13 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       return;
     }
     case 'renameParameter': {
+      const old = draft.parameters.find((x) => x.id === command.id)?.name;
+      if (old !== undefined && old !== command.name)
+        for (const v of draft.variants)
+          for (const [id, law] of Object.entries(v.parameters)) {
+            const next = renameInStationFunction(law, old, command.name);
+            if (JSON.stringify(next) !== JSON.stringify(law)) v.parameters[id] = next;
+          }
       const renamed = renameParameter(draft.parameters, command.id, command.name);
       renamed.forEach((p, i) => {
         const current = draft.parameters[i];
@@ -167,6 +181,26 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
     case 'removeParameter': {
       const i = draft.parameters.findIndex((x) => x.id === command.id);
       if (i >= 0) draft.parameters.splice(i, 1);
+      for (const v of draft.variants) delete v.parameters[command.id];
+      return;
+    }
+    case 'setParameterOverride': {
+      const variant = draft.variants.find((v) => v.id === draft.activeVariant);
+      if (!variant || !draft.parameters.some((x) => x.id === command.id)) return;
+      if (command.law) variant.parameters[command.id] = command.law;
+      else delete variant.parameters[command.id];
+      return;
+    }
+    case 'setActiveVariant': {
+      const next = draft.variants.find((v) => v.id === command.id);
+      const current = draft.variants.find((v) => v.id === draft.activeVariant);
+      if (!next?.elements || !current || next === current) return;
+      // immer dovoľuje presunúť drafty v strome: kolekcie sa vymenia bez kópie
+      const stored = variantElements(draft);
+      Object.assign(draft, next.elements);
+      delete next.elements;
+      current.elements = stored;
+      draft.activeVariant = next.id;
       return;
     }
     case 'batch':

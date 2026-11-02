@@ -14,9 +14,11 @@ import {
 } from '@bridge/drawing';
 import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
 import {
+  activeVariantOf,
   type BearingLine,
   createEmptyProject,
   effectiveFreeWidth,
+  effectiveParameters,
   type ModelIssue,
   type Obstacle,
   openProject,
@@ -312,7 +314,13 @@ export function App() {
       }
     : undefined;
   const station = referenceStation ?? displayRange?.from ?? 0;
-  const selectedParameter = project.parameters.find((p) => p.id === selectedParameterId);
+  // globálne parametre s prepismi aktívneho variantu (ADR 0024)
+  const parameters = effectiveParameters(project);
+  const variant = activeVariantOf(project);
+  /** meno aktívneho variantu, len ak má projekt viac variantov */
+  const variantLabel = project.variants.length > 1 ? variant.name : undefined;
+  const selectedParameter = parameters.find((p) => p.id === selectedParameterId);
+  const sharedParameter = project.parameters.find((p) => p.id === selectedParameterId);
   const alignmentMap = useMemo(() => alignmentsByName(alignments), [alignments]);
   const sectionContext = useMemo(
     () =>
@@ -1944,6 +1952,13 @@ export function App() {
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
+    variants: project.variants,
+    activeVariant: project.activeVariant,
+    setActiveVariant: (id) => {
+      projectStore.getState().dispatch({ type: 'setActiveVariant', id });
+      const name = project.variants.find((v) => v.id === id)?.name;
+      if (name) setMessage(sk.variants.switched(name));
+    },
   }).concat(contextual ? [contextual] : []);
 
   // Esc zruší aktívny nástroj (rozkreslené čiary a oblasti zahodia pohľady)
@@ -2493,6 +2508,11 @@ export function App() {
           set={parameterState.set}
           alignmentRange={displayRange}
           referenceStation={station}
+          override={
+            sharedParameter && variant.parameters[sharedParameter.id]
+              ? { shared: sharedParameter.law, variant: variant.name }
+              : undefined
+          }
         />
       );
     return (
@@ -2664,7 +2684,9 @@ export function App() {
         }
         parametersView={
           <ParameterTable
-            parameters={project.parameters}
+            parameters={parameters}
+            overrides={variant.parameters}
+            variant={variantLabel}
             state={parameterState}
             referenceStation={station}
             onReferenceStation={setReferenceStation}
@@ -2818,6 +2840,7 @@ export function App() {
       {rightPanel()}
       <footer className="app-status">
         <span className="status-main">{statusText()}</span>
+        {variantLabel && <span className="status-variant">{sk.variants.status(variantLabel)}</span>}
         {checks.length > 0 && (
           <button
             type="button"

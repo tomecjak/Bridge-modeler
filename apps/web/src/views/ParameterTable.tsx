@@ -9,6 +9,7 @@ import {
   newParameterId,
   nextParameterName,
   type ParameterState,
+  parameterLawCommand,
 } from '../store/parameters.ts';
 import { projectStore } from '../store/projectStore.ts';
 import { ExpressionInput } from './ExpressionInput.tsx';
@@ -23,6 +24,10 @@ interface Props {
   range: { from: number; to: number } | undefined;
   selectedId: string | undefined;
   onSelect: (id: string) => void;
+  /** prepisy aktívneho variantu (id parametra → priebeh, ADR 0024) */
+  overrides: Readonly<Record<string, StationFunction>>;
+  /** meno aktívneho variantu, ak má projekt viac variantov (inak bez stĺpca prepisu) */
+  variant: string | undefined;
 }
 
 const UNITS: ParameterUnit[] = ['length', 'angle', 'slope', 'none'];
@@ -30,6 +35,12 @@ const KINDS: StationFunction['kind'][] = ['constant', 'piecewise', 'expression']
 
 const update = (id: string, changes: Partial<Omit<Parameter, 'id'>>) =>
   projectStore.getState().dispatch({ type: 'updateParameter', id, changes });
+
+/** Priebeh do prepisu aktívneho variantu, ak ho má, inak do spoločnej hodnoty (ADR 0024). */
+const setLaw = (id: string, law: StationFunction) => {
+  const { project, dispatch } = projectStore.getState();
+  dispatch(parameterLawCommand(project, id, law));
+};
 
 /** Prevod druhu staničnej funkcie so zachovaním zadaného výrazu. */
 export function convertLaw(
@@ -59,6 +70,8 @@ export function ParameterTable({
   range,
   selectedId,
   onSelect,
+  overrides,
+  variant,
 }: Props) {
   const evaluation = useMemo(
     () => state.set.evaluateAt(referenceStation),
@@ -116,6 +129,9 @@ export function ParameterTable({
               <th>{sk.parameters.kind}</th>
               <th className="wide">{sk.parameters.definition}</th>
               <th className="num">{sk.parameters.value}</th>
+              {variant !== undefined && (
+                <th title={sk.parameters.overrideTitle(variant)}>{sk.parameters.override}</th>
+              )}
               <th>{sk.parameters.status}</th>
               <th aria-label={sk.parameters.remove} />
             </tr>
@@ -127,10 +143,12 @@ export function ParameterTable({
                 ...evaluation.issues.filter((i) => i.parameter === p.name),
               ];
               const value = evaluation.values.get(p.name);
+              const overridden = overrides[p.id] !== undefined;
               return (
                 <tr
                   key={p.id}
                   aria-selected={p.id === selectedId}
+                  className={overridden ? 'parameter-overridden' : undefined}
                   onFocus={() => onSelect(p.id)}
                   onClick={() => onSelect(p.id)}
                 >
@@ -162,8 +180,9 @@ export function ParameterTable({
                       value={p.law.kind}
                       aria-label={sk.parameters.kind}
                       onChange={(e) =>
-                        update(p.id, {
-                          law: convertLaw(
+                        setLaw(
+                          p.id,
+                          convertLaw(
                             p.law,
                             e.target.value as StationFunction['kind'],
                             range ?? {
@@ -171,7 +190,7 @@ export function ParameterTable({
                               to: referenceStation + 10,
                             },
                           ),
-                        })
+                        )
                       }
                     >
                       {KINDS.map((k) => (
@@ -186,7 +205,7 @@ export function ParameterTable({
                       <ExpressionInput
                         value={p.law.value}
                         ariaLabel={sk.parameters.definition}
-                        onCommit={(value) => update(p.id, { law: { kind: 'constant', value } })}
+                        onCommit={(value) => setLaw(p.id, { kind: 'constant', value })}
                       />
                     )}
                     {p.law.kind === 'expression' && (
@@ -194,7 +213,7 @@ export function ParameterTable({
                         value={p.law.expr}
                         ariaLabel={sk.parameters.definition}
                         placeholder="h0 + 0.002 * (sta - 1200)"
-                        onCommit={(expr) => update(p.id, { law: { kind: 'expression', expr } })}
+                        onCommit={(expr) => setLaw(p.id, { kind: 'expression', expr })}
                       />
                     )}
                     {p.law.kind === 'piecewise' && (
@@ -206,6 +225,24 @@ export function ParameterTable({
                   <td className="num">
                     {value === undefined ? '—' : formatParameterValue(p.unit, value)}
                   </td>
+                  {variant !== undefined && (
+                    <td className="parameter-override">
+                      <input
+                        type="checkbox"
+                        aria-label={`${sk.parameters.override} ${p.name}`}
+                        title={sk.parameters.overrideTitle(variant)}
+                        checked={overridden}
+                        onChange={(e) =>
+                          projectStore.getState().dispatch({
+                            type: 'setParameterOverride',
+                            id: p.id,
+                            // zapnutie začne od spoločnej hodnoty, vypnutie prepis zruší
+                            law: e.target.checked ? p.law : null,
+                          })
+                        }
+                      />
+                    </td>
+                  )}
                   <td className="status" title={issues.map(formatModelIssue).join('\n')}>
                     {issues[0] ? formatModelIssue(issues[0]) : ''}
                   </td>

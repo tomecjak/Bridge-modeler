@@ -7,7 +7,12 @@ import {
   type SceneObjectKind,
   type TriangleMesh,
 } from '@bridge/mesh';
-import { buildParameterSet, type ModelIssue, type ProjectFile } from '@bridge/model';
+import {
+  buildParameterSet,
+  effectiveParameters,
+  type ModelIssue,
+  type ProjectFile,
+} from '@bridge/model';
 import {
   BEARING_PLAN_SIZE,
   deckCrossbeams,
@@ -52,7 +57,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     alignments: new Map(
       project.alignments.map((a) => [a.name, createAlignment(a, origin).alignment]),
     ),
-    parameters: buildParameterSet(project.parameters),
+    parameters: buildParameterSet(effectiveParameters(project)),
     bridgeAxes: project.bridgeAxes,
     profiles: project.profiles,
     superstructures: project.superstructures,
@@ -64,7 +69,10 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
   // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
   const lines = project.bearingLines.map((l) => evaluateBearingLine(base, l));
   const ctx: SupportContext = { ...base, crossbeams: deckCrossbeams(base, lines) };
-  const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
+  const globalLaws: LawRef[] = effectiveParameters(project).map((p) => ({
+    law: p.law,
+    unit: p.unit,
+  }));
   const results = project.supports.map((s) => evaluateSupport(ctx, s));
 
   const decks = new Map<string, ShapeHandle>();

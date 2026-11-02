@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "15"
+      "const": "16"
     },
     "name": {
       "type": "string"
@@ -2277,6 +2277,1185 @@
         ],
         "additionalProperties": false
       }
+    },
+    "variants": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "parameters": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "constant"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "piecewise"
+                    },
+                    "segments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "number"
+                          },
+                          "to": {
+                            "type": "number"
+                          },
+                          "v0": {
+                            "type": "string"
+                          },
+                          "v1": {
+                            "type": "string"
+                          },
+                          "shape": {
+                            "type": "string",
+                            "enum": [
+                              "linear",
+                              "parabolic",
+                              "circular"
+                            ]
+                          },
+                          "vertexAt": {
+                            "type": "string",
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "to",
+                          "v0",
+                          "v1",
+                          "shape"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "segments"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "expression"
+                    },
+                    "expr": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "expr"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "elements": {
+            "type": "object",
+            "properties": {
+              "bridgeAxes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "alignment": {
+                      "type": "string"
+                    },
+                    "horizontalOffset": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "constant"
+                            },
+                            "value": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "piecewise"
+                            },
+                            "segments": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "from": {
+                                    "type": "number"
+                                  },
+                                  "to": {
+                                    "type": "number"
+                                  },
+                                  "v0": {
+                                    "type": "string"
+                                  },
+                                  "v1": {
+                                    "type": "string"
+                                  },
+                                  "shape": {
+                                    "type": "string",
+                                    "enum": [
+                                      "linear",
+                                      "parabolic",
+                                      "circular"
+                                    ]
+                                  },
+                                  "vertexAt": {
+                                    "type": "string",
+                                    "enum": [
+                                      "start",
+                                      "end"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "from",
+                                  "to",
+                                  "v0",
+                                  "v1",
+                                  "shape"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "segments"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "expression"
+                            },
+                            "expr": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "expr"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "verticalOffset": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "constant"
+                            },
+                            "value": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "piecewise"
+                            },
+                            "segments": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "from": {
+                                    "type": "number"
+                                  },
+                                  "to": {
+                                    "type": "number"
+                                  },
+                                  "v0": {
+                                    "type": "string"
+                                  },
+                                  "v1": {
+                                    "type": "string"
+                                  },
+                                  "shape": {
+                                    "type": "string",
+                                    "enum": [
+                                      "linear",
+                                      "parabolic",
+                                      "circular"
+                                    ]
+                                  },
+                                  "vertexAt": {
+                                    "type": "string",
+                                    "enum": [
+                                      "start",
+                                      "end"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "from",
+                                  "to",
+                                  "v0",
+                                  "v1",
+                                  "shape"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "segments"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "expression"
+                            },
+                            "expr": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "expr"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "alignment",
+                    "horizontalOffset",
+                    "verticalOffset"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "profiles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "length",
+                              "angle",
+                              "slope",
+                              "none"
+                            ]
+                          },
+                          "default": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "unit",
+                          "default"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "x": {
+                            "type": "string"
+                          },
+                          "y": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "x",
+                          "y"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "loops": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "outer",
+                              "void"
+                            ]
+                          },
+                          "points": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "role",
+                          "points"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "referencePoint": {
+                      "type": "string"
+                    },
+                    "typology": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "parameters",
+                    "points",
+                    "loops",
+                    "referencePoint"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "superstructures": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "bridgeAxis": {
+                      "type": "string"
+                    },
+                    "from": {
+                      "type": "number"
+                    },
+                    "to": {
+                      "type": "number"
+                    },
+                    "ends": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "string",
+                          "enum": [
+                            "abutment",
+                            "manual"
+                          ]
+                        },
+                        "end": {
+                          "type": "string",
+                          "enum": [
+                            "abutment",
+                            "manual"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "profile": {
+                      "type": "string"
+                    },
+                    "parameterLaws": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "constant"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "piecewise"
+                              },
+                              "segments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "from": {
+                                      "type": "number"
+                                    },
+                                    "to": {
+                                      "type": "number"
+                                    },
+                                    "v0": {
+                                      "type": "string"
+                                    },
+                                    "v1": {
+                                      "type": "string"
+                                    },
+                                    "shape": {
+                                      "type": "string",
+                                      "enum": [
+                                        "linear",
+                                        "parabolic",
+                                        "circular"
+                                      ]
+                                    },
+                                    "vertexAt": {
+                                      "type": "string",
+                                      "enum": [
+                                        "start",
+                                        "end"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "from",
+                                    "to",
+                                    "v0",
+                                    "v1",
+                                    "shape"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "segments"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "expression"
+                              },
+                              "expr": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "expr"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "edge"
+                              },
+                              "curve": {
+                                "oneOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "alignment"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "name"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "planLine"
+                                      },
+                                      "id": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "id"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "type": {
+                                        "type": "string",
+                                        "const": "survey"
+                                      },
+                                      "survey": {
+                                        "type": "string"
+                                      },
+                                      "line": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "type",
+                                      "survey",
+                                      "line"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "side": {
+                                "type": "string",
+                                "enum": [
+                                  "left",
+                                  "right"
+                                ]
+                              },
+                              "add": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "curve",
+                              "side",
+                              "add"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "orientation": {
+                      "type": "string",
+                      "enum": [
+                        "vertical",
+                        "normalToGrade"
+                      ]
+                    },
+                    "freeWidth": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "bridgeAxis",
+                    "from",
+                    "to",
+                    "profile",
+                    "parameterLaws",
+                    "orientation"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "edgeBeams": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "superstructure": {
+                      "type": "string"
+                    },
+                    "side": {
+                      "type": "string",
+                      "enum": [
+                        "left",
+                        "right"
+                      ]
+                    },
+                    "profile": {
+                      "type": "string"
+                    },
+                    "parameterLaws": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "constant"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "piecewise"
+                              },
+                              "segments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "from": {
+                                      "type": "number"
+                                    },
+                                    "to": {
+                                      "type": "number"
+                                    },
+                                    "v0": {
+                                      "type": "string"
+                                    },
+                                    "v1": {
+                                      "type": "string"
+                                    },
+                                    "shape": {
+                                      "type": "string",
+                                      "enum": [
+                                        "linear",
+                                        "parabolic",
+                                        "circular"
+                                      ]
+                                    },
+                                    "vertexAt": {
+                                      "type": "string",
+                                      "enum": [
+                                        "start",
+                                        "end"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "from",
+                                    "to",
+                                    "v0",
+                                    "v1",
+                                    "shape"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "segments"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "expression"
+                              },
+                              "expr": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "expr"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "superstructure",
+                    "side",
+                    "profile",
+                    "parameterLaws"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "bearingLines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "superstructure": {
+                      "type": "string"
+                    },
+                    "station": {
+                      "type": "number"
+                    },
+                    "crossingAngle": {
+                      "type": "string"
+                    },
+                    "crossbeam": {
+                      "type": "object",
+                      "properties": {
+                        "profile": {
+                          "type": "string"
+                        },
+                        "width": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "profile",
+                        "width"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "superstructure",
+                    "station",
+                    "crossingAngle"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "supports": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "abutment",
+                        "pier"
+                      ]
+                    },
+                    "bearingLine": {
+                      "type": "string"
+                    },
+                    "offset": {
+                      "type": "string"
+                    },
+                    "geometry": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "wall"
+                            },
+                            "thickness": {
+                              "type": "string"
+                            },
+                            "length": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "thickness",
+                            "length"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "columns"
+                            },
+                            "shape": {
+                              "type": "string",
+                              "enum": [
+                                "circle",
+                                "rect"
+                              ]
+                            },
+                            "diameter": {
+                              "type": "string"
+                            },
+                            "width": {
+                              "type": "string"
+                            },
+                            "depth": {
+                              "type": "string"
+                            },
+                            "count": {
+                              "type": "string"
+                            },
+                            "spacing": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "shape",
+                            "diameter",
+                            "width",
+                            "depth",
+                            "count",
+                            "spacing"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "abutment"
+                            },
+                            "construction": {
+                              "type": "string",
+                              "enum": [
+                                "bearing",
+                                "monolithic"
+                              ]
+                            },
+                            "length": {
+                              "type": "string"
+                            },
+                            "frontOffset": {
+                              "type": "string"
+                            },
+                            "endOffset": {
+                              "type": "string"
+                            },
+                            "gap": {
+                              "type": "string"
+                            },
+                            "backwallThickness": {
+                              "type": "string"
+                            },
+                            "seatHeight": {
+                              "type": "string"
+                            },
+                            "stemThickness": {
+                              "type": "string"
+                            },
+                            "wallThickness": {
+                              "type": "string"
+                            },
+                            "wings": {
+                              "type": "object",
+                              "properties": {
+                                "angle": {
+                                  "type": "string"
+                                },
+                                "length": {
+                                  "type": "string"
+                                },
+                                "thickness": {
+                                  "type": "string"
+                                },
+                                "support": {
+                                  "type": "string",
+                                  "enum": [
+                                    "hung",
+                                    "founded"
+                                  ]
+                                },
+                                "endHeight": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "angle",
+                                "length",
+                                "thickness",
+                                "support",
+                                "endHeight"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "construction",
+                            "length",
+                            "frontOffset",
+                            "endOffset",
+                            "gap",
+                            "backwallThickness",
+                            "seatHeight",
+                            "stemThickness",
+                            "wallThickness",
+                            "wings"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "footing": {
+                      "type": "object",
+                      "properties": {
+                        "length": {
+                          "type": "string"
+                        },
+                        "width": {
+                          "type": "string"
+                        },
+                        "thickness": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "length",
+                        "width",
+                        "thickness"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "connection": {
+                      "type": "string",
+                      "enum": [
+                        "bearing",
+                        "hinge",
+                        "fixed"
+                      ]
+                    },
+                    "bearingHeight": {
+                      "type": "string"
+                    },
+                    "bearings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "foundation": {
+                      "type": "object",
+                      "properties": {
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "terrain",
+                            "height",
+                            "level"
+                          ]
+                        },
+                        "cover": {
+                          "type": "string"
+                        },
+                        "height": {
+                          "type": "string"
+                        },
+                        "level": {
+                          "type": "string"
+                        },
+                        "terrain": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "mode",
+                        "cover",
+                        "height",
+                        "level"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "bearingLine",
+                    "offset",
+                    "geometry",
+                    "footing",
+                    "connection",
+                    "bearingHeight",
+                    "bearings",
+                    "foundation"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "bridgeAxes",
+              "profiles",
+              "superstructures",
+              "edgeBeams",
+              "bearingLines",
+              "supports"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "parameters"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "activeVariant": {
+      "type": "string"
     }
   },
   "required": [
@@ -2296,9 +3475,11 @@
     "terrains",
     "planLines",
     "obstacles",
-    "surveys"
+    "surveys",
+    "variants",
+    "activeVariant"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-15.json",
-  "title": "Projekt modelára mostov (schemaVersion 15)"
+  "$id": "https://bridge-modeler.local/schema/project-16.json",
+  "title": "Projekt modelára mostov (schemaVersion 16)"
 }
