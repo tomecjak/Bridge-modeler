@@ -1,0 +1,16 @@
+{
+  "name": "@bridge/survey",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Meračka: čítačka DXF, výšky bodov z textov (ADR 0021).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p test"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6"
+  }
+}

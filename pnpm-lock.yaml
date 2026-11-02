@@ -366,6 +366,12 @@ importers:
         specifier: ^26.6.6
         version: 26.6.6
 
+  packages/survey:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+
   packages/terrain:
     dependencies:
       '@bridge/alignment':
