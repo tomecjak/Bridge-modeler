@@ -525,10 +525,11 @@ Rozhodnutia 2026-11-02 (plan mode): šablóna rímsy = L-tvar s nosom cez koniec
 **Hotové, keď:** dvojica NK z rezu E–E má rímsy podľa výkresu (`Dvojica NK.png`) a voľná šírka medzi rímsami sedí s kótami (test).
 — *2026-11-02:* splnené: golden test `twinDeckE-E.test.ts` (rímsy 1 750 / 900 / 900 / 1 650 s presahmi 400 / 350, voľná šírka 12 750 a 11 250, šírka mosta 15 400 a 13 800, spolu 29 400). *Ostáva:* rozmery šablóny rímsy sú zástupné a nos rímsy sa nezapočítava do voľnej výšky (otázka 28).
 
-#### 10h — Varianty a ukazovatele
+#### 10h — Varianty a ukazovatele (ADR 0024)
+Rozhodnutia 2026-11-02 (plan mode): varianty ako pracovná kópia — prvky aktívneho variantu sú na najvyššej úrovni projektu, neaktívne varianty majú prvky vo `variants[].elements` (namiesto príznaku `variant` pri každom prvku, aby sa nemenil existujúci výpočet); duplikovanie zachová id prvkov; prepis globálneho parametra je vo variante (`variants[].parameters`). Mostné závery sa nepočítajú; objem NK a ekvivalentná hrúbka sú bez ríms (rímsy zvlášť); ceny €/m² sú zástupná tabuľka podľa typológie v kóde.
 - [ ] varianty v jednom projekte: `variants` + `activeVariant`; prvky mosta (os mosta, prierezy, NK, rímsy, podpery) nesú `variant`, podklady (osi, terén, meračka, prekážky, čiary, oblasť mosta) sú spoločné; globálne parametre spoločné s možnosťou prepísať hodnotu vo variante; migrácia → „Variant A“; nové ADR
 - [ ] duplikovať / premenovať / odstrániť variant (nové id s prepisom odkazov, jeden krok späť)
-- [ ] ukazovatele (čistá funkcia, každý s vysvetlivkou v UI): dispozícia (polia, piliere, opory, rozpätia, dĺžky, šírka, min. uhol kríženia), plocha mosta a pôdorysná plocha NK, objem NK (∫A·dL), objem spodnej stavby, ekvivalentná hrúbka NK, výšky pilierov, podpery v prekážke, počet ložísk a mostných závesov, voľná výška a rezerva, max. pole / ekonomické, štíhlosť, pomer krajné / vnútorné pole
+- [ ] ukazovatele (čistá funkcia, každý s vysvetlivkou v UI): dispozícia (polia, piliere, opory, rozpätia, dĺžky, šírka, min. uhol kríženia), plocha mosta a pôdorysná plocha NK, objem NK (∫A·dL), objem spodnej stavby, ekvivalentná hrúbka NK, výšky pilierov, podpery v prekážke, počet ložísk, voľná výška a rezerva, max. pole / ekonomické, štíhlosť, pomer krajné / vnútorné pole
 - [ ] plocha mosta = pôdorysná plocha vrátane ríms (pri konštantnej šírke = dĺžka premostenia × šírka vrátane ríms)
 - [ ] orientačná cena: €/m² plochy mosta podľa typológie, zatiaľ zástupné hodnoty zreteľne označené (skutočné dodá projektant)
 - [ ] porovnanie variantov: tabuľka so zvýraznenou najlepšou hodnotou, pozdĺžne profily variantov pod sebou v rovnakej mierke; voliteľne CSV
@@ -667,6 +668,9 @@ Nové otázky (2026-11-02, Fáza 10g — predpoklady, oprav ich):
 
 Nové otázky (2026-11-02, Fáza 10i — predpoklady, oprav ich):
 28. Rímsy (ADR 0023): spodok rímsy je priamka so sklonom horného povrchu NK pri okraji (zlom horného povrchu pod rímsou sa zanedbá); vnútorná líca je zvislá a voľná šírka sa meria vodorovne kolmo na os mosta medzi vnútornými hornými hranami ríms; nos rímsy sa do kontroly voľnej výšky pod mostom zatiaľ nezapočítava; rozmery šablóny sú zástupné, kým nepríde firemný detail rímsy (šírka, výška vnútornej líca, nos, odkvapový nos).
+
+Nové otázky (2026-11-02, Fáza 10h — predpoklady, oprav ich):
+29. Ukazovatele (ADR 0024): objem NK = ∫A·dL po osi mosta bez opravy na excentricitu ťažiska v oblúku; objem spodnej stavby = betón podpier vrátane základov, bez ložísk a pilót; výška piliera = od hornej hrany základu po hornú hranu podpery; ložiská sa počítajú len pri spoji „ložisko“; plocha mosta bez dvoch opôr sa berie na celej dĺžke NK (v UI označené); profily variantov sa porovnávajú v osi mosta; CSV pre slovenský Excel (`;`, desatinná čiarka); prepnutie variantu je krok v histórii späť; exporty sú z aktívneho variantu. Jednotkové ceny €/m² sú zástupné — dodáš skutočné?
 
 ### Zistené z podkladov
 
