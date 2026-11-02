@@ -7,9 +7,13 @@ import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { buildParameterSet, type Superstructure } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
 import {
+  deckWidths,
+  edgeBeamEdges,
+  evaluateEdgeBeam,
   evaluateSuperstructure,
   type SectionContext,
   singleDeckExample,
+  twinDeckEdgeBeams,
   twinDeckExample,
 } from '../src/index.ts';
 
@@ -143,6 +147,52 @@ describe('rez E–E dvojice NK — kóty z výkresu', () => {
     );
     console.info(`1 000 prierezov: ${elapsed.toFixed(1)} ms`);
     expect(elapsed).toBeLessThan(100);
+  });
+});
+
+describe('rez E–E dvojice NK — rímsy (ADR 0023)', () => {
+  const beams = twinDeckEdgeBeams(
+    { left: 'L', right: 'P' },
+    { profile: 'rimsa', beams: ['LL', 'LP', 'PL', 'PP'] },
+  );
+  const withBeams: SectionContext = {
+    ...ctx,
+    profiles: [example.profile, beams.profile],
+    edgeBeams: beams.edgeBeams,
+  };
+  const beam = (id: string) => {
+    const b = beams.edgeBeams.find((x) => x.id === id);
+    if (!b) throw new Error(`missing edge beam ${id}`);
+    const sup = deck(b.superstructure);
+    const r = evaluateEdgeBeam(withBeams, b, evaluateSuperstructure(withBeams, sup, 100));
+    expect(r.issues).toEqual([]);
+    const { outer, inner } = edgeBeamEdges(r, b.side);
+    if (!outer || !inner) throw new Error(`edge beam ${id} without outline`);
+    return { r, outer: r.toWorld(outer), inner: r.toWorld(inner) };
+  };
+  const plan = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.hypot(b.x - a.x, b.y - a.y);
+
+  it('voľná šírka medzi rímsami 12 750 (ľavá NK) a 11 250 (pravá NK)', () => {
+    expect(deckWidths(withBeams, deck('L'), 100)?.free).toBeCloseTo(mm(12750), 9);
+    expect(deckWidths(withBeams, deck('P'), 100)?.free).toBeCloseTo(mm(11250), 9);
+    expect(plan(beam('LL').inner, beam('LP').inner)).toBeCloseTo(mm(12750), 9);
+    expect(plan(beam('PL').inner, beam('PP').inner)).toBeCloseTo(mm(11250), 9);
+  });
+
+  it('šírka mosta 15 400 a 13 800, spolu 29 400 s medzerou 100 + 100 medzi rímsami', () => {
+    expect(deckWidths(withBeams, deck('L'), 100)?.bridge).toBeCloseTo(mm(15400), 9);
+    expect(deckWidths(withBeams, deck('P'), 100)?.bridge).toBeCloseTo(mm(13800), 9);
+    expect(plan(beam('LL').outer, beam('PP').outer)).toBeCloseTo(mm(29400), 6);
+    expect(plan(beam('LP').outer, beam('PL').outer)).toBeCloseTo(mm(200), 6);
+  });
+
+  it('rímsy zhora 1 750 + 900 a 900 + 1 650, presah za betón 400 / 350', () => {
+    const widths = ['LL', 'LP', 'PL', 'PP'].map((id) => plan(beam(id).inner, beam(id).outer));
+    expect(widths.map((w) => Math.round(w * 1000))).toEqual([1750, 900, 900, 1650]);
+    const left = section('L');
+    expect(plan(left.r.toWorld(left.p('TL')), beam('LL').outer)).toBeCloseTo(mm(400), 9);
+    expect(plan(left.r.toWorld(left.p('TR')), beam('LP').outer)).toBeCloseTo(mm(350), 9);
   });
 });
 

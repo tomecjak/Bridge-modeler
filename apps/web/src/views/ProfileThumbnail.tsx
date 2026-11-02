@@ -1,5 +1,5 @@
 import type { ProfileDefinition } from '@bridge/model';
-import { evaluateProfileDefinition, profileParameterValues } from '@bridge/sections';
+import { evaluateProfileDefinition, previewScope, profileParameterValues } from '@bridge/sections';
 import { useMemo } from 'react';
 
 const W = 132;
@@ -9,7 +9,7 @@ const PAD = 4;
 /** Náhľad tvaru prierezu s predvolenými hodnotami parametrov (knižnica prierezov). */
 export function ProfileThumbnail({ profile }: { profile: ProfileDefinition }) {
   const path = useMemo(() => {
-    const none = () => undefined;
+    const none = previewScope(profile, () => undefined);
     const values = profileParameterValues(profile, {}, none, 0).values;
     const loops = evaluateProfileDefinition(profile, values, none, 0).loops;
     const pts = loops.flatMap((l) => l.polygon);

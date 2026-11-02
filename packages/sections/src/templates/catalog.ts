@@ -5,6 +5,7 @@ import {
   type ProfileParameter,
   type ProfilePoint,
 } from '@bridge/model';
+import { EDGE_BEAM_TYPOLOGY, edgeBeamTemplate } from './edgeBeam.ts';
 import { singleBeamHaunched } from './singleBeamHaunched.ts';
 
 /**
@@ -370,16 +371,23 @@ export const PROFILE_TEMPLATES: readonly ProfileTemplate[] = [
   { typology: CROSSBEAM_TYPOLOGY, name: 'Priečnik – plný blok', create: crossbeamBlock },
 ];
 
-/** Šablóna podľa typológie s daným id; neznáma typológia → undefined. */
+/** Šablóny prierezov ríms (ADR 0023); nie sú to prierezy NK ani priečnikov. */
+export const EDGE_BEAM_TEMPLATES: readonly ProfileTemplate[] = [
+  { typology: EDGE_BEAM_TYPOLOGY, name: 'Rímsa', create: (id) => edgeBeamTemplate(id) },
+];
+
+/** Šablóna podľa typológie s daným id (aj rímsa); neznáma typológia → undefined. */
 export function profileTemplate(typology: string, id: string): ProfileDefinition | undefined {
-  return PROFILE_TEMPLATES.find((t) => t.typology === typology)?.create(id);
+  return [...PROFILE_TEMPLATES, ...EDGE_BEAM_TEMPLATES]
+    .find((t) => t.typology === typology)
+    ?.create(id);
 }
 
-/** Zabudované šablóny ako knižnica len na čítanie (id položky `sablona:<typológia>`). */
+/** Zabudované šablóny (prierezy NK, priečnik, rímsa) ako knižnica len na čítanie (id položky `sablona:<typológia>`). */
 export function builtinProfileLibrary(name = 'Šablóny'): ProfileLibrary {
   return memoryLibrary(
     name,
-    PROFILE_TEMPLATES.map((t) => ({
+    [...PROFILE_TEMPLATES, ...EDGE_BEAM_TEMPLATES].map((t) => ({
       id: `sablona:${t.typology}`,
       name: t.name,
       typology: t.typology,

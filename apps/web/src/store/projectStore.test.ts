@@ -165,6 +165,28 @@ describe('project store', () => {
     expect(store.getState().project.supports.map((x) => x.id)).toEqual(['o1']);
   });
 
+  it('removes the edge beams with their deck in one undoable step', () => {
+    const ref = reference212Project();
+    const store = createProjectStore(ref);
+    const deck = ref.superstructures[0]?.id ?? '';
+    const beam = (id: string, side: 'left' | 'right') => ({
+      id,
+      name: id,
+      superstructure: deck,
+      side,
+      profile: 'rimsa',
+      parameterLaws: {},
+    });
+    store
+      .getState()
+      .dispatch({ type: 'addElements', edgeBeams: [beam('r1', 'left'), beam('r2', 'right')] });
+    expect(store.getState().project.edgeBeams.map((b) => b.id)).toEqual(['r1', 'r2']);
+    store.getState().dispatch({ type: 'removeElement', collection: 'superstructures', id: deck });
+    expect(store.getState().project.edgeBeams).toEqual([]);
+    store.getState().undo();
+    expect(store.getState().project.edgeBeams.map((b) => b.id)).toEqual(['r1', 'r2']);
+  });
+
   it('keeps the deck ends on the abutments in the same undoable step', () => {
     const ref = reference212Project();
     const store = createProjectStore(

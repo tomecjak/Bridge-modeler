@@ -32,6 +32,14 @@ function project() {
     foundation: levelFoundation('240 - 1.2'),
   };
   p.supports.push(pier, { ...pier, id: 'p2', name: 'P2', bearingLine: 'b2' });
+  p.edgeBeams.push({
+    id: 'r1',
+    name: 'Rímsa vľavo',
+    superstructure: 'nk',
+    side: 'left',
+    profile: 'rimsa',
+    parameterLaws: { b: { kind: 'constant', value: '1.75' } },
+  });
   p.planLines.push({
     id: 'l1',
     name: 'Okraj',
@@ -88,7 +96,28 @@ describe('duplicateElement', () => {
     expect(r.command.supports?.map((s) => s.bearingLine)).toEqual(
       r.command.bearingLines?.map((l) => l.id),
     );
+    // rímsy idú s NK
+    expect(r.command.edgeBeams).toMatchObject([
+      { name: 'Rímsa vľavo', superstructure: deck?.id, side: 'left' },
+    ]);
+    expect(r.command.edgeBeams?.[0]?.id).not.toBe('r1');
     expect(r.selected).toEqual({ collection: 'superstructures', id: deck?.id });
+  });
+
+  it('copies an edge beam to the other side of its deck', () => {
+    const r = duplicateElement(project(), 'edgeBeams', 'r1', newId);
+    expect(r?.command).toMatchObject({
+      type: 'addElements',
+      edgeBeams: [
+        {
+          name: 'Rímsa vpravo',
+          superstructure: 'nk',
+          side: 'right',
+          profile: 'rimsa',
+          parameterLaws: { b: { kind: 'constant', value: '1.75' } },
+        },
+      ],
+    });
   });
 
   it('shifts a copied plan line east and does not copy terrain', () => {

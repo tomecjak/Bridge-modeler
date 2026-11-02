@@ -1,6 +1,7 @@
-import type { BearingLine, ProjectFile, Support } from '@bridge/model';
+import type { BearingLine, EdgeBeam, ProjectFile, Support } from '@bridge/model';
 import { nextLineName } from './bearingLines.ts';
 import type { Command, ElementCollection } from './commands.ts';
+import { edgeBeamName } from './edgeBeams.ts';
 
 /** Posun kópie podpery po staničení a čiary v pôdoryse [m], aby nebola na rovnakom mieste ako originál. */
 export const DUPLICATE_SHIFT = 5;
@@ -62,6 +63,7 @@ function copyLine(
  * - podpera aj os uloženia dostanú novú os posunutú o 5 m po staničení (v rozsahu NK, ADR 0017) a ďalšie čísla,
  * - NK sa skopíruje aj s vlastnou osou mosta, osami uloženia a podperami (dá sa posunúť nabok, napr. druhá NK
  *   dvojice),
+ * - NK sa kopíruje aj s rímsami; rímsa sa skopíruje na druhú stranu svojej NK (ADR 0023),
  * - os mosta, prierez a čiara (posunutá o 5 m na východ) dostanú názov „(kópia)“.
  * Terén sa nekopíruje. `newId` vytvorí nové id s predponou.
  */
@@ -126,13 +128,27 @@ export function duplicateElement(
         const lineId = lineIds.get(s.bearingLine);
         return lineId ? [{ ...clone(s), id: newId('sup'), bearingLine: lineId }] : [];
       });
+      const edgeBeams = project.edgeBeams
+        .filter((b) => b.superstructure === d.id)
+        .map((b) => ({ ...clone(b), id: newId('rim'), superstructure: copy.id }));
       return {
         command: {
           type: 'addElements',
           ...(axisCopy ? { bridgeAxes: [axisCopy] } : {}),
           superstructures: [copy],
           ...(bearingLines.length > 0 ? { bearingLines, supports } : {}),
+          ...(edgeBeams.length > 0 ? { edgeBeams } : {}),
         },
+        selected: { collection, id: copy.id },
+      };
+    }
+    case 'edgeBeams': {
+      const b = project.edgeBeams.find((x) => x.id === id);
+      if (!b) return undefined;
+      const side = b.side === 'left' ? 'right' : 'left';
+      const copy: EdgeBeam = { ...clone(b), id: newId('rim'), side, name: edgeBeamName(side) };
+      return {
+        command: { type: 'addElements', edgeBeams: [copy] },
         selected: { collection, id: copy.id },
       };
     }

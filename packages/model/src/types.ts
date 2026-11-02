@@ -142,8 +142,25 @@ export const SuperstructureSchema = z.object({
   /** priebehy parametrov profilu po staničení; chýbajúce = predvolená hodnota profilu */
   parameterLaws: z.record(z.string(), ProfileLawSchema),
   orientation: z.enum(['vertical', 'normalToGrade']),
+  /** požadovaná voľná šírka na NK [m] (ADR 0023); chýba = voľná šírka zo zadania */
+  freeWidth: z.number().positive().optional(),
 });
 export type Superstructure = z.infer<typeof SuperstructureSchema>;
+
+/**
+ * Rímsa (ADR 0023): prierez s typológiou `edgeBeam` na okraji NK `side` po celej dĺžke NK. Rámec prierezu: referenčný
+ * bod = okraj NK, x von od NK, y nahor; prierez je definovaný pre pravú stranu, ľavá rímsa sa zrkadlí.
+ */
+export const EdgeBeamSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  superstructure: z.string(),
+  side: z.enum(['left', 'right']),
+  profile: z.string(),
+  /** priebehy parametrov prierezu rímsy po staničení; chýbajúce = predvolená hodnota prierezu */
+  parameterLaws: z.record(z.string(), StationFunctionSchema),
+});
+export type EdgeBeam = z.infer<typeof EdgeBeamSchema>;
 
 /** Geometria podpery (ADR 0008); rozmery sú výrazy v m. */
 export const SupportGeometrySchema = z.discriminatedUnion('type', [

@@ -5,6 +5,7 @@ import { SurveySchema } from './survey.ts';
 import {
   BearingLineSchema,
   BridgeAxisSchema,
+  EdgeBeamSchema,
   ParameterSchema,
   PlanLineSchema,
   ProfileDefinitionSchema,
@@ -14,7 +15,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '14';
+export const SCHEMA_VERSION = '15';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -104,6 +105,8 @@ export const ProjectFileSchema = z.strictObject({
   bridgeAxes: z.array(BridgeAxisSchema),
   profiles: z.array(ProfileDefinitionSchema),
   superstructures: z.array(SuperstructureSchema),
+  /** rímsy na okrajoch NK (ADR 0023) */
+  edgeBeams: z.array(EdgeBeamSchema),
   bearingLines: z.array(BearingLineSchema),
   supports: z.array(SupportSchema),
   terrains: z.array(TerrainSurfaceSchema),
@@ -128,6 +131,7 @@ export function createEmptyProject(name: string): ProjectFile {
     bridgeAxes: [],
     profiles: [],
     superstructures: [],
+    edgeBeams: [],
     bearingLines: [],
     supports: [],
     terrains: [],

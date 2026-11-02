@@ -3,7 +3,9 @@ import type {
   AbutmentGeometry,
   BearingLine,
   BridgeAxis,
+  EdgeBeam,
   FoundationMode,
+  ModelIssue,
   ProfileDefinition,
   ProfileLaw,
   Superstructure,
@@ -25,7 +27,7 @@ import { lawSummary } from './simpleSheets.tsx';
 type Dispatch = (command: Command) => void;
 
 /** Problémy prvku ako poznámky skupiny (chyby červeno, upozornenia oranžovo). */
-function issueRows(issues: SupportResult['issues']): PropertyRow[] {
+function issueRows(issues: readonly ModelIssue[]): PropertyRow[] {
   return issues.map((i) => ({
     kind: 'note',
     text: formatModelIssue(i),
@@ -745,6 +747,97 @@ export function deckSheet(input: {
     actions: [
       { label: sk.ribbon.spanLayout, icon: 'spans', onClick: input.onSpanLayout },
       { label: sk.supports.add, icon: 'pier', onClick: input.onAddSupport },
+      { label: sk.properties.remove, icon: 'trash', danger: true, onClick: input.onDelete },
+    ],
+  };
+}
+
+const EDGE_BEAM_TEMPLATE = 'template:edgeBeam';
+
+/**
+ * Rímsa v mriežke vlastností (ADR 0023): prierez navrchu (aj nový zo šablóny), názov, NK a strana, parametre prierezu
+ * po staničení („…“ = editor priebehu) a problémy.
+ */
+export function edgeBeamSheet(input: {
+  beam: EdgeBeam;
+  decks: readonly Pick<Superstructure, 'id' | 'name'>[];
+  /** prierezy ríms v projekte */
+  profiles: readonly Pick<ProfileDefinition, 'id' | 'name' | 'parameters'>[];
+  issues: readonly ModelIssue[];
+  /** nový prierez zo šablóny „Rímsa“ (pridá prierez do projektu) */
+  onTemplate: () => void;
+  onEditLaw: (parameter: string) => void;
+  onDelete: () => void;
+  dispatch: Dispatch;
+}): PropertySheet {
+  const { beam } = input;
+  const t = sk.edgeBeams;
+  const set = (changes: Partial<EdgeBeam>) =>
+    input.dispatch({ type: 'updateElement', collection: 'edgeBeams', id: beam.id, changes });
+  const profile = input.profiles.find((p) => p.id === beam.profile);
+  const lawRows: PropertyRow[] = [
+    ...(profile?.parameters.map(
+      (p): PropertyRow => ({
+        kind: 'edit',
+        label: p.description ? `${p.name} — ${p.description}` : p.name,
+        value: profileLawSummary(beam.parameterLaws[p.name], p.default, () => ''),
+        onEdit: () => input.onEditLaw(p.name),
+      }),
+    ) ?? []),
+    ...Object.keys(beam.parameterLaws)
+      .filter((name) => !profile?.parameters.some((p) => p.name === name))
+      .map(
+        (name): PropertyRow => ({
+          kind: 'note',
+          text: formatModelIssue({ code: 'UnknownProfileParameter', name }),
+          tone: 'error',
+        }),
+      ),
+    { kind: 'note', text: t.hint, tone: 'muted' },
+  ];
+  return {
+    heading: { icon: 'edgeBeam', label: t.kind },
+    type: {
+      label: t.profile,
+      value: beam.profile,
+      options: [
+        ...input.profiles.map((p) => ({ value: p.id, label: p.name })),
+        ...(profile ? [] : [{ value: beam.profile, label: '—' }]),
+        { value: EDGE_BEAM_TEMPLATE, label: t.template },
+      ],
+      onChange: (v) => (v === EDGE_BEAM_TEMPLATE ? input.onTemplate() : set({ profile: v })),
+    },
+    groups: [
+      {
+        id: 'edge-beam-identity',
+        title: sk.properties.identity,
+        rows: [
+          {
+            kind: 'text',
+            label: sk.properties.name,
+            value: beam.name,
+            onCommit: (name) => set({ name }),
+          },
+          {
+            kind: 'readonly',
+            label: t.deck,
+            value: input.decks.find((d) => d.id === beam.superstructure)?.name ?? '—',
+          },
+          {
+            kind: 'select',
+            label: t.side,
+            value: beam.side,
+            options: (['left', 'right'] as const).map((v) => ({ value: v, label: t.sides[v] })),
+            onChange: (v) => set({ side: v as EdgeBeam['side'] }),
+          },
+        ],
+      },
+      { id: 'edge-beam-laws', title: t.laws, rows: lawRows },
+      ...(input.issues.length > 0
+        ? [{ id: 'edge-beam-issues', title: sk.browser.problems, rows: issueRows(input.issues) }]
+        : []),
+    ],
+    actions: [
       { label: sk.properties.remove, icon: 'trash', danger: true, onClick: input.onDelete },
     ],
   };

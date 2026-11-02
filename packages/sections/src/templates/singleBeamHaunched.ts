@@ -1,5 +1,12 @@
-import type { BridgeAxis, ProfileDefinition, StationFunction, Superstructure } from '@bridge/model';
+import type {
+  BridgeAxis,
+  EdgeBeam,
+  ProfileDefinition,
+  StationFunction,
+  Superstructure,
+} from '@bridge/model';
 import { deckFromProfile } from './deck.ts';
+import { edgeBeamTemplate } from './edgeBeam.ts';
 
 /**
  * Šablóna „Jednotrám s nábehmi“ (typológia VŠB, PLAN.md §7). Rámec: x vpravo, y nahor [m],
@@ -112,6 +119,41 @@ export function twinDeckExample(
     superstructures: [
       deck(ids.left, 'Ľavá NK', ids.leftAxis, { bL: '7.35', bR: '7.3', bw: '5' }),
       deck(ids.right, 'Pravá NK', ids.rightAxis, { bL: '6.55', bR: '6.5', bw: '4' }),
+    ],
+  };
+}
+
+/**
+ * Rímsy dvojice NK podľa rezu E–E (ADR 0023): šírky ríms b a presahy za okraj betónu c z kót výkresu
+ * (ľavá NK 1 750 / 400 a 900 / 350, pravá NK 900 / 350 a 1 650 / 400), jeden prierez „Rímsa“ so zástupnými výškami.
+ * Poradie id ríms: ľavá NK vľavo, ľavá NK vpravo, pravá NK vľavo, pravá NK vpravo.
+ */
+export function twinDeckEdgeBeams(
+  decks: { left: string; right: string },
+  ids: { profile: string; beams: readonly [string, string, string, string] },
+): { profile: ProfileDefinition; edgeBeams: EdgeBeam[] } {
+  const beam = (
+    id: string,
+    superstructure: string,
+    side: EdgeBeam['side'],
+    b: string,
+    c: string,
+  ): EdgeBeam => ({
+    id,
+    name: side === 'left' ? 'Rímsa vľavo' : 'Rímsa vpravo',
+    superstructure,
+    side,
+    profile: ids.profile,
+    parameterLaws: { b: constant(b), c: constant(c) },
+  });
+  const [ll, lr, rl, rr] = ids.beams;
+  return {
+    profile: edgeBeamTemplate(ids.profile),
+    edgeBeams: [
+      beam(ll, decks.left, 'left', '1.75', '0.4'),
+      beam(lr, decks.left, 'right', '0.9', '0.35'),
+      beam(rl, decks.right, 'left', '0.9', '0.35'),
+      beam(rr, decks.right, 'right', '1.65', '0.4'),
     ],
   };
 }

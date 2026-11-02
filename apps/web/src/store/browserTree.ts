@@ -37,6 +37,7 @@ export interface BrowserInput {
     | 'alignments'
     | 'bridgeAxes'
     | 'superstructures'
+    | 'edgeBeams'
     | 'bearingLines'
     | 'supports'
     | 'profiles'
@@ -77,8 +78,8 @@ const withIssues = (node: BrowserNode, issues: number): BrowserNode =>
   issues > 0 ? { ...node, issues } : node;
 
 /**
- * Strom prehliadača projektu (ADR 0016): pohľady, model hierarchicky (os cesty → os mosta → NK → osi uloženia podľa
- * staničenia → podpera, oblasť mosta), podklady, prierezy a parametre. Prvky s neplatným odkazom sú v skupine
+ * Strom prehliadača projektu (ADR 0016): pohľady, model hierarchicky (os cesty → os mosta → NK → rímsy a osi uloženia
+ * podľa staničenia → podpera, oblasť mosta), podklady, prierezy a parametre. Prvky s neplatným odkazom sú v skupine
  * Nepriradené.
  */
 export function browserTree(input: BrowserInput): BrowserNode[] {
@@ -120,6 +121,19 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
     );
   };
 
+  const edgeBeamNode = (b: ProjectFile['edgeBeams'][number]): BrowserNode =>
+    withIssues(
+      {
+        key: `edgeBeams:${b.id}`,
+        label: b.name,
+        detail: project.profiles.find((p) => p.id === b.profile)?.name ?? '—',
+        icon: 'edgeBeam',
+        target: element('edgeBeams', b.id),
+        editable: true,
+      },
+      issues.element(b.id),
+    );
+
   const deckNode = (id: string): BrowserNode | undefined => {
     const d = project.superstructures.find((x) => x.id === id);
     if (!d) return undefined;
@@ -131,10 +145,13 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
     ]
       .filter((x) => x !== undefined)
       .join(' · ');
-    const children = project.bearingLines
-      .filter((l) => l.superstructure === d.id)
-      .sort((a, b) => a.station - b.station)
-      .flatMap((l) => lineNode(l.id) ?? []);
+    const children = [
+      ...project.edgeBeams.filter((b) => b.superstructure === d.id).map(edgeBeamNode),
+      ...project.bearingLines
+        .filter((l) => l.superstructure === d.id)
+        .sort((a, b) => a.station - b.station)
+        .flatMap((l) => lineNode(l.id) ?? []),
+    ];
     return withIssues(
       {
         key: `superstructures:${d.id}`,
@@ -206,6 +223,7 @@ export function browserTree(input: BrowserInput): BrowserNode[] {
     ...project.superstructures
       .filter((d) => !axisIds.has(d.bridgeAxis))
       .flatMap((d) => deckNode(d.id) ?? []),
+    ...project.edgeBeams.filter((b) => !deckIds.has(b.superstructure)).map(edgeBeamNode),
     ...project.bearingLines
       .filter((l) => !deckIds.has(l.superstructure))
       .flatMap((l) => lineNode(l.id) ?? []),

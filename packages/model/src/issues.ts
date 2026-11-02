@@ -19,7 +19,14 @@ export type ExpressionField =
 
 /** Prvok modelu, ktorého sa problém týka (prierez, NK, os mosta). */
 export interface IssueOwner {
-  kind: 'profile' | 'superstructure' | 'bridgeAxis' | 'support' | 'bearingLine' | 'obstacle';
+  kind:
+    | 'profile'
+    | 'superstructure'
+    | 'bridgeAxis'
+    | 'support'
+    | 'bearingLine'
+    | 'obstacle'
+    | 'edgeBeam';
   name: string;
 }
 

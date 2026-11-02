@@ -30,6 +30,7 @@ const OWNER = {
   support: 'Podpera',
   bearingLine: 'Os uloženia',
   obstacle: 'Prekážka',
+  edgeBeam: 'Rímsa',
 } as const;
 
 const TYPE = { number: 'číslo', boolean: 'logická hodnota' } as const;

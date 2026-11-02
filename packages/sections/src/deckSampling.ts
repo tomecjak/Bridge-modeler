@@ -8,6 +8,7 @@ import type {
 } from '@bridge/model';
 import type { CrossbeamBand } from './crossbeams.ts';
 import { edgeBreaks } from './edge.ts';
+import { edgeBeamLaws } from './edgeBeam.ts';
 import { DEFAULT_SAMPLING, type LawRef, type SamplingOptions, sampleStations } from './sampling.ts';
 import {
   evaluateSuperstructure,
@@ -88,6 +89,8 @@ export function sampleSuperstructure(
     ),
     { law: axis.horizontalOffset, unit: 'length' },
     { law: axis.verticalOffset, unit: 'length' },
+    // zlomy priebehov ríms (ADR 0023) — rímsy sa vyhodnocujú v hlavných vzorkách NK
+    ...edgeBeamLaws(ctx, sup),
     ...(options.globalLaws ?? []),
   ];
   const probes = [sFrom, (sFrom + sTo) / 2, sTo].map((s) => evaluateSuperstructure(ctx, sup, s));

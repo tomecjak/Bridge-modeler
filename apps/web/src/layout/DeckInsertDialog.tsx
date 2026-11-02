@@ -1,8 +1,9 @@
 import { copyForProject } from '@bridge/model';
-import { CROSSBEAM_TYPOLOGY, deckFromProfile } from '@bridge/sections';
+import { deckFromProfile } from '@bridge/sections';
 import { useState } from 'react';
 import { parseNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
+import { isDeckProfile } from '../store/edgeBeams.ts';
 import { newId } from '../store/parameters.ts';
 import { projectStore, useProject } from '../store/projectStore.ts';
 import { Field } from '../views/Field.tsx';
@@ -31,12 +32,9 @@ export function DeckInsertDialog({ alignment, range, onClose, onInserted, onExam
   const project = useProject((s) => s.project);
   const profileSources = useProfileSources();
   const { sources, cloudError } = profileSources;
-  // priečniky nie sú prierezy NK (ADR 0018)
+  // priečniky (ADR 0018) a rímsy (ADR 0023) nie sú prierezy NK
   const entries = Object.fromEntries(
-    Object.entries(profileSources.entries).map(([key, list]) => [
-      key,
-      list.filter((e) => e.typology !== CROSSBEAM_TYPOLOGY),
-    ]),
+    Object.entries(profileSources.entries).map(([key, list]) => [key, list.filter(isDeckProfile)]),
   ) as typeof profileSources.entries;
   const [choice, setChoice] = useState<{ source: SourceKey; id: string }>();
   const [name, setName] = useState(() => {

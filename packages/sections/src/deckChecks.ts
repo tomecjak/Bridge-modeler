@@ -1,4 +1,5 @@
 import type { ModelIssue, Superstructure } from '@bridge/model';
+import { deckEdgeBeams, evaluateEdgeBeam } from './edgeBeam.ts';
 import { slendernessIssues } from './slenderness.ts';
 import type { SpanResult } from './spans.ts';
 import { CROSS_SLOPE_TOLERANCE, crossSlopeIssues } from './superelevation.ts';
@@ -81,4 +82,33 @@ export function deckChecks(
     issues.push(...slendernessIssues(ctx, sup, spans, DEPTH_EPS).map((i) => ({ owner, ...i })));
   issues.push(...crossSlopeIssues(ctx, sup, CROSS_SLOPE_TOLERANCE).map((i) => ({ owner, ...i })));
   return issues;
+}
+
+/**
+ * Problémy ríms NK (ADR 0023) podľa id rímsy na tých istých vzorkách ako `deckChecks` (hlavný prierez NK), bez
+ * duplicít. Problémy prierezu NK hlási `deckChecks`.
+ */
+export function edgeBeamChecks(
+  ctx: SectionContext,
+  sup: Superstructure,
+  spans: Pick<SpanResult, 'lines'> | undefined,
+): Map<string, ModelIssue[]> {
+  const beams = deckEdgeBeams(ctx, sup);
+  const out = new Map(beams.map((b) => [b.id, [] as ModelIssue[]]));
+  if (beams.length === 0) return out;
+  const profile = ctx.profiles.find((p) => p.id === sup.profile);
+  const seen = new Map(beams.map((b) => [b.id, new Set<string>()]));
+  for (const s of deckSampleStations(ctx, sup, spans)) {
+    const deck = evaluateSuperstructure(ctx, sup, s, profile);
+    for (const b of beams) {
+      const keys = seen.get(b.id) as Set<string>;
+      for (const issue of evaluateEdgeBeam(ctx, b, deck).issues) {
+        const key = issueKey(issue);
+        if (keys.has(key)) continue;
+        keys.add(key);
+        out.get(b.id)?.push(issue);
+      }
+    }
+  }
+  return out;
 }

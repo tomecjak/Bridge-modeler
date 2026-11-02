@@ -98,7 +98,8 @@ describe('migrateProject', () => {
     const r = openProject(JSON.stringify(v1));
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.project.schemaVersion).toBe('14');
+      expect(r.project.schemaVersion).toBe('15');
+      expect(r.project.edgeBeams).toEqual([]);
       expect(r.project.obstacles).toEqual([]);
       expect(r.project.surveys).toEqual([]);
       expect(r.project.bearingLines).toEqual([]);
@@ -118,12 +119,12 @@ describe('migrateProject', () => {
         to: '0.2',
         migrate: (raw: Record<string, unknown>) => ({ ...raw, title: undefined, name: raw.title }),
       },
-      '0.2': { to: '14', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
+      '0.2': { to: '15', migrate: (raw: Record<string, unknown>) => ({ ...raw, parameters: [] }) },
     };
     const r = migrateProject({ schemaVersion: '0.1', title: 'Starý most' }, migrations);
     expect(r).toMatchObject({
       ok: true,
-      raw: { schemaVersion: '14', name: 'Starý most', parameters: [] },
+      raw: { schemaVersion: '15', name: 'Starý most', parameters: [] },
     });
   });
 
@@ -279,6 +280,37 @@ describe('migrateProject', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.project.terrains.map((t) => t.foundation)).toEqual([true, undefined]);
+  });
+
+  it('adds no edge beams to version 14 files and keeps edge beams with the required free width', () => {
+    const { edgeBeams: _beams, ...v14 } = {
+      ...createEmptyProject('Most v14'),
+      schemaVersion: '14',
+    };
+    const old = openProject(JSON.stringify(v14));
+    expect(old.ok && old.project.edgeBeams).toEqual([]);
+
+    const project = createEmptyProject('Most s rímsami');
+    project.superstructures.push({
+      id: 'nk',
+      name: 'NK',
+      bridgeAxis: 'os',
+      from: 0,
+      to: 30,
+      profile: 'pr',
+      parameterLaws: {},
+      orientation: 'vertical',
+      freeWidth: 12.75,
+    });
+    project.edgeBeams.push({
+      id: 'r1',
+      name: 'Rímsa vľavo',
+      superstructure: 'nk',
+      side: 'left',
+      profile: 'rimsa',
+      parameterLaws: { b: { kind: 'constant', value: '1.75' } },
+    });
+    expect(openProject(serializeProject(project))).toEqual({ ok: true, project });
   });
 
   it('adds an empty brief and no study area to version 6 files', () => {

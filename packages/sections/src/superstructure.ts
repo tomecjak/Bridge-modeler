@@ -3,6 +3,7 @@ import type { Scope } from '@bridge/expr';
 import { type Frame, frameFromAzimuthGrade, type Vec2, type Vec3, vec2 } from '@bridge/geom';
 import {
   type BridgeAxis,
+  type EdgeBeam,
   evaluateLaw,
   type IssueOwner,
   type ModelIssue,
@@ -33,6 +34,8 @@ export interface SectionContext {
   surveys?: readonly Survey[];
   /** pásy priečnikov podľa id NK (ADR 0018); v páse má NK prierez priečnika */
   crossbeams?: ReadonlyMap<string, readonly CrossbeamBand[]>;
+  /** rímsy na okrajoch NK (ADR 0023) */
+  edgeBeams?: readonly EdgeBeam[];
 }
 
 export interface BridgeAxisPoint {

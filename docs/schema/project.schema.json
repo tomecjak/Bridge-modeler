@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "14"
+      "const": "15"
     },
     "name": {
       "type": "string"
@@ -1254,6 +1254,10 @@
               "vertical",
               "normalToGrade"
             ]
+          },
+          "freeWidth": {
+            "type": "number",
+            "exclusiveMinimum": 0
           }
         },
         "required": [
@@ -1265,6 +1269,144 @@
           "profile",
           "parameterLaws",
           "orientation"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "edgeBeams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "superstructure": {
+            "type": "string"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right"
+            ]
+          },
+          "profile": {
+            "type": "string"
+          },
+          "parameterLaws": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "constant"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "piecewise"
+                    },
+                    "segments": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "number"
+                          },
+                          "to": {
+                            "type": "number"
+                          },
+                          "v0": {
+                            "type": "string"
+                          },
+                          "v1": {
+                            "type": "string"
+                          },
+                          "shape": {
+                            "type": "string",
+                            "enum": [
+                              "linear",
+                              "parabolic",
+                              "circular"
+                            ]
+                          },
+                          "vertexAt": {
+                            "type": "string",
+                            "enum": [
+                              "start",
+                              "end"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "to",
+                          "v0",
+                          "v1",
+                          "shape"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "segments"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "expression"
+                    },
+                    "expr": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "expr"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "superstructure",
+          "side",
+          "profile",
+          "parameterLaws"
         ],
         "additionalProperties": false
       }
@@ -2148,6 +2290,7 @@
     "bridgeAxes",
     "profiles",
     "superstructures",
+    "edgeBeams",
     "bearingLines",
     "supports",
     "terrains",
@@ -2156,6 +2299,6 @@
     "surveys"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-14.json",
-  "title": "Projekt modelára mostov (schemaVersion 14)"
+  "$id": "https://bridge-modeler.local/schema/project-15.json",
+  "title": "Projekt modelára mostov (schemaVersion 15)"
 }

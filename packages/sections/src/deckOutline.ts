@@ -1,5 +1,6 @@
 import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
 import type { DeckSamples } from './deckSampling.ts';
+import type { EvaluatedLoop } from './profile.ts';
 import type { SuperstructureSection } from './superstructure.ts';
 
 /** Obrys NK v pôdoryse (lokálne súradnice). */
@@ -37,17 +38,17 @@ export function deckOutline(
     pts.push(shifted(last, pick(last), -pick(last).x * cot1));
     return pts;
   };
-  const left = edge((sec) => extreme(sec, -1));
-  const right = edge((sec) => extreme(sec, 1));
+  const left = edge((sec) => extremePoint(sec.loops, -1) ?? vec2(0, 0));
+  const right = edge((sec) => extremePoint(sec.loops, 1) ?? vec2(0, 0));
   return { left, right, polygon: [...left, ...[...right].reverse()] };
 }
 
 const cot = (a: number) => Math.cos(a) / Math.sin(a);
 
 /** Krajný bod vonkajších obrysov vľavo (`side` = −1) alebo vpravo (+1); pri zhode x vyšší bod. */
-function extreme(sec: SuperstructureSection, side: -1 | 1): Vec2 {
+export function extremePoint(loops: readonly EvaluatedLoop[], side: -1 | 1): Vec2 | undefined {
   let best: Vec2 | undefined;
-  for (const l of sec.loops) {
+  for (const l of loops) {
     if (l.role !== 'outer') continue;
     for (const p of l.polygon) {
       if (
@@ -59,7 +60,7 @@ function extreme(sec: SuperstructureSection, side: -1 | 1): Vec2 {
       }
     }
   }
-  return best ?? vec2(0, 0);
+  return best;
 }
 
 /** Bod prierezu v pôdoryse posunutý pozdĺž vodorovnej dotyčnice osi mosta o `shift` [m]. */

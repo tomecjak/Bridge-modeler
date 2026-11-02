@@ -28,6 +28,8 @@ export interface RibbonContext {
   hasSelection: boolean;
   dmrBusy: boolean;
   onInsertDeck: () => void;
+  /** dialóg Vložiť rímsy (ADR 0023) */
+  onInsertEdgeBeams: () => void;
   /** dialóg Rozloženie polí (ADR 0017) */
   onSpanLayout: () => void;
   onEditStudyArea: () => void;
@@ -132,6 +134,15 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               title: t.deckTitle,
               disabled: !c.hasRoad,
               onClick: c.onInsertDeck,
+            },
+            {
+              kind: 'button',
+              id: 'edge-beams',
+              label: t.edgeBeams,
+              icon: 'edgeBeam',
+              title: t.edgeBeamsTitle,
+              disabled: !c.hasDeck,
+              onClick: c.onInsertEdgeBeams,
             },
             toolButton('bearingLine', t.bearingLine, 'bearingLine', t.bearingLineTitle, !c.hasDeck),
             {
@@ -577,6 +588,7 @@ export type ContextualKind =
   | 'support'
   | 'bearingLine'
   | 'deck'
+  | 'edgeBeam'
   | 'planLine'
   | 'terrain'
   | 'bridgeAxis'
@@ -592,9 +604,11 @@ export interface ContextualContext {
   onRename: () => void;
   /** podpera, NK: prierez na jej staničení */
   onShowInSection: () => void;
-  /** NK: nástroj Podpera, rozloženie polí a prechod do editora jej prierezu */
+  /** NK: nástroj Podpera, rozloženie polí a prechod do editora jej prierezu (aj prierezu rímsy) */
   onAddSupport: () => void;
   onSpanLayout: () => void;
+  /** NK: vložiť rímsy (ADR 0023) */
+  onInsertEdgeBeams: () => void;
   /** os uloženia bez podpery: vložiť na ňu podperu (ADR 0017) */
   onSupportOnLine: (() => void) | undefined;
   onEditProfile: () => void;
@@ -706,9 +720,26 @@ export function contextualTab(c: ContextualContext): RibbonTab {
             items: [
               button('deck-spans', t.spanLayout, 'spans', c.onSpanLayout, t.spanLayoutTitle),
               button('deck-support', t.support, 'pier', c.onAddSupport, t.supportTitle),
+              button(
+                'deck-edge-beams',
+                t.edgeBeams,
+                'edgeBeam',
+                c.onInsertEdgeBeams,
+                t.edgeBeamsTitle,
+              ),
               button('deck-profile', t.editProfile, 'section', c.onEditProfile),
               button('deck-section', t.showInSection, 'section', c.onShowInSection),
               button('deck-longitudinal', t.profileInAxis, 'profile', c.onProfileHere),
+            ],
+          },
+        ];
+      case 'edgeBeam':
+        return [
+          {
+            label: t.groups.bridge,
+            items: [
+              button('edge-beam-profile', t.editProfile, 'section', c.onEditProfile),
+              button('edge-beam-section', t.showInSection, 'section', c.onShowInSection),
             ],
           },
         ];

@@ -7,6 +7,7 @@ import {
   PROFILE_TEMPLATES,
   profileTemplate,
 } from './catalog.ts';
+import { EDGE_BEAM_TYPOLOGY } from './edgeBeam.ts';
 
 const globals = () => undefined;
 
@@ -114,8 +115,12 @@ describe('profile templates', () => {
     const lib = builtinProfileLibrary();
     expect(lib.readOnly).toBe(true);
     const entries = await lib.list();
-    expect(entries.map((e) => e.typology)).toEqual(PROFILE_TEMPLATES.map((t) => t.typology));
+    expect(entries.map((e) => e.typology)).toEqual([
+      ...PROFILE_TEMPLATES.map((t) => t.typology),
+      EDGE_BEAM_TYPOLOGY,
+    ]);
     expect((await lib.get('sablona:box'))?.profile.typology).toBe('box');
+    expect((await lib.get('sablona:edgeBeam'))?.profile.name).toBe('Rímsa');
   });
 
   it('returns undefined for an unknown typology', () => {

@@ -4,6 +4,7 @@ import {
   type BearingLine,
   type BridgeAxis,
   type Brief,
+  type EdgeBeam,
   type Obstacle,
   type Parameter,
   type PlanLine,
@@ -22,6 +23,7 @@ export interface ElementCollections {
   bridgeAxes: BridgeAxis;
   profiles: ProfileDefinition;
   superstructures: Superstructure;
+  edgeBeams: EdgeBeam;
   bearingLines: BearingLine;
   supports: Support;
   terrains: TerrainSurface;
@@ -59,6 +61,7 @@ export type Command =
       bridgeAxes?: BridgeAxis[];
       profiles?: ProfileDefinition[];
       superstructures?: Superstructure[];
+      edgeBeams?: EdgeBeam[];
       bearingLines?: BearingLine[];
       supports?: Support[];
       terrains?: TerrainSurface[];
@@ -69,7 +72,7 @@ export type Command =
       origin?: Vec3;
     }
   | ElementUpdate
-  /** odstráni prvok; os uloženia aj s podperami na nej (ADR 0017) */
+  /** odstráni prvok; os uloženia aj s podperami na nej (ADR 0017), NK aj s rímsami (ADR 0023) */
   | { type: 'removeElement'; collection: ElementCollection; id: string }
   /** nahradí terén novým na tom istom mieste zoznamu (napr. znova stiahnutý DMR) — jeden krok späť/znova */
   | { type: 'replaceTerrain'; id: string; terrain: TerrainSurface }
@@ -120,6 +123,7 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       draft.bridgeAxes.push(...(command.bridgeAxes ?? []));
       draft.profiles.push(...(command.profiles ?? []));
       draft.superstructures.push(...(command.superstructures ?? []));
+      draft.edgeBeams.push(...(command.edgeBeams ?? []));
       draft.bearingLines.push(...(command.bearingLines ?? []));
       draft.supports.push(...(command.supports ?? []));
       // prvý nový povrch je pre založenie podpier, ak ním nie je žiadny iný (ADR 0020)
@@ -147,6 +151,8 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       if (i >= 0) list.splice(i, 1);
       if (command.collection === 'bearingLines')
         draft.supports = draft.supports.filter((s) => s.bearingLine !== command.id);
+      if (command.collection === 'superstructures')
+        draft.edgeBeams = draft.edgeBeams.filter((b) => b.superstructure !== command.id);
       return;
     }
     case 'replaceTerrain': {

@@ -63,6 +63,17 @@ function input(): BrowserInput {
     support('p8', 'pier', 'chýba'),
   );
   project.studyArea = { alignment: road.name, from: 1080, to: 1180 };
+  const rimsa = profileTemplate('edgeBeam', 'rimsa');
+  if (rimsa) project.profiles.push(rimsa);
+  const beam = (id: string, superstructure: string) => ({
+    id,
+    name: `Rímsa ${id}`,
+    superstructure,
+    side: 'left' as const,
+    profile: 'rimsa',
+    parameterLaws: {},
+  });
+  project.edgeBeams.push(beam('r1', 'nk'), beam('r9', 'chýba'));
   return {
     project,
     issues: {
@@ -102,12 +113,14 @@ describe('browserTree', () => {
     const deck = find(tree, 'superstructures:nk');
     expect(deck?.detail).toBe('Komora · 16,00 + 23,00 + 16,00');
     expect(deck?.children?.map((n) => n.label)).toEqual([
+      'Rímsa r1',
       'Os uloženia 1',
       'Os uloženia 2',
       'Os uloženia 3',
       'Os uloženia 4',
     ]);
-    expect(deck?.children?.map((n) => n.children?.map((s) => s.label))).toEqual([
+    expect(find(tree, 'edgeBeams:r1')).toMatchObject({ detail: 'Rímsa', icon: 'edgeBeam' });
+    expect(deck?.children?.slice(1).map((n) => n.children?.map((s) => s.label))).toEqual([
       ['O1'],
       ['P1'],
       [],
@@ -126,6 +139,7 @@ describe('browserTree', () => {
   it('keeps elements with a missing parent under Unassigned', () => {
     const tree = browserTree(input());
     expect(find(tree, 'unassigned')?.children?.map((n) => n.key)).toEqual([
+      'edgeBeams:r9',
       'bearingLines:l9',
       'supports:p8',
     ]);

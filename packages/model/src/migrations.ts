@@ -181,6 +181,8 @@ export const MIGRATIONS: Readonly<
   '12': { to: '13', migrate: (raw) => ({ ...raw, surveys: [] }) },
   /** klopenie osí (ADR 0022) je voliteľné — staré osi ho nemajú, kým sa neimportujú znova */
   '13': { to: '14', migrate: (raw) => raw },
+  /** 14 → 15: rímsy (ADR 0023); požadovaná voľná šírka NK je voliteľná */
+  '14': { to: '15', migrate: (raw) => ({ ...raw, edgeBeams: [] }) },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

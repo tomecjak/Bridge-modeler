@@ -32,15 +32,20 @@ import {
   deckBearingsAt,
   deckChecks,
   deckEndSources,
+  EDGE_BEAM_TYPOLOGY,
+  edgeBeamChecks,
+  edgeBeamTemplate,
   evaluateObstacle,
   evaluateSuperstructure,
   globalScope,
   layoutStations,
   moveLine,
+  previewScope,
   profileParameterValues,
   SPAN_SNAP,
   setSpanLength,
   snapToPrevious,
+  twinDeckEdgeBeams,
   twinDeckExample,
 } from '@bridge/sections';
 import type { DxfDrawing, ExtractedSurvey, SurveyLayers } from '@bridge/survey';
@@ -76,15 +81,18 @@ import {
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
 import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
+import { EdgeBeamInsertDialog } from './layout/EdgeBeamInsertDialog.tsx';
 import { type ObstacleForm, ObstacleInsertDialog } from './layout/ObstacleInsertDialog.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
 import { ProjectBrowser } from './layout/ProjectBrowser.tsx';
 import { AxisOffsetDialog } from './layout/properties/AxisOffsetDialog.tsx';
 import { BearingsDialog } from './layout/properties/BearingsDialog.tsx';
+import { EdgeBeamLawDialog } from './layout/properties/EdgeBeamLawDialog.tsx';
 import {
   bearingLineSheet,
   deckSheet,
+  edgeBeamSheet,
   profileSheet,
   supportSheet,
 } from './layout/properties/elementSheets.tsx';
@@ -134,6 +142,7 @@ import { curveFromKey, surveyLineOptions } from './store/curves.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
 import { duplicateElement } from './store/duplicate.ts';
+import { isEdgeBeamProfile } from './store/edgeBeams.ts';
 import {
   newObstacle,
   obstacleName,
@@ -257,6 +266,9 @@ export function App() {
   const [planLineVertices, setPlanLineVertices] = useState<string>();
   const [bearingsOf, setBearingsOf] = useState<string>();
   const [lawDialog, setLawDialog] = useState<{ deckId: string; parameter: string }>();
+  /** priebeh parametra rímsy a dialóg Vložiť rímsy s predvolenou NK (ADR 0023) */
+  const [edgeBeamLaw, setEdgeBeamLaw] = useState<{ beamId: string; parameter: string }>();
+  const [edgeBeamDialog, setEdgeBeamDialog] = useState<{ deckId: string | undefined }>();
   const [profileTables, setProfileTables] = useState<string>();
   /** Upraviť → Premenovať začne premenovanie vybraného prvku v prehliadači */
   const [renameRequest, setRenameRequest] = useState<{ key: string; nonce: number }>();
@@ -307,6 +319,7 @@ export function App() {
             profiles: project.profiles,
             planLines: project.planLines,
             surveys: project.surveys,
+            edgeBeams: project.edgeBeams,
           }
         : undefined,
     [
@@ -316,6 +329,7 @@ export function App() {
       project.profiles,
       project.planLines,
       project.surveys,
+      project.edgeBeams,
       project.crs.origin,
     ],
   );
@@ -354,6 +368,18 @@ export function App() {
           ? project.superstructures.map(
               (d) => [d.id, deckChecks(checkContext, d, supportState.spans.get(d.id))] as const,
             )
+          : [],
+      ),
+    [checkContext, project.superstructures, supportState.spans],
+  );
+  /** problémy ríms na tých istých vzorkách NK (ADR 0023), podľa id rímsy */
+  const edgeBeamIssues = useMemo(
+    () =>
+      new Map(
+        checkContext
+          ? project.superstructures.flatMap((d) => [
+              ...edgeBeamChecks(checkContext, d, supportState.spans.get(d.id)),
+            ])
           : [],
       ),
     [checkContext, project.superstructures, supportState.spans],
@@ -573,7 +599,7 @@ export function App() {
     if (selectedElement?.collection !== 'profiles') return undefined;
     const def = project.profiles.find((p) => p.id === selectedElement.id);
     if (!def) return undefined;
-    const globals = globalScope(parameterState.set, sectionAt);
+    const globals = previewScope(def, globalScope(parameterState.set, sectionAt));
     const used = sections.results.find(
       (r) => r.superstructure.profile === def.id && (r.section?.parameters.size ?? 0) > 0,
     );
@@ -788,6 +814,26 @@ export function App() {
           collection: 'bearingLines',
           id: lineId,
           changes: { crossbeam: { profile: profile.id, width } },
+        },
+      ],
+    });
+  }
+
+  /** Rímsa s novou kópiou šablóny „Rímsa“ (prierez a zmena rímsy jedným krokom späť, ADR 0023). */
+  function setEdgeBeamTemplate(beamId: string) {
+    const profile = edgeBeamTemplate(newId('prof'));
+    const names = project.profiles.map((p) => p.name);
+    let name: string = sk.edgeBeams.templateName;
+    for (let n = 2; names.includes(name); n++) name = `${sk.edgeBeams.templateName} ${n}`;
+    projectStore.getState().dispatch({
+      type: 'batch',
+      commands: [
+        { type: 'addElements', profiles: [{ ...profile, name }] },
+        {
+          type: 'updateElement',
+          collection: 'edgeBeams',
+          id: beamId,
+          changes: { profile: profile.id },
         },
       ],
     });
@@ -1268,11 +1314,23 @@ export function App() {
       leftAxis: newId('axis'),
       rightAxis: newId('axis'),
     });
+    const [left, right] = example.superstructures;
+    const beams =
+      left && right
+        ? twinDeckEdgeBeams(
+            { left: left.id, right: right.id },
+            {
+              profile: newId('prof'),
+              beams: [newId('rim'), newId('rim'), newId('rim'), newId('rim')],
+            },
+          )
+        : undefined;
     projectStore.getState().dispatch({
       type: 'addElements',
       bridgeAxes: example.bridgeAxes,
-      profiles: [example.profile],
+      profiles: beams ? [example.profile, beams.profile] : [example.profile],
       superstructures: example.superstructures,
+      edgeBeams: beams?.edgeBeams ?? [],
     });
     const first = example.superstructures[0];
     if (first) setSelectedElement({ collection: 'superstructures', id: first.id });
@@ -1320,6 +1378,7 @@ export function App() {
             ...(r.command.bridgeAxes ?? []),
             ...(r.command.profiles ?? []),
             ...(r.command.planLines ?? []),
+            ...(r.command.edgeBeams ?? []),
           ]
         : [];
     const name = added.find((e) => e.id === r.selected.id)?.name;
@@ -1372,6 +1431,11 @@ export function App() {
         target: element('superstructures', d.id),
         model: [...(deckIssues.get(d.id) ?? []), ...(supportState.spans.get(d.id)?.issues ?? [])],
       })),
+      ...project.edgeBeams.map((b) => ({
+        owner: named(titles.edgeBeams, b.name),
+        target: element('edgeBeams', b.id),
+        model: edgeBeamIssues.get(b.id) ?? [],
+      })),
       ...supportState.lines.map((r) => ({
         owner: named(titles.bearingLines, r.line.name),
         target: element('bearingLines', r.line.id),
@@ -1391,10 +1455,12 @@ export function App() {
   }, [
     project.parameters,
     project.superstructures,
+    project.edgeBeams,
     parameterState.issues,
     lastImport,
     alignments,
     deckIssues,
+    edgeBeamIssues,
     supportState,
     obstacleState,
     clearanceChecks,
@@ -1418,6 +1484,8 @@ export function App() {
           (i) => i.severity !== 'warning',
         ).length,
       );
+    for (const [id, list] of edgeBeamIssues)
+      elementIssues.set(id, list.filter((i) => i.severity !== 'warning').length);
     const spans = new Map(
       [...supportState.spans].map(([id, s]) => [id, s.spans.map((x) => x.length)] as const),
     );
@@ -1439,6 +1507,7 @@ export function App() {
     supportState,
     obstacleState,
     clearanceChecks,
+    edgeBeamIssues,
     lastImport.issues,
     alignments,
     parameterState.issues,
@@ -1503,7 +1572,8 @@ export function App() {
     if (crossing) return crossing.station;
     const station = lineStationOf(target.id);
     if (station !== undefined) return station;
-    const deck = project.superstructures.find((x) => x.id === target.id);
+    const deckId = project.edgeBeams.find((b) => b.id === target.id)?.superstructure ?? target.id;
+    const deck = project.superstructures.find((x) => x.id === deckId);
     return deck ? (deck.from + deck.to) / 2 : undefined;
   }
 
@@ -1651,6 +1721,7 @@ export function App() {
     supports: 'support',
     bearingLines: 'bearingLine',
     superstructures: 'deck',
+    edgeBeams: 'edgeBeam',
     planLines: 'planLine',
     terrains: 'terrain',
     obstacles: 'obstacle',
@@ -1702,15 +1773,18 @@ export function App() {
           setTool('support');
         },
         onSpanLayout: openSpanLayout,
+        onInsertEdgeBeams: () => setEdgeBeamDialog({ deckId: selectedElement.id }),
         onSupportOnLine:
           selectedElement.collection === 'bearingLines' &&
           !project.supports.some((s) => s.bearingLine === selectedElement.id)
             ? () => addSupportOnLine(selectedElement.id)
             : undefined,
         onEditProfile: () => {
-          const deck = project.superstructures.find((d) => d.id === selectedElement.id);
-          if (!deck) return;
-          setSelectedElement({ collection: 'profiles', id: deck.profile });
+          const owner =
+            project.superstructures.find((d) => d.id === selectedElement.id) ??
+            project.edgeBeams.find((b) => b.id === selectedElement.id);
+          if (!owner) return;
+          setSelectedElement({ collection: 'profiles', id: owner.profile });
           setMode('section');
         },
         onVertices: () => setPlanLineVertices(selectedElement.id),
@@ -1760,6 +1834,14 @@ export function App() {
     hasSelection: selectedElement !== undefined,
     dmrBusy: dmrProgress !== undefined,
     onInsertDeck: openDeckDialog,
+    onInsertEdgeBeams: () =>
+      setEdgeBeamDialog({
+        deckId:
+          selectedElement?.collection === 'superstructures'
+            ? selectedElement.id
+            : (project.edgeBeams.find((b) => b.id === selectedElement?.id)?.superstructure ??
+              profileDeck?.id),
+      }),
     onSpanLayout: openSpanLayout,
     onEditStudyArea: () => {
       setSelectedElement(undefined);
@@ -2231,7 +2313,7 @@ export function App() {
               decks: project.superstructures,
               supports: project.supports.filter((s) => s.bearingLine === line.id),
               spans: supportState.spans.get(line.superstructure),
-              profiles: project.profiles,
+              profiles: project.profiles.filter((p) => !isEdgeBeamProfile(p)),
               onCrossbeamTemplate: () => addCrossbeamFromTemplate(line.id),
               onAddSupport: () => addSupportOnLine(line.id),
               onSelectSupport: (id) => setSelectedElement({ collection: 'supports', id }),
@@ -2249,7 +2331,7 @@ export function App() {
             wide
             sheet={deckSheet({
               deck,
-              profiles: project.profiles,
+              profiles: project.profiles.filter((p) => !isEdgeBeamProfile(p)),
               axes: project.bridgeAxes,
               curveName: (law) =>
                 law.curve.type === 'alignment'
@@ -2275,6 +2357,24 @@ export function App() {
                 setTool('support');
               },
               onSpanLayout: openSpanLayout,
+              onDelete: deleteSelected,
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'edgeBeams') {
+      const beam = project.edgeBeams.find((x) => x.id === el.id);
+      if (beam)
+        return (
+          <PropertiesPalette
+            sheet={edgeBeamSheet({
+              beam,
+              decks: project.superstructures,
+              profiles: project.profiles.filter((p) => p.typology === EDGE_BEAM_TYPOLOGY),
+              issues: edgeBeamIssues.get(beam.id) ?? [],
+              onTemplate: () => setEdgeBeamTemplate(beam.id),
+              onEditLaw: (parameter) => setEdgeBeamLaw({ beamId: beam.id, parameter }),
               onDelete: deleteSelected,
               dispatch,
             })}
@@ -2752,6 +2852,26 @@ export function App() {
           parameter={lawDialog.parameter}
           ctx={sectionContext}
           onClose={() => setLawDialog(undefined)}
+        />
+      )}
+      {edgeBeamLaw && (
+        <EdgeBeamLawDialog
+          beamId={edgeBeamLaw.beamId}
+          parameter={edgeBeamLaw.parameter}
+          onClose={() => setEdgeBeamLaw(undefined)}
+        />
+      )}
+      {edgeBeamDialog && (
+        <EdgeBeamInsertDialog
+          deckId={edgeBeamDialog.deckId}
+          onClose={() => setEdgeBeamDialog(undefined)}
+          onInserted={(beams, deckName) => {
+            setEdgeBeamDialog(undefined);
+            const first = beams[0];
+            if (first) setSelectedElement({ collection: 'edgeBeams', id: first.id });
+            setMode('section');
+            setMessage(sk.edgeBeams.insert.inserted(deckName, beams.length));
+          }}
         />
       )}
       {planLineVertices && (

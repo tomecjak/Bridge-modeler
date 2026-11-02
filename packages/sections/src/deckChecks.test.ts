@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { deckChecks, deckSampleStations } from './deckChecks.ts';
+import { deckChecks, deckSampleStations, edgeBeamChecks } from './deckChecks.ts';
 import { evaluateSpans, spanLines } from './spans.ts';
+import { edgeBeamTemplate } from './templates/edgeBeam.ts';
 import { evaluateReference212 } from './testing/reference212.ts';
 
 describe('deck checks over the whole deck', () => {
@@ -43,5 +44,41 @@ describe('deck checks over the whole deck', () => {
     expect(deckChecks(ctx, { ...deck, bridgeAxis: 'nic' }, spans)).toEqual([
       expect.objectContaining({ code: 'UnknownBridgeAxis', id: 'nic' }),
     ]);
+  });
+});
+
+describe('edge beam checks', () => {
+  const { ctx, lines, results, deck } = evaluateReference212();
+  const spans = evaluateSpans(deck, spanLines(lines, results));
+  const beam = (id: string, profile: string, b: string) => ({
+    id,
+    name: id,
+    superstructure: deck.id,
+    side: 'left' as const,
+    profile,
+    parameterLaws: { b: { kind: 'constant' as const, value: b } },
+  });
+
+  it('reports the problems of each edge beam once over the whole deck', () => {
+    const withBeams = {
+      ...ctx,
+      profiles: [...ctx.profiles, edgeBeamTemplate('rimsa')],
+      edgeBeams: [
+        beam('ok', 'rimsa', '0.9'),
+        beam('zly', 'rimsa', '0.9 +'),
+        beam('bez', 'nic', '1'),
+      ],
+    };
+    const issues = edgeBeamChecks(withBeams, deck, spans);
+    expect(issues.get('ok')).toEqual([]);
+    // chyba parametra raz (body, ktoré naň odkazujú, hlási prierez — ako pri NK)
+    const bad = issues.get('zly') ?? [];
+    expect(bad.filter((i) => i.parameter === 'b')).toEqual([
+      expect.objectContaining({
+        code: 'ExpressionError',
+        owner: { kind: 'edgeBeam', name: 'zly' },
+      }),
+    ]);
+    expect(issues.get('bez')?.map((i) => i.code)).toEqual(['UnknownProfile']);
   });
 });
