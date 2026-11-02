@@ -78,6 +78,9 @@ export interface RibbonContext {
   variants: readonly { id: string; name: string }[];
   activeVariant: string;
   setActiveVariant: (id: string) => void;
+  onDuplicateVariant: () => void;
+  onRenameVariant: () => void;
+  onRemoveVariant: () => void;
 }
 
 /** Ponúkané prevýšenia pozdĺžneho profilu (výšky : dĺžky); export je vždy 1 : 1. */
@@ -139,6 +142,34 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
               options: c.variants.map((v) => ({ value: v.id, label: v.name })),
               onChange: c.setActiveVariant,
               disabled: c.variants.length < 2,
+            },
+            {
+              kind: 'button',
+              id: 'variant-duplicate',
+              label: sk.variants.duplicate,
+              title: sk.variants.duplicateTitle,
+              icon: 'duplicate',
+              size: 'small',
+              onClick: c.onDuplicateVariant,
+            },
+            {
+              kind: 'button',
+              id: 'variant-rename',
+              label: sk.variants.rename,
+              title: sk.variants.renameTitle,
+              icon: 'rename',
+              size: 'small',
+              onClick: c.onRenameVariant,
+            },
+            {
+              kind: 'button',
+              id: 'variant-remove',
+              label: sk.variants.remove,
+              title: sk.variants.removeTitle,
+              icon: 'trash',
+              size: 'small',
+              disabled: c.variants.length < 2,
+              onClick: c.onRemoveVariant,
             },
           ],
         },

@@ -20,6 +20,7 @@ import {
   effectiveFreeWidth,
   effectiveParameters,
   type ModelIssue,
+  nextVariantName,
   type Obstacle,
   openProject,
   type Support,
@@ -137,6 +138,7 @@ import { SupportLibraryDialog } from './layout/SupportLibraryDialog.tsx';
 import { SurveyImportDialog } from './layout/SurveyImportDialog.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { useSupportSources } from './layout/useSupportSources.ts';
+import { VariantNameDialog } from './layout/VariantNameDialog.tsx';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
@@ -266,6 +268,8 @@ export function App() {
   const [panelTarget, setPanelTarget] = useState<'studyArea' | 'alignment'>();
   /** dialógy: informácie o projekte, posun osi mosta, vrcholy čiary */
   const [projectInfoOpen, setProjectInfoOpen] = useState(false);
+  /** dialóg mena variantu: kópia aktívneho alebo premenovanie (ADR 0024) */
+  const [variantDialog, setVariantDialog] = useState<'duplicate' | 'rename'>();
   const [axisOffset, setAxisOffset] = useState<{
     axisId: string;
     which: 'horizontalOffset' | 'verticalOffset';
@@ -1954,10 +1958,13 @@ export function App() {
     onProjectInfo: () => setProjectInfoOpen(true),
     variants: project.variants,
     activeVariant: project.activeVariant,
-    setActiveVariant: (id) => {
-      projectStore.getState().dispatch({ type: 'setActiveVariant', id });
-      const name = project.variants.find((v) => v.id === id)?.name;
-      if (name) setMessage(sk.variants.switched(name));
+    // aktívny variant ukazuje stavový riadok, správa by po Späť zavádzala
+    setActiveVariant: (id) => projectStore.getState().dispatch({ type: 'setActiveVariant', id }),
+    onDuplicateVariant: () => setVariantDialog('duplicate'),
+    onRenameVariant: () => setVariantDialog('rename'),
+    onRemoveVariant: () => {
+      projectStore.getState().dispatch({ type: 'removeVariant', id: variant.id });
+      setMessage(sk.variants.removed(variant.name));
     },
   }).concat(contextual ? [contextual] : []);
 
@@ -2903,6 +2910,25 @@ export function App() {
         />
       )}
       {projectInfoOpen && <ProjectInfoDialog onClose={() => setProjectInfoOpen(false)} />}
+      {variantDialog && (
+        <VariantNameDialog
+          title={sk.variants.dialog[variantDialog]}
+          confirm={sk.variants.dialog.confirm[variantDialog]}
+          initial={variantDialog === 'duplicate' ? nextVariantName(project.variants) : variant.name}
+          taken={project.variants
+            .filter((v) => v.id !== variant.id || variantDialog === 'duplicate')
+            .map((v) => v.name)}
+          onClose={() => setVariantDialog(undefined)}
+          onConfirm={(name) => {
+            const { dispatch } = projectStore.getState();
+            if (variantDialog === 'duplicate') {
+              dispatch({ type: 'duplicateVariant', id: newId('var'), name });
+              setMessage(sk.variants.duplicated(name));
+            } else dispatch({ type: 'renameVariant', id: variant.id, name });
+            setVariantDialog(undefined);
+          }}
+        />
+      )}
       {axisOffset && (
         <AxisOffsetDialog
           axisId={axisOffset.axisId}

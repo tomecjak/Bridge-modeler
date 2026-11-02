@@ -148,7 +148,24 @@ export const sk = {
   },
   variants: {
     status: (name: string) => `Variant: ${name}`,
-    switched: (name: string) => `Aktívny variant: ${name}`,
+    duplicate: 'Duplikovať',
+    duplicateTitle:
+      'Kópia aktívneho variantu (prvky mosta aj prepisy parametrov) ako nový aktívny variant',
+    rename: 'Premenovať',
+    renameTitle: 'Premenovať aktívny variant',
+    remove: 'Odstrániť',
+    removeTitle: 'Odstrániť aktívny variant (Späť ho vráti); posledný variant ostane',
+    duplicated: (name: string) => `Nový variant ${name} je aktívny`,
+    removed: (name: string) => `Variant ${name} odstránený (Späť ho vráti)`,
+    dialog: {
+      duplicate: 'Duplikovať variant',
+      rename: 'Premenovať variant',
+      confirm: { duplicate: 'Duplikovať', rename: 'Premenovať' },
+      name: 'Meno variantu',
+      cancel: 'Zrušiť',
+      empty: 'Zadajte meno variantu.',
+      taken: 'Variant s týmto menom už existuje.',
+    },
   },
   parameters: {
     tab: 'Parametre',
