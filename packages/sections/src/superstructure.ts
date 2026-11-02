@@ -3,6 +3,7 @@ import type { Scope } from '@bridge/expr';
 import { type Frame, frameFromAzimuthGrade, type Vec2, type Vec3, vec2 } from '@bridge/geom';
 import {
   type BridgeAxis,
+  type Brief,
   type EdgeBeam,
   evaluateLaw,
   type IssueOwner,
@@ -36,6 +37,8 @@ export interface SectionContext {
   crossbeams?: ReadonlyMap<string, readonly CrossbeamBand[]>;
   /** rímsy na okrajoch NK (ADR 0023) */
   edgeBeams?: readonly EdgeBeam[];
+  /** zadanie: voľná šírka na moste pre kontrolu a výrazy NK (ADR 0023) */
+  brief?: Pick<Brief, 'freeWidth' | 'roadCategory'>;
 }
 
 export interface BridgeAxisPoint {

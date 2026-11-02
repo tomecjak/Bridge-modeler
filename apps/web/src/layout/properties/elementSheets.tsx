@@ -11,8 +11,8 @@ import type {
   Superstructure,
   Support,
 } from '@bridge/model';
-import type { BearingLineResult, SupportResult } from '@bridge/sections';
-import { formatNumber } from '../../format/number.ts';
+import type { BearingLineResult, DeckWidthRange, SupportResult } from '@bridge/sections';
+import { formatNumber, parseNumber } from '../../format/number.ts';
 import { formatModelIssue } from '../../i18n/modelIssues.ts';
 import { sk } from '../../i18n/sk.ts';
 import type { Command } from '../../store/commands.ts';
@@ -582,6 +582,10 @@ export function deckSheet(input: {
   abutmentAt: { start: boolean; end: boolean };
   result: SectionResult | undefined;
   station: number;
+  /** šírky po dĺžke NK (ADR 0023) */
+  widths: DeckWidthRange | undefined;
+  /** voľná šírka zo zadania [m] (predvolená požadovaná) */
+  briefFreeWidth: number | undefined;
   onEditLaw: (parameter: string) => void;
   onAddSupport: () => void;
   onSpanLayout: () => void;
@@ -589,6 +593,35 @@ export function deckSheet(input: {
   dispatch: Dispatch;
 }): PropertySheet {
   const { deck, spans, lines } = input;
+  const t = sk.properties;
+  const mm = (m: number) => formatNumber(m * 1000, 0);
+  const range = (r: { min: number; max: number }) => t.widthRange(mm(r.min), mm(r.max));
+  const widthRows: PropertyRow[] = [
+    {
+      kind: 'text',
+      label: t.requiredFreeWidth,
+      value: deck.freeWidth === undefined ? '' : mm(deck.freeWidth),
+      placeholder:
+        input.briefFreeWidth === undefined
+          ? t.requiredUnknown
+          : t.requiredFromBrief(mm(input.briefFreeWidth)),
+      onCommit: (text) => {
+        if (text.trim() === '') {
+          set({ freeWidth: undefined });
+          return;
+        }
+        const value = parseNumber(text);
+        if (value !== undefined && value > 0) set({ freeWidth: value / 1000 });
+      },
+      ...(deck.freeWidth !== undefined && input.briefFreeWidth !== undefined
+        ? { action: { label: t.useBrief, onClick: () => set({ freeWidth: undefined }) } }
+        : {}),
+    },
+    input.widths?.free
+      ? { kind: 'readonly', label: t.freeWidth, value: range(input.widths.free) }
+      : { kind: 'note', text: t.noFreeWidth, tone: 'muted' },
+    { kind: 'note', text: t.widthsHint, tone: 'muted' },
+  ];
   const ends = { start: deck.ends?.start ?? 'abutment', end: deck.ends?.end ?? 'abutment' };
   /** koniec NK: prepínač „podľa opory“ a staničenie (pri odvodenom konci len na čítanie, ADR 0018) */
   const endRows = (side: 'start' | 'end'): PropertyRow[] => {
@@ -732,6 +765,7 @@ export function deckSheet(input: {
         ],
       },
       { id: 'deck-laws', title: sk.properties.profileLaws, rows: lawRows },
+      { id: 'deck-widths', title: t.widths, rows: widthRows },
       { id: 'deck-spans', title: sk.supports.spans, rows: spanRows },
       ...(lines.length > 0
         ? [{ id: 'deck-lines', title: sk.bearingLines.group, rows: lineRowsOfDeck }]

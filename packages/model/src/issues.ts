@@ -139,6 +139,17 @@ export type ModelIssue = {
   /** krajné pole mimo orientačného pomeru k susednému vnútornému poľu (ADR 0022) */
   | { code: 'EndSpanRatio'; span: 'first' | 'last'; ratio: number; min: number; max: number }
   | { code: 'MissingBearingLines' }
+  /**
+   * najmenšia voľná šírka medzi rímsami je menšia ako požadovaná (ADR 0023) [m]; `source` = hodnota pri NK alebo zo
+   * zadania
+   */
+  | {
+      code: 'FreeWidthBelowRequired';
+      station: number;
+      width: number;
+      required: number;
+      source: 'deck' | 'brief';
+    }
   | { code: 'AmbiguousStation'; station: number }
   | { code: 'InvalidJson'; detail: string }
   /** súbor nie je knižnica prierezov (chýba značka formátu) */

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Superstructure } from './types.ts';
 
 /** Druh mosta v zadaní (Fáza 10a). */
 export const BridgeTypeSchema = z.enum(['road', 'railway', 'footbridge', 'ecoduct']);
@@ -87,4 +88,17 @@ export function parseRoadCategory(code: string): RoadCategory | undefined {
 /** Voľná šírka na moste [m]: ručná hodnota zo zadania, inak b z kategórie; undefined, ak sa nedá určiť. */
 export function effectiveFreeWidth(brief: Pick<Brief, 'freeWidth' | 'roadCategory'>) {
   return brief.freeWidth ?? parseRoadCategory(brief.roadCategory)?.b;
+}
+
+/**
+ * Požadovaná voľná šírka na NK [m] (ADR 0023): hodnota pri NK, inak voľná šírka zo zadania; undefined, ak sa nedá
+ * určiť.
+ */
+export function requiredFreeWidth(
+  sup: Pick<Superstructure, 'freeWidth'>,
+  brief: Pick<Brief, 'freeWidth' | 'roadCategory'> | undefined,
+): { value: number; source: 'deck' | 'brief' } | undefined {
+  if (sup.freeWidth !== undefined) return { value: sup.freeWidth, source: 'deck' };
+  const value = brief && effectiveFreeWidth(brief);
+  return value === undefined ? undefined : { value, source: 'brief' };
 }

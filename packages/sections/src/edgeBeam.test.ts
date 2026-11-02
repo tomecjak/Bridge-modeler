@@ -3,12 +3,16 @@ import { syntheticAlignmentData } from '@bridge/alignment/testing';
 import { isCounterClockwise, type Vec2 } from '@bridge/geom';
 import { buildParameterSet, type EdgeBeam, type Superstructure } from '@bridge/model';
 import { describe, expect, it } from 'vitest';
+import { deckChecks } from './deckChecks.ts';
 import { sampleSuperstructure } from './deckSampling.ts';
 import {
   deckEdge,
+  deckWidthRange,
   deckWidths,
   edgeBeamEdges,
   evaluateEdgeBeam,
+  FREE_WIDTH_TOLERANCE,
+  freeWidthIssues,
   sampleEdgeBeam,
 } from './edgeBeam.ts';
 import { evaluateProfileDefinition, profileParameterValues } from './profile.ts';
@@ -240,5 +244,61 @@ describe('deckWidths', () => {
     const w = deckWidths(ctx, sup, 100);
     expect(w?.free).toBeUndefined();
     expect(w?.bridge).toBeCloseTo((w?.deck ?? 0) + DEFAULTS.c, 12);
+  });
+});
+
+describe('free width check (ADR 0023)', () => {
+  // NK 7,35 + 7,30 = 14,65; rímsy na NK 1,35 a 0,55 → voľná šírka 12,75
+  const beams = [beam('left', { b: '1.75', c: '0.4' }), beam('right')];
+  const stations = [60, 100, 200];
+  const brief = (freeWidth: number | null) => ({ freeWidth, roadCategory: '' });
+
+  it('collects the deck, free and bridge widths over the deck samples', () => {
+    const range = deckWidthRange(context(beams), deck(0.045), stations);
+    expect(range?.deck.min).toBeCloseTo(14.65, 9);
+    expect(range?.bridge.max).toBeCloseTo(15.4, 9);
+    expect(range?.free?.min).toBeCloseTo(12.75, 9);
+    expect(range?.free?.max).toBeCloseTo(12.75, 9);
+    expect(
+      deckWidthRange(context([beams[0] as EdgeBeam]), deck(0.045), stations)?.free,
+    ).toBeUndefined();
+  });
+
+  it('warns once when the free width is more than 1 mm below the required one', () => {
+    const issues = (freeWidth: number | null, sup = deck(0.045), list = beams) =>
+      freeWidthIssues(
+        context(list, { brief: brief(freeWidth) }),
+        sup,
+        stations,
+        FREE_WIDTH_TOLERANCE,
+      );
+    expect(issues(12.75)).toEqual([]);
+    expect(issues(12.7505)).toEqual([]);
+    expect(issues(12.752)).toEqual([
+      {
+        code: 'FreeWidthBelowRequired',
+        station: 1060,
+        width: expect.closeTo(12.75, 9),
+        required: 12.752,
+        source: 'brief',
+        severity: 'warning',
+      },
+    ]);
+    // hodnota pri NK má prednosť pred zadaním
+    expect(issues(9.5, { ...deck(0.045), freeWidth: 13 })[0]).toMatchObject({
+      required: 13,
+      source: 'deck',
+    });
+    // bez požadovanej hodnoty alebo bez oboch ríms sa nekontroluje
+    expect(issues(null)).toEqual([]);
+    expect(issues(13, deck(0.045), [beams[0] as EdgeBeam])).toEqual([]);
+  });
+
+  it('is part of the deck checks', () => {
+    const ctx = context(beams, { brief: brief(13) });
+    const checks = deckChecks(ctx, deck(0.045), undefined);
+    expect(checks.filter((i) => i.code === 'FreeWidthBelowRequired')).toEqual([
+      expect.objectContaining({ owner: { kind: 'superstructure', name: 'NK' }, required: 13 }),
+    ]);
   });
 });

@@ -8,6 +8,7 @@ describe('checks panel', () => {
     expect(modelIssueGroup('FoundationAboveTerrain')).toBe('foundation');
     expect(modelIssueGroup('SelfIntersection')).toBe('geometry');
     expect(modelIssueGroup('Cycle')).toBe('other');
+    expect(modelIssueGroup('FreeWidthBelowRequired')).toBe('freeWidth');
     expect(alignmentIssueGroup('GeometryMismatch')).toBe('geometry');
     expect(alignmentIssueGroup('MissingUnits')).toBe('other');
   });

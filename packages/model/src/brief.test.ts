@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveFreeWidth, emptyBrief, parseRoadCategory } from './brief.ts';
+import { effectiveFreeWidth, emptyBrief, parseRoadCategory, requiredFreeWidth } from './brief.ts';
 
 describe('parseRoadCategory', () => {
   it('reads the letter, the free width b and the design speed', () => {
@@ -26,5 +26,22 @@ describe('effectiveFreeWidth', () => {
     expect(effectiveFreeWidth(brief)).toBe(9.5);
     expect(effectiveFreeWidth({ ...brief, freeWidth: 10.25 })).toBe(10.25);
     expect(effectiveFreeWidth(emptyBrief())).toBeUndefined();
+  });
+});
+
+describe('requiredFreeWidth', () => {
+  it('takes the deck value first, then the brief, otherwise nothing', () => {
+    const brief = { ...emptyBrief(), roadCategory: 'C 9,5/70' };
+    expect(requiredFreeWidth({ freeWidth: 12.75 }, brief)).toEqual({
+      value: 12.75,
+      source: 'deck',
+    });
+    expect(requiredFreeWidth({}, brief)).toEqual({ value: 9.5, source: 'brief' });
+    expect(requiredFreeWidth({}, { ...brief, freeWidth: 11 })).toEqual({
+      value: 11,
+      source: 'brief',
+    });
+    expect(requiredFreeWidth({}, emptyBrief())).toBeUndefined();
+    expect(requiredFreeWidth({}, undefined)).toBeUndefined();
   });
 });

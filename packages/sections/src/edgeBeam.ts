@@ -1,6 +1,12 @@
 import type { Scope } from '@bridge/expr';
 import { type Vec2, vec2 } from '@bridge/geom';
-import type { EdgeBeam, IssueOwner, ModelIssue, Superstructure } from '@bridge/model';
+import {
+  type EdgeBeam,
+  type IssueOwner,
+  type ModelIssue,
+  requiredFreeWidth,
+  type Superstructure,
+} from '@bridge/model';
 import { extremePoint } from './deckOutline.ts';
 import type { DeckSamples, DeckSegment } from './deckSampling.ts';
 import {
@@ -194,4 +200,81 @@ export function deckWidths(
   if (l.length > 0 && r.length > 0)
     widths.free = Math.min(...r.map((e) => e.inner)) - Math.max(...l.map((e) => e.inner));
   return widths;
+}
+
+/** Tolerancia kontroly voľnej šírky [m] (ADR 0023): upozorní sa, ak je menšia o viac ako 1 mm. */
+export const FREE_WIDTH_TOLERANCE = 0.001;
+
+/** Rozsah šírky po dĺžke NK [m]; `at` = spojité staničenie prvej najmenšej hodnoty. */
+export interface WidthRange {
+  min: number;
+  max: number;
+  at: number;
+}
+
+export interface DeckWidthRange {
+  deck: WidthRange;
+  bridge: WidthRange;
+  /** voľná šírka; len ak má NK rímsy na oboch stranách */
+  free?: WidthRange;
+}
+
+/** Šírky NK (`deckWidths`) na spojitých staničeniach `stations` ako rozsahy; bez vyhodnotiteľného prierezu undefined. */
+export function deckWidthRange(
+  ctx: SectionContext,
+  sup: Superstructure,
+  stations: readonly number[],
+): DeckWidthRange | undefined {
+  const all = stations.flatMap((s) => {
+    const w = deckWidths(ctx, sup, s);
+    return w ? [{ s, w }] : [];
+  });
+  const range = (pick: (w: DeckWidths) => number | undefined): WidthRange | undefined => {
+    let r: WidthRange | undefined;
+    for (const { s, w } of all) {
+      const v = pick(w);
+      if (v === undefined) continue;
+      if (!r) r = { min: v, max: v, at: s };
+      else {
+        // pri zhode (zaokrúhlenie) ostane prvé staničenie
+        if (v < r.min - 1e-9) r = { ...r, min: v, at: s };
+        r.max = Math.max(r.max, v);
+      }
+    }
+    return r;
+  };
+  const deck = range((w) => w.deck);
+  const bridge = range((w) => w.bridge);
+  if (!deck || !bridge) return undefined;
+  const free = range((w) => w.free);
+  return free ? { deck, bridge, free } : { deck, bridge };
+}
+
+/**
+ * Voľná šírka voči požadovanej (ADR 0023): požadovaná = hodnota pri NK, inak zo zadania. Ak je najmenšia voľná šírka
+ * na staničeniach `stations` menšia o viac ako `tolerance`, vráti jedno upozornenie `FreeWidthBelowRequired`
+ * (zobrazované staničenie najmenšej hodnoty). Bez požadovanej hodnoty alebo bez oboch ríms sa nekontroluje.
+ */
+export function freeWidthIssues(
+  ctx: SectionContext,
+  sup: Superstructure,
+  stations: readonly number[],
+  tolerance: number,
+): ModelIssue[] {
+  const required = requiredFreeWidth(sup, ctx.brief);
+  if (!required) return [];
+  const free = deckWidthRange(ctx, sup, stations)?.free;
+  if (!free || free.min >= required.value - tolerance) return [];
+  const axis = ctx.bridgeAxes.find((a) => a.id === sup.bridgeAxis);
+  const road = axis && ctx.alignments.get(axis.alignment);
+  return [
+    {
+      code: 'FreeWidthBelowRequired',
+      station: road ? road.stationing.toDisplay(free.at).station : Number.NaN,
+      width: free.min,
+      required: required.value,
+      source: required.source,
+      severity: 'warning',
+    },
+  ];
 }

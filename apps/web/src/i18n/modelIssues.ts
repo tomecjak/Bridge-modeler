@@ -210,6 +210,8 @@ export function formatModelIssue(issue: ModelIssue): string {
       return `${prefix}${issue.span === 'first' ? 'prvé' : 'posledné'} krajné pole má k susednému vnútornému poľu pomer ${formatNumber(issue.ratio, 2)}, orientačne ${formatNumber(issue.min, 2)} – ${formatNumber(issue.max, 2)} (informatívne).`;
     case 'MissingBearingLines':
       return `${prefix}NK nemá aspoň dve osi uloženia — polia sa nedajú určiť.`;
+    case 'FreeWidthBelowRequired':
+      return `${prefix}voľná šírka medzi rímsami ${formatNumber(issue.width * 1000, 0)} mm na ${formatStation(issue.station)} je menšia ako požadovaná ${formatNumber(issue.required * 1000, 0)} mm (${issue.source === 'deck' ? 'zadaná pri NK' : 'zo zadania'}).`;
     case 'InvalidJson':
       return `Súbor nie je platný JSON (${issue.detail}).`;
     case 'NotAProfileLibrary':

@@ -1,5 +1,10 @@
 import type { ModelIssue, Superstructure } from '@bridge/model';
-import { deckEdgeBeams, evaluateEdgeBeam } from './edgeBeam.ts';
+import {
+  deckEdgeBeams,
+  evaluateEdgeBeam,
+  FREE_WIDTH_TOLERANCE,
+  freeWidthIssues,
+} from './edgeBeam.ts';
 import { slendernessIssues } from './slenderness.ts';
 import type { SpanResult } from './spans.ts';
 import { CROSS_SLOPE_TOLERANCE, crossSlopeIssues } from './superelevation.ts';
@@ -46,7 +51,7 @@ const DEPTH_EPS = 1e-6;
 
 /**
  * Kontroly NK nad celou jej dĺžkou (ADR 0022): problémy prierezu na vzorkách `deckSampleStations` (bez duplicít,
- * prvý výskyt so staničením) a štíhlosť polí. Problémy polí sú v `SpanResult`, tu sa neopakujú.
+ * prvý výskyt so staničením), štíhlosť polí, klopenie a voľná šírka medzi rímsami (ADR 0023). Problémy polí sú v `SpanResult`, tu sa neopakujú.
  */
 export function deckChecks(
   ctx: SectionContext,
@@ -81,6 +86,9 @@ export function deckChecks(
   if (spans)
     issues.push(...slendernessIssues(ctx, sup, spans, DEPTH_EPS).map((i) => ({ owner, ...i })));
   issues.push(...crossSlopeIssues(ctx, sup, CROSS_SLOPE_TOLERANCE).map((i) => ({ owner, ...i })));
+  issues.push(
+    ...freeWidthIssues(ctx, sup, stations, FREE_WIDTH_TOLERANCE).map((i) => ({ owner, ...i })),
+  );
   return issues;
 }
 

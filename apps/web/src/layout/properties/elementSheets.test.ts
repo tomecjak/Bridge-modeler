@@ -5,7 +5,7 @@ import {
   type Superstructure,
   type Support,
 } from '@bridge/model';
-import { profileTemplate } from '@bridge/sections';
+import { type DeckWidthRange, profileTemplate } from '@bridge/sections';
 import { describe, expect, it } from 'vitest';
 import type { Command } from '../../store/commands.ts';
 import type { DeckSpans } from '../../store/supports.ts';
@@ -333,9 +333,12 @@ describe('deckSheet', () => {
   const sheetOf = (
     lines: Pick<BearingLine, 'id' | 'crossingAngle'>[] = [],
     commands: Command[] = [],
+    widths: { deck?: Superstructure; widths?: DeckWidthRange; brief?: number } = {},
   ) =>
     deckSheet({
-      deck,
+      deck: widths.deck ?? deck,
+      widths: widths.widths,
+      briefFreeWidth: widths.brief,
       profiles: [profile],
       axes: [{ id: 'ax', name: 'Os mosta' }],
       curveName: () => '',
@@ -380,6 +383,29 @@ describe('deckSheet', () => {
     ).toMatchObject({ value: '76' });
     expect(sheetOf().groups.some((g) => g.id === 'deck-lines')).toBe(false);
     expect(sheet.actions?.[0]?.label).toBe('Rozloženie polí');
+  });
+
+  it('edits the required free width (empty = from the brief) and shows the free width range', () => {
+    const commands: Command[] = [];
+    const range = { min: 12.75, max: 12.8, at: 100 };
+    const rowsOf = (sheet: ReturnType<typeof sheetOf>) =>
+      sheet.groups.find((g) => g.id === 'deck-widths')?.rows ?? [];
+    const rows = rowsOf(
+      sheetOf([], commands, {
+        widths: { deck: range, bridge: range, free: range },
+        brief: 12.75,
+      }),
+    );
+    expect(rows[0]).toMatchObject({ kind: 'text', value: '', placeholder: 'zo zadania 12 750' });
+    expect(rows[1]).toMatchObject({ kind: 'readonly', value: '12 750 – 12 800' });
+    if (rows[0]?.kind === 'text') rows[0].onCommit('13 000');
+    expect(commands.at(-1)).toMatchObject({ changes: { freeWidth: 13 } });
+    const own = rowsOf(sheetOf([], commands, { deck: { ...deck, freeWidth: 13 }, brief: 12.75 }));
+    expect(own[0]).toMatchObject({ value: '13 000', action: { label: 'Podľa zadania' } });
+    if (own[0]?.kind === 'text') own[0].onCommit('');
+    expect(commands.at(-1)).toMatchObject({ changes: { freeWidth: undefined } });
+    // bez ríms na oboch stranách sa voľná šírka nemeria
+    expect(rowsOf(sheetOf())[1]).toMatchObject({ kind: 'note', tone: 'muted' });
   });
 
   it('derives the deck start from the abutment and lets it be unlocked', () => {

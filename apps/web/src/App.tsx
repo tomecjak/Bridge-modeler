@@ -16,6 +16,7 @@ import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
 import {
   type BearingLine,
   createEmptyProject,
+  effectiveFreeWidth,
   type ModelIssue,
   type Obstacle,
   openProject,
@@ -32,6 +33,8 @@ import {
   deckBearingsAt,
   deckChecks,
   deckEndSources,
+  deckSampleStations,
+  deckWidthRange,
   EDGE_BEAM_TYPOLOGY,
   edgeBeamChecks,
   edgeBeamTemplate,
@@ -320,6 +323,7 @@ export function App() {
             planLines: project.planLines,
             surveys: project.surveys,
             edgeBeams: project.edgeBeams,
+            brief: project.brief,
           }
         : undefined,
     [
@@ -330,6 +334,7 @@ export function App() {
       project.planLines,
       project.surveys,
       project.edgeBeams,
+      project.brief,
       project.crs.origin,
     ],
   );
@@ -367,6 +372,26 @@ export function App() {
         checkContext
           ? project.superstructures.map(
               (d) => [d.id, deckChecks(checkContext, d, supportState.spans.get(d.id))] as const,
+            )
+          : [],
+      ),
+    [checkContext, project.superstructures, supportState.spans],
+  );
+  /** šírky NK, voľná šírka a šírka mosta na vzorkách kontrol (ADR 0023), podľa id NK */
+  const deckWidthRanges = useMemo(
+    () =>
+      new Map(
+        checkContext
+          ? project.superstructures.map(
+              (d) =>
+                [
+                  d.id,
+                  deckWidthRange(
+                    checkContext,
+                    d,
+                    deckSampleStations(checkContext, d, supportState.spans.get(d.id)),
+                  ),
+                ] as const,
             )
           : [],
       ),
@@ -2362,6 +2387,8 @@ export function App() {
               })(),
               result: sections.results.find((r) => r.superstructure.id === deck.id),
               station: sectionAt,
+              widths: deckWidthRanges.get(deck.id),
+              briefFreeWidth: effectiveFreeWidth(project.brief),
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
               onAddSupport: () => {
                 setMode('2d');
