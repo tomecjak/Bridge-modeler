@@ -5,6 +5,7 @@ import type {
   PviData,
   Rotation,
   StationEquationData,
+  SuperelevationData,
   VerticalProfileData,
 } from '../data.ts';
 import type { AlignmentIssue } from '../issues.ts';
@@ -132,8 +133,62 @@ function readAlignment(node: XmlNode, ctx: Context): AlignmentData | undefined {
     .flatMap((p) => childrenNamed(p, 'ProfAlign'))
     .map((p) => readProfAlign(p, ctx))
     .filter((p): p is VerticalProfileData => p !== undefined);
+  const superelevation = childrenNamed(node, 'Superelevation').flatMap((s) => {
+    const r = readSuperelevation(s, ctx);
+    return r ? [r] : [];
+  });
   if (ctx.sink.failed) return undefined;
-  return { name, staStart, length, horizontal, stationEquations, profiles };
+  return {
+    name,
+    staStart,
+    length,
+    horizontal,
+    stationEquations,
+    profiles,
+    ...(superelevation.length > 0 ? { superelevation } : {}),
+  };
+}
+
+/** Prvky klopenia LandXML 1.2 → polia `SuperelevationData` (ADR 0022). */
+const SUPERELEVATION_FIELDS = {
+  BeginRunoutSta: 'beginRunout',
+  BeginRunoffSta: 'beginRunoff',
+  FullSuperSta: 'fullSuper',
+  FullSuperelev: 'fullSuperelev',
+  RunoffSta: 'runoff',
+  StartofRunoutSta: 'startOfRunout',
+  EndofRunoutSta: 'endOfRunout',
+} as const;
+
+/**
+ * Klopenie oblúka. Klopenie os nepokazí: neplatné číslo je upozornenie a pole sa vynechá, bez rozsahu
+ * (staStart, staEnd) sa vynechá celý prvok.
+ */
+function readSuperelevation(node: XmlNode, ctx: Context): SuperelevationData | undefined {
+  const number = (field: string, raw: string | undefined) => {
+    const value = raw === undefined ? undefined : parseNumber(raw);
+    if (value === undefined && raw !== undefined)
+      ctx.sink.warning({ code: 'InvalidValue', element: 'Superelevation', field, value: raw });
+    return value;
+  };
+  const staStart = number('staStart', node.attributes.staStart);
+  const staEnd = number('staEnd', node.attributes.staEnd);
+  if (staStart === undefined || staEnd === undefined) {
+    if (node.attributes.staStart === undefined || node.attributes.staEnd === undefined)
+      ctx.sink.warning({
+        code: 'InvalidValue',
+        element: 'Superelevation',
+        field: 'staStart',
+        value: '',
+      });
+    return undefined;
+  }
+  const data: SuperelevationData = { staStart, staEnd };
+  for (const [element, field] of Object.entries(SUPERELEVATION_FIELDS)) {
+    const value = number(element, childNamed(node, element)?.text);
+    if (value !== undefined) data[field] = value;
+  }
+  return data;
 }
 
 function readCoordGeom(node: XmlNode, ctx: Context): HorizontalElementData[] {

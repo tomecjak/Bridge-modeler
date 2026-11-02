@@ -18,4 +18,5 @@ export {
   type Stationing,
   type StationRegion,
 } from './station/stationing.ts';
+export * from './superelevation.ts';
 export type { ProfileKeyPoint, ProfilePoint, VerticalProfile } from './vertical/vertical.ts';

@@ -30,6 +30,23 @@ export function toLandXml(data: AlignmentData): string {
           .join('')}</ProfAlign></Profile>`,
     )
     .join('');
+  const tags = [
+    ['BeginRunoutSta', 'beginRunout'],
+    ['BeginRunoffSta', 'beginRunoff'],
+    ['FullSuperSta', 'fullSuper'],
+    ['FullSuperelev', 'fullSuperelev'],
+    ['RunoffSta', 'runoff'],
+    ['StartofRunoutSta', 'startOfRunout'],
+    ['EndofRunoutSta', 'endOfRunout'],
+  ] as const;
+  const superelevation = (data.superelevation ?? [])
+    .map(
+      (e) =>
+        `<Superelevation staStart="${e.staStart}" staEnd="${e.staEnd}">${tags
+          .map(([tag, key]) => (e[key] === undefined ? '' : `<${tag}>${e[key]}</${tag}>`))
+          .join('')}</Superelevation>`,
+    )
+    .join('');
   const equations = data.stationEquations
     .map(
       (q) =>
@@ -40,6 +57,6 @@ export function toLandXml(data: AlignmentData): string {
 <LandXML xmlns="http://www.landxml.org/schema/LandXML-1.2" version="1.2">
 <Units><Metric linearUnit="meter" angularUnit="decimal degrees" directionUnit="decimal degrees"/></Units>
 <Alignments><Alignment name="${data.name}" length="${data.length}" staStart="${data.staStart}">
-<CoordGeom>${data.horizontal.map(element).join('')}</CoordGeom>${profiles}${equations}
+<CoordGeom>${data.horizontal.map(element).join('')}</CoordGeom>${profiles}${equations}${superelevation}
 </Alignment></Alignments></LandXML>`;
 }

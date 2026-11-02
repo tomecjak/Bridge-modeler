@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "13"
+      "const": "14"
     },
     "name": {
       "type": "string"
@@ -394,6 +394,46 @@
                 "staInternal",
                 "staBack",
                 "staAhead"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "superelevation": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "staStart": {
+                  "type": "number"
+                },
+                "staEnd": {
+                  "type": "number"
+                },
+                "beginRunout": {
+                  "type": "number"
+                },
+                "beginRunoff": {
+                  "type": "number"
+                },
+                "fullSuper": {
+                  "type": "number"
+                },
+                "fullSuperelev": {
+                  "type": "number"
+                },
+                "runoff": {
+                  "type": "number"
+                },
+                "startOfRunout": {
+                  "type": "number"
+                },
+                "endOfRunout": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "staStart",
+                "staEnd"
               ],
               "additionalProperties": false
             }
@@ -2116,6 +2156,6 @@
     "surveys"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-13.json",
-  "title": "Projekt modelára mostov (schemaVersion 13)"
+  "$id": "https://bridge-modeler.local/schema/project-14.json",
+  "title": "Projekt modelára mostov (schemaVersion 14)"
 }

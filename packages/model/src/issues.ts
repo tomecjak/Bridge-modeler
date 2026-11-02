@@ -125,6 +125,10 @@ export type ModelIssue = {
       max: number;
       typology: string;
     }
+  /** NK zasahuje do nábehu klopenia osi cesty z LandXML (zobrazované staničenia, ADR 0022) */
+  | { code: 'DeckInSuperelevationTransition'; from: number; to: number }
+  /** priečny sklon NK `q` sa líši od plného klopenia z LandXML [m/m] */
+  | { code: 'CrossSlopeMismatch'; station: number; q: number; superelevation: number }
   /** krajné pole mimo orientačného pomeru k susednému vnútornému poľu (ADR 0022) */
   | { code: 'EndSpanRatio'; span: 'first' | 'last'; ratio: number; min: number; max: number }
   | { code: 'MissingBearingLines' }

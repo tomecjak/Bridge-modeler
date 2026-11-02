@@ -75,6 +75,8 @@ const MODEL_GROUPS = {
   SpanAboveEconomic: 'spans',
   EndSpanRatio: 'spans',
   Slenderness: 'slenderness',
+  DeckInSuperelevationTransition: 'superelevation',
+  CrossSlopeMismatch: 'superelevation',
   MissingBearingLines: 'spans',
   AmbiguousStation: 'geometry',
   InvalidJson: 'other',
@@ -100,6 +102,7 @@ const ALIGNMENT_GROUPS = {
   LengthMismatch: 'geometry',
   VerticalCurvesOverlap: 'geometry',
   InvalidProfile: 'geometry',
+  SuperelevationInconsistent: 'superelevation',
 } as const satisfies Record<AlignmentIssueCode, CheckGroup>;
 
 export const modelIssueGroup = (code: ModelIssueCode): CheckGroup => MODEL_GROUPS[code];

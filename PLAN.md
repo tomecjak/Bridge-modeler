@@ -503,9 +503,11 @@ Rozhodnutia 2026-11-02 (plan mode): panel = karta „Kontroly“ vo výreze, po�
 - [x] štíhlosť h/L: tabuľka orientačných hodnôt podľa typológie (len upozornenie; TODO statik v Otvorených otázkach)
   - `packages/sections/src/slenderness.ts`: `SLENDERNESS` (PLAN.md §7), `sectionDepth` (najväčšia zvislá hrúbka vonkajších obrysov, dutiny sa nerátajú), `slendernessIssues` v strede polí, pri komore s nábehmi aj nad vnútornými podperami (L = dlhšie susedné pole), hlavný prierez NK (nie priečnik); `Slenderness` v skupine Štíhlosť cez `deckChecks`. Testy na tvaroch (doska so sklonom, dvojtrám, komora) a na 212-00 (jednotrám s nábehmi h 1,2: L/h 13,3 / 19,2 / 13,3 mimo 20 – 25); v prehliadači 125-00 (25 + 32 + 25 m, h 2,0: krajné polia masívnejšie).
   - *Predpoklad:* pri typológii s rozsahom nad podperou sa h nad podperou berie na osi uloženia a L ako dlhšie zo susedných polí.
-- [ ] parser `Superelevation` z LandXML (typované problémy, schéma v14) a kontrola parametra `q` v rozsahu NK: NK v nábehu klopenia, plné klopenie ≠ `q` (tolerancia 0,1 %) → upozornenie; ak LandXML klopenie neobsahuje, kontrola sa nezobrazuje
+- [x] parser `Superelevation` z LandXML (typované problémy, schéma v14) a kontrola parametra `q` v rozsahu NK: NK v nábehu klopenia, plné klopenie ≠ `q` (tolerancia 0,1 %) → upozornenie; ak LandXML klopenie neobsahuje, kontrola sa nezobrazuje
+  - `SuperelevationData` v `AlignmentData.superelevation` (schéma v14, voliteľné, migrácia 13 → 14 bez zmeny dát), parser (neplatná hodnota = upozornenie, os ostane použiteľná), `superelevationDiagram` (plné klopenie a nábehy v spojitom staničení, q = e / 100; nekonzistentné → `SuperelevationInconsistent` a `Alignment.superelevation` je undefined), zapisovač `toLandXml` s klopením a test spiatočného prevodu. `crossSlopeIssues` (`packages/sections`): `DeckInSuperelevationTransition`, `CrossSlopeMismatch` (q hlavného prierezu na začiatku, v strede a na konci prekryvu, raz za úsek) cez `deckChecks`; skupina Klopenie. Testy: parser, diagram (aj posunuté údaje ako 125-00), kontrola na 212-00 s klopením, 125-00 z inboxu → nekonzistentné; golden test s výkazom klopenia je `it.todo`. V prehliadači: syntetická os (nábeh km 0,030 – 0,040, plné −3 % proti q 2,5 %) a 125-00 (6 upozornení, kontrola vynechaná).
 
-**Hotové, keď:** všetky kontroly sú na jednom mieste a interpretáciu klopenia overí golden test na podklade s výkazom klopenia.
+**Hotové, keď:** všetky kontroly sú na jednom mieste a interpretáciu klopenia overí golden test na podklade s výkazom klopenia. — *2026-11-02:* kontroly sú na jednom mieste (karta Kontroly) a overené testami aj v prehliadači; **golden test klopenia čaká na výkaz klopenia** (Referenčné dáta, bod 8; `packages/alignment/test/superelevation-125-00.test.ts` má `it.todo`), dovtedy je interpretácia a znamienko predpoklad (otázka 26).
+  - *Ostáva:* kontrola klopenia mimo plného klopenia a nábehov (normálny strechovitý sklon) sa nerobí; štíhlosť a pomer polí sú orientačné (TODO statik).
 
 #### 10i — Rímsy (pred 10h)
 - [ ] rímsa (`edgeBeam`) ako samostatný prvok na okraji NK (rozhodnutie 2026-10-30): parametrický prierez z knižnice (šírka, výška, sklon 4 % k vozovke), vedená po okraji NK v rozsahu NK; schéma + ADR
@@ -651,6 +653,10 @@ Nové otázky (2026-10-31, z odpovedí vyššie):
 Nové otázky (2026-11-02, import meračky — zatiaľ predpoklady, oprav ich):
 24. Čiary meračky majú výšku len vo vrcholoch v zameraných bodoch. *Predpoklad:* medzi nimi sa výška interpoluje lineárne po dĺžke čiary (pred prvým a za posledným zameraným vrcholom ostáva výška krajného), čiara bez výšok leží v 3D na teréne (najvyšší povrch, zhustená po 1 m) a v reze sa nekreslí; úroveň prekážky „výška čiary meračky“ používa tú istú interpoláciu. Má sa radšej čiara bez výšok v 3D skryť, alebo výška brať z terénu aj medzi zameranými bodmi?
 25. Orezanie meračky pri importe. *Predpoklad:* rovnaký koridor ako terén (pás 60 m okolo osi cesty v rozsahu NK alebo oblasti mosta ± 50 m, nastaviteľné v dialógu), čiara ostane celá, ak má aspoň jeden vrchol vnútri; bez osi sa importuje celá meračka. Stačí to, alebo orezávať na obdĺžnik okolo mosta ako pri DMR?
+
+Nové otázky (2026-11-02, Fáza 10g — predpoklady, oprav ich):
+26. Klopenie z LandXML: znamienko `FullSuperelev` kladné = klesá doprava (ako `q`; rozhodnutie z plan mode podľa 125-00), staničenia v `Superelevation` sú spojité (staStart + s, ako PVI), plné klopenie musí ležať v rozsahu prvku `Superelevation` ± 1 m, inak sa os považuje za nekonzistentnú. Overí sa na výkaze klopenia (Referenčné dáta, bod 8).
+27. Kontroly NK sa robia na vzorkách (konce NK, osi uloženia, stredy polí); problém prierezu medzi vzorkami (napr. okraj podľa krivky, ktorá chýba len na krátkom úseku) sa v paneli neukáže — stačí to, alebo zhustiť vzorky (napr. po 1 m)?
 
 ### Zistené z podkladov
 

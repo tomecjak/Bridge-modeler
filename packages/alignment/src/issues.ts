@@ -17,6 +17,8 @@ export type AlignmentIssue = { severity: 'error' | 'warning'; alignment?: string
   | { code: 'LengthMismatch'; declared: number; computed: number }
   | { code: 'VerticalCurvesOverlap'; profile: string; station: number }
   | { code: 'InvalidProfile'; profile: string }
+  /** klopenie v LandXML nesedí s rozsahom oblúka alebo poradím staničení — kontrola `q` sa vynechá (ADR 0022) */
+  | { code: 'SuperelevationInconsistent'; index: number; staStart: number; staEnd: number }
 );
 
 export type AlignmentIssueCode = AlignmentIssue['code'];

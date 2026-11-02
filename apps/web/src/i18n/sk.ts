@@ -139,7 +139,7 @@ export const sk = {
             .join(' · '),
     summaryTitle: 'Súhrn',
     empty: 'Model prešiel všetkými kontrolami.',
-    hint: 'Klik na riadok vyberie prvok (vlastnosti vpravo), dvojklik ho ukáže v pohľade. Prierez NK sa kontroluje na koncoch NK, na osiach uloženia a v stredoch polí. Orientačné hodnoty (ekonomické rozpätie, štíhlosť, pomer polí) sú len upozornenia.',
+    hint: 'Klik na riadok vyberie prvok (vlastnosti vpravo), dvojklik ho ukáže v pohľade. Prierez NK sa kontroluje na koncoch NK, na osiach uloženia a v stredoch polí. Orientačné hodnoty (ekonomické rozpätie, štíhlosť, pomer polí) sú len upozornenia. Klopenie sa kontroluje, len ak ho LandXML obsahuje; os importovanú pred schémou v14 importujte znova.',
     status: (errors: number, warnings: number) => `✖ ${errors} · ⚠ ${warnings}`,
     statusTitle: 'Otvoriť kontroly',
     landxmlFile: 'Súbor LandXML',

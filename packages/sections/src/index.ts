@@ -20,6 +20,7 @@ export * from './sampling.ts';
 export * from './slenderness.ts';
 export * from './spanLayout.ts';
 export * from './spans.ts';
+export * from './superelevation.ts';
 export * from './superstructure.ts';
 export * from './supportGeometry.ts';
 export * from './supports.ts';

@@ -102,6 +102,35 @@ describe('parseLandXml', () => {
     ]);
   });
 
+  it('reads superelevation of curves and warns about invalid values without failing the alignment', () => {
+    const se = `<Superelevation staStart="20" staEnd="60"><BeginRunoutSta>5</BeginRunoutSta>
+      <BeginRunoffSta>10</BeginRunoffSta><FullSuperSta>20</FullSuperSta><FullSuperelev>-4.</FullSuperelev>
+      <RunoffSta>60</RunoffSta><StartofRunoutSta>70</StartofRunoutSta><EndofRunoutSta>75</EndofRunoutSta>
+      </Superelevation><Superelevation staStart="80" staEnd="90"><FullSuperelev>x</FullSuperelev></Superelevation>
+      <Superelevation staEnd="95"/>`;
+    const { alignments, issues } = parseLandXml(doc(alignment(LINE, se)));
+    expect(alignments[0]?.superelevation).toEqual([
+      {
+        staStart: 20,
+        staEnd: 60,
+        beginRunout: 5,
+        beginRunoff: 10,
+        fullSuper: 20,
+        fullSuperelev: -4,
+        runoff: 60,
+        startOfRunout: 70,
+        endOfRunout: 75,
+      },
+      { staStart: 80, staEnd: 90 },
+    ]);
+    expect(issues.map((i) => [i.severity, i.code])).toEqual([
+      ['warning', 'InvalidValue'],
+      ['warning', 'InvalidValue'],
+    ]);
+    // os bez klopenia pole nemá
+    expect(parseLandXml(doc(alignment(LINE))).alignments[0]?.superelevation).toBeUndefined();
+  });
+
   it('reads station equations', () => {
     const eq = '<StaEquation staInternal="120" staBack="1120" staAhead="1100"/>';
     const { alignments } = parseLandXml(doc(alignment(LINE, eq, 'staStart="1000"')));

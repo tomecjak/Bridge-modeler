@@ -9,6 +9,11 @@ import {
 } from './horizontal/horizontal.ts';
 import type { AlignmentIssue } from './issues.ts';
 import { createStationing, type Stationing } from './station/stationing.ts';
+import {
+  SUPERELEVATION_TOLERANCE,
+  type SuperelevationSegment,
+  superelevationDiagram,
+} from './superelevation.ts';
 import { buildVertical, type ProfilePoint, type VerticalProfile } from './vertical/vertical.ts';
 
 export interface AlignmentPoint {
@@ -39,6 +44,8 @@ export interface Alignment {
   readonly elements: readonly ElementInfo[];
   /** prevod s ↔ zobrazované staničenie so skokmi */
   readonly stationing: Stationing;
+  /** diagram klopenia z LandXML (ADR 0022); undefined = os klopenie nemá alebo je nekonzistentné */
+  readonly superelevation?: readonly SuperelevationSegment[] | undefined;
   evaluate(s: number): AlignmentPoint;
   evaluateHorizontal(s: number): HorizontalPoint;
   elevation(s: number): ProfilePoint;
@@ -60,7 +67,12 @@ export function createAlignment(
   const h = buildHorizontal(data.horizontal, vec2(origin.x, origin.y), data.length);
   const profileData = data.profiles[0];
   const v = profileData ? buildVertical(profileData, data.staStart) : { issues: [] };
-  const issues = [...h.issues, ...v.issues].map(scoped);
+  const se = superelevationDiagram(
+    data.superelevation ?? [],
+    data.staStart,
+    SUPERELEVATION_TOLERANCE,
+  );
+  const issues = [...h.issues, ...v.issues, ...se.issues].map(scoped);
   const elements = data.horizontal.map((e, index) => ({
     index,
     kind: e.kind,
@@ -69,7 +81,7 @@ export function createAlignment(
     data: e,
   }));
   return {
-    alignment: new EvaluatedAlignment(data, origin, h.horizontal, v.profile, elements),
+    alignment: new EvaluatedAlignment(data, origin, h.horizontal, v.profile, elements, se.segments),
     issues,
   };
 }
@@ -83,6 +95,7 @@ class EvaluatedAlignment implements Alignment {
   readonly horizontal: HorizontalAlignment;
   readonly profile: VerticalProfile | undefined;
   readonly elements: readonly ElementInfo[];
+  readonly superelevation: readonly SuperelevationSegment[] | undefined;
 
   constructor(
     data: AlignmentData,
@@ -90,7 +103,9 @@ class EvaluatedAlignment implements Alignment {
     horizontal: HorizontalAlignment,
     profile: VerticalProfile | undefined,
     elements: readonly ElementInfo[],
+    superelevation: readonly SuperelevationSegment[] | undefined,
   ) {
+    this.superelevation = superelevation;
     this.origin = origin;
     this.horizontal = horizontal;
     this.profile = profile;

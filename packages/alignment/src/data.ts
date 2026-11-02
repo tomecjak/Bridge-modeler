@@ -14,6 +14,30 @@ export interface AlignmentData {
   horizontal: HorizontalElementData[];
   stationEquations: StationEquationData[];
   profiles: VerticalProfileData[];
+  /** klopenie z LandXML `Superelevation` (ADR 0022); chýba v projektoch importovaných pred schémou v14 */
+  superelevation?: SuperelevationData[] | undefined;
+}
+
+/**
+ * Klopenie jedného oblúka (LandXML `Superelevation`, ADR 0022). Staničenia sú spojité = staStart + s (ako PVI) [m],
+ * sklon v %; kladné plné klopenie = klesá doprava (ako parameter `q` prierezu, predpoklad overí výkaz klopenia).
+ */
+export interface SuperelevationData {
+  staStart: number;
+  staEnd: number;
+  /** začiatok vyrovnania strechovitého sklonu (normálny priečny sklon) */
+  beginRunout?: number | undefined;
+  /** začiatok vzostupnice (vonkajší pruh vo vodorovnej polohe) */
+  beginRunoff?: number | undefined;
+  /** začiatok plného klopenia */
+  fullSuper?: number | undefined;
+  fullSuperelev?: number | undefined;
+  /** koniec plného klopenia */
+  runoff?: number | undefined;
+  /** koniec zostupnice (vonkajší pruh vodorovne) */
+  startOfRunout?: number | undefined;
+  /** koniec vyrovnania (normálny priečny sklon) */
+  endOfRunout?: number | undefined;
 }
 
 export type Rotation = 'cw' | 'ccw';

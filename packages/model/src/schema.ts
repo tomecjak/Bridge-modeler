@@ -14,7 +14,7 @@ import {
 } from './types.ts';
 
 /** Aktuálna verzia schémy projektového súboru; staršie sa pri otvorení migrujú (migrations.ts). */
-export const SCHEMA_VERSION = '13';
+export const SCHEMA_VERSION = '14';
 
 const Vec2Schema = z.object({ x: z.number(), y: z.number() });
 const Vec3Schema = z.object({ x: z.number(), y: z.number(), z: z.number() });
@@ -53,6 +53,22 @@ export const AlignmentDataSchema = z.object({
   stationEquations: z.array(
     z.object({ staInternal: z.number(), staBack: z.number(), staAhead: z.number() }),
   ),
+  /** klopenie z LandXML (ADR 0022); staničenia staStart + s, sklon v % */
+  superelevation: z
+    .array(
+      z.object({
+        staStart: z.number(),
+        staEnd: z.number(),
+        beginRunout: z.number().optional(),
+        beginRunoff: z.number().optional(),
+        fullSuper: z.number().optional(),
+        fullSuperelev: z.number().optional(),
+        runoff: z.number().optional(),
+        startOfRunout: z.number().optional(),
+        endOfRunout: z.number().optional(),
+      }),
+    )
+    .optional(),
   profiles: z.array(
     z.object({
       name: z.string(),

@@ -36,5 +36,7 @@ export function formatIssue(issue: AlignmentIssue): string {
       return `Výškové oblúky nivelety „${issue.profile}“ sa prekrývajú (${formatStation(issue.station)}).`;
     case 'InvalidProfile':
       return `Niveleta „${issue.profile}“ má menej ako dva vrcholy alebo nezoradené staničenia.`;
+    case 'SuperelevationInconsistent':
+      return `Klopenie v LandXML je nekonzistentné (prvok ${issue.index}, ${formatStation(issue.staStart)} – ${formatStation(issue.staEnd)}): nábehy a plné klopenie nesedia s rozsahom oblúka — kontrola priečneho sklonu NK sa pre os vynechá.`;
   }
 }

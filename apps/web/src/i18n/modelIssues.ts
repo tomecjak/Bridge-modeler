@@ -201,6 +201,10 @@ export function formatModelIssue(issue: ModelIssue): string {
       const where = issue.where === 'field' ? `pole ${issue.label}` : `nad podperou ${issue.label}`;
       return `${prefix}${where}: L/h = ${formatNumber(issue.length, 1)} / ${formatNumber(issue.depth, 2)} = ${formatNumber(issue.ratio, 1)}, orientačne L/${issue.min} – L/${issue.max} (${name}) — NK je ${issue.ratio > issue.max ? 'štíhlejšia' : 'masívnejšia'} (informatívne, hodnoty potvrdí statik).`;
     }
+    case 'DeckInSuperelevationTransition':
+      return `${prefix}NK zasahuje do nábehu klopenia ${formatStation(issue.from)} – ${formatStation(issue.to)}: priečny sklon cesty sa tam mení, prierez NK s jedným q ho nesleduje.`;
+    case 'CrossSlopeMismatch':
+      return `${prefix}na ${formatStation(issue.station)} je priečny sklon NK q = ${formatNumber(issue.q * 100, 2)} %, plné klopenie z LandXML ${formatNumber(issue.superelevation * 100, 2)} % (tolerancia 0,1 %).`;
     case 'EndSpanRatio':
       return `${prefix}${issue.span === 'first' ? 'prvé' : 'posledné'} krajné pole má k susednému vnútornému poľu pomer ${formatNumber(issue.ratio, 2)}, orientačne ${formatNumber(issue.min, 2)} – ${formatNumber(issue.max, 2)} (informatívne).`;
     case 'MissingBearingLines':

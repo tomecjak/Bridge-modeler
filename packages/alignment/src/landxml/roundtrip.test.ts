@@ -30,4 +30,22 @@ describe('LandXML round trip of a synthetic alignment', () => {
       expect(Math.abs(a.azimuth - e.azimuth)).toBeLessThan(1e-9);
     }
   });
+
+  it('keeps the superelevation of curves', () => {
+    const withSe = {
+      ...data,
+      superelevation: [
+        {
+          staStart: 40,
+          staEnd: 90,
+          beginRunoff: 30,
+          fullSuper: 40,
+          fullSuperelev: 3.5,
+          runoff: 90,
+        },
+      ],
+    };
+    const back = parseLandXml(toLandXml(withSe)).alignments[0];
+    expect(back?.superelevation).toEqual(withSe.superelevation);
+  });
 });

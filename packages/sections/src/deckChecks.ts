@@ -1,6 +1,7 @@
 import type { ModelIssue, Superstructure } from '@bridge/model';
 import { slendernessIssues } from './slenderness.ts';
 import type { SpanResult } from './spans.ts';
+import { CROSS_SLOPE_TOLERANCE, crossSlopeIssues } from './superelevation.ts';
 import { evaluateSuperstructure, type SectionContext } from './superstructure.ts';
 
 /**
@@ -78,5 +79,6 @@ export function deckChecks(
   const owner = { kind: 'superstructure' as const, name: sup.name };
   if (spans)
     issues.push(...slendernessIssues(ctx, sup, spans, DEPTH_EPS).map((i) => ({ owner, ...i })));
+  issues.push(...crossSlopeIssues(ctx, sup, CROSS_SLOPE_TOLERANCE).map((i) => ({ owner, ...i })));
   return issues;
 }
