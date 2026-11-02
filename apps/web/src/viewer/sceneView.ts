@@ -140,6 +140,8 @@ export class SceneView {
 
     this.materials = {
       superstructure: new MeshStandardMaterial({ color: 0xc4c0b6, roughness: 0.9 }),
+      // rímsy (ADR 0023) svetlejšie ako NK, aby bolo vidno ich hranice
+      edgeBeam: new MeshStandardMaterial({ color: 0xdedad1, roughness: 0.9 }),
       support: new MeshStandardMaterial({ color: 0xa8a399, roughness: 0.9 }),
       // voľný prierez prekážky (ADR 0020): priesvitný, nezakrýva most ani terén
       clearance: new MeshStandardMaterial({

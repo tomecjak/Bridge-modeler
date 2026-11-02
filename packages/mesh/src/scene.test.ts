@@ -8,7 +8,7 @@ import {
   type ProjectFile,
   type Support,
 } from '@bridge/model';
-import { twinDeckExample } from '@bridge/sections';
+import { twinDeckEdgeBeams, twinDeckExample } from '@bridge/sections';
 import { type SupportOnLine, supportsOnLines } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { meshVolume } from './mesh.ts';
@@ -129,6 +129,36 @@ describe('buildScene', () => {
     const empty = buildScene({ ...project, crs: { epsg: 5514, origin: null } }, cache);
     expect(empty.objects).toEqual([]);
     expect(empty.removed).toHaveLength(11);
+  });
+
+  it('adds the edge beams after their deck and rebuilds only a changed edge beam', () => {
+    const beams = twinDeckEdgeBeams(
+      { left: 'L', right: 'P' },
+      { profile: 'rimsa', beams: ['LL', 'LP', 'PL', 'PP'] },
+    );
+    const project = {
+      ...bridge200(),
+      profiles: [...bridge200().profiles, beams.profile],
+      edgeBeams: beams.edgeBeams,
+    };
+    const cache = createSceneCache();
+    const scene = buildScene(project, cache);
+    expect(scene.objects.slice(0, 6).map((o) => [o.kind, o.id])).toEqual([
+      ['superstructure', 'L'],
+      ['edgeBeam', 'LL'],
+      ['edgeBeam', 'LP'],
+      ['superstructure', 'P'],
+      ['edgeBeam', 'PL'],
+      ['edgeBeam', 'PP'],
+    ]);
+    for (const o of scene.objects.filter((x) => x.kind === 'edgeBeam')) {
+      expect(o.issues, o.id).toEqual([]);
+      expect(meshVolume(o.mesh), o.id).toBeGreaterThan(0.3 * 190);
+    }
+    const wider = clone(project);
+    const ll = wider.edgeBeams.find((b) => b.id === 'LL');
+    if (ll) ll.parameterLaws = { ...ll.parameterLaws, b: { kind: 'constant', value: '2' } };
+    expect(buildScene(wider, cache).changed).toEqual([sceneObjectKey('edgeBeam', 'LL')]);
   });
 
   it('is deterministic', () => {

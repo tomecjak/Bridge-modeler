@@ -1,5 +1,5 @@
 import type { Vec2, Vec3 } from '@bridge/geom';
-import type { ModelIssue, Superstructure } from '@bridge/model';
+import type { EdgeBeam, ModelIssue, Superstructure } from '@bridge/model';
 import {
   type DeckSegment,
   type LawRef,
@@ -7,6 +7,7 @@ import {
   type SectionContext,
   type SuperstructureSection,
   type SupportResult,
+  sampleEdgeBeam,
   sampleSuperstructure,
 } from '@bridge/sections';
 import type { GeometryKernel, LoftSection } from './kernel.ts';
@@ -49,6 +50,29 @@ export function superstructureMesh<S>(
   const { stations, endAngles, issues } = samples;
   const meshes = samples.segments.flatMap((segment) => segmentMeshes(kernel, segment));
   return { mesh: mergeMeshes(meshes), stations, endAngles, issues };
+}
+
+/**
+ * Teleso rímsy (ADR 0023) ako sweep jej prierezov vo vzorkách NK; konce sú rovnobežné s koncami NK (šikmé ako NK).
+ * Problémy NK hlási NK, tu len problémy rímsy.
+ */
+export function edgeBeamMesh<S>(
+  kernel: GeometryKernel<S>,
+  input: SuperstructureMeshInput & { beam: EdgeBeam },
+): { mesh: TriangleMesh; issues: ModelIssue[] } {
+  const samples = sampleSuperstructure(input.ctx, input.superstructure, input.supports, input);
+  if (!('sections' in samples)) return { mesh: mergeMeshes([]), issues: [] };
+  const segment = sampleEdgeBeam(input.ctx, input.beam, samples);
+  const seen = new Set<string>();
+  const issues = segment.sections
+    .flatMap((s) => s.issues)
+    .filter((i) => {
+      const key = JSON.stringify(i);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return { mesh: mergeMeshes(segmentMeshes(kernel, segment)), issues };
 }
 
 /** Lofty jedného úseku NK so šikmými hranicami (prierezy za hranicou sa pritiahnu na hraničnú plochu). */

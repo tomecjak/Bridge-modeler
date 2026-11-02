@@ -8,6 +8,11 @@ export interface SectionInput {
     id: string;
     loops: readonly { role: 'outer' | 'void'; points: readonly Vec2[] }[];
   }[];
+  /** rímsy NK v reze (ADR 0023), rovnaké súradnice ako NK */
+  edgeBeams?: readonly {
+    id: string;
+    loops: readonly { role: 'outer' | 'void'; points: readonly Vec2[] }[];
+  }[];
   /** pohľad na podperu na staničení rezu */
   supports: readonly { id: string; body: readonly Polygon2D[]; footing: Polygon2D | undefined }[];
   terrain: readonly (readonly Vec2[])[];
@@ -19,8 +24,8 @@ export interface SectionInput {
 }
 
 /**
- * Priečny rez na staničení (Fáza 6): NK s dutinami, pohľad na podperu, terén a zvislá os cesty cez celý obsah
- * (s presahom 1 m). x = odsadenie od osi cesty, y = výška v m n. m. Bez kót.
+ * Priečny rez na staničení (Fáza 6): NK s dutinami a rímsami, pohľad na podperu, terén a zvislá os cesty cez celý
+ * obsah (s presahom 1 m). x = odsadenie od osi cesty, y = výška v m n. m. Bez kót.
  */
 export function sectionDrawing(input: SectionInput): Drawing {
   const scale = input.scale ?? 100;
@@ -39,6 +44,8 @@ export function sectionDrawing(input: SectionInput): Drawing {
       entities.push(polyline(l.role === 'outer' ? 'deck' : 'deckVoid', l.points, true, d.id));
     }
   }
+  for (const b of input.edgeBeams ?? [])
+    for (const l of b.loops) entities.push(polyline('edgeBeam', l.points, true, b.id));
   const b = drawingBounds({ entities, scale });
   if (b) entities.unshift(polyline('roadAxis', [vec2(0, b.minY - 1), vec2(0, b.maxY + 1)]));
   return { entities, scale };

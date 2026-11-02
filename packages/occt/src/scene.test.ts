@@ -3,13 +3,28 @@
  * zjednotená opora, STEP celej scény.
  */
 import { buildScene, createSceneCache, meshVolume } from '@bridge/mesh';
-import { type DeckSamples, sampleSuperstructure } from '@bridge/sections';
+import { type DeckSamples, edgeBeamTemplate, sampleSuperstructure } from '@bridge/sections';
 import { evaluateReference212, reference212Project } from '@bridge/sections/testing';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { OcctGeometryKernel } from './kernel.ts';
 import { type ExactObject, exactScene, exactSceneStep } from './scene.ts';
 
-const project = reference212Project();
+const base = reference212Project();
+const deckId = base.superstructures[0]?.id ?? '';
+const beam = (id: string, side: 'left' | 'right') => ({
+  id,
+  name: side === 'left' ? 'Rímsa vľavo' : 'Rímsa vpravo',
+  superstructure: deckId,
+  side,
+  profile: 'rimsa',
+  parameterLaws: {},
+});
+// rímsy (ADR 0023) idú do STEP ako samostatné telesá so šikmými koncami NK
+const project = {
+  ...base,
+  profiles: [...base.profiles, edgeBeamTemplate('rimsa')],
+  edgeBeams: [beam('rl', 'left'), beam('rp', 'right')],
+};
 let kernel: OcctGeometryKernel;
 let objects: ExactObject[];
 let elapsed = 0;
@@ -38,6 +53,17 @@ describe('exactScene (212-00)', () => {
     expect(Math.abs(exact - mesh) / mesh).toBeLessThan(0.005);
     // tesselácia presného telesa (rovinné steny) → objem siete zhodný na mm³
     expect(meshVolume(deck.mesh)).toBeCloseTo(exact, 3);
+  });
+
+  it('matches the edge beam volumes of the mesh kernel within 0.5 %', () => {
+    for (const id of ['rl', 'rp']) {
+      const o = objects.find((x) => x.id === id) as ExactObject;
+      expect(o.kind).toBe('edgeBeam');
+      expect(o.solids.map((s) => s.name)).toEqual([`${o.name} (${id})`]);
+      const exact = kernel.volume(o.solids[0]?.solid as never);
+      const mesh = meshVolume(meshOf(id) as never);
+      expect(Math.abs(exact - mesh) / mesh).toBeLessThan(0.005);
+    }
   });
 
   it('ends the deck exactly in the vertical planes through the abutment axes', () => {
@@ -69,7 +95,7 @@ describe('exactScene (212-00)', () => {
   });
 
   it('unites the abutment parts into one body and keeps the pier volume of the mesh kernel', () => {
-    const [, o1, p2] = objects as [ExactObject, ExactObject, ExactObject];
+    const [o1, p2] = objects.filter((o) => o.kind === 'support') as [ExactObject, ExactObject];
     const o1Body = kernel.volume(o1.solids[0]?.solid as never);
     const o1Bearings = o1.solids.slice(1).reduce((a, s) => a + kernel.volume(s.solid), 0);
     const o1Mesh = meshVolume(meshOf(o1.id) as never);

@@ -4,6 +4,7 @@ import {
   bridgeAxisPlan,
   bridgeAxisProfileLine,
   bridgeLengths,
+  edgeBeamTemplate,
   evaluateSpans,
   polylineProfileLine,
   spanLines,
@@ -17,6 +18,7 @@ import { planDrawing } from './plan.ts';
 import {
   profileCuts,
   profileDrawing,
+  profileEdgeBeamLines,
   profileEdgeLines,
   profileGrade,
   profileReadout,
@@ -379,6 +381,81 @@ describe('sectionDrawing', () => {
     ]);
     expect(on(d, 'deck')).toHaveLength(1);
     expect(textHeight(d.scale)).toBeCloseTo(0.25, 12);
+  });
+});
+
+describe('edge beams in the drawings (ADR 0023)', () => {
+  const beam = (id: string, side: 'left' | 'right') => ({
+    id,
+    name: id,
+    superstructure: ref.deck.id,
+    side,
+    profile: 'rimsa',
+    parameterLaws: {},
+  });
+  const ctx = {
+    ...ref.ctx,
+    profiles: [...ref.ctx.profiles, edgeBeamTemplate('rimsa')],
+    edgeBeams: [beam('rl', 'left'), beam('rp', 'right')],
+  };
+  const withBeams = deckDrawingData(ctx, ref.deck, ref.results, {}, ref.lines) as DeckDrawingData;
+  const plan2 = (a: Vec2, b: Vec2) => Math.hypot(b.x - a.x, b.y - a.y);
+
+  it('samples each edge beam with the deck and outlines it in plan with the skewed deck ends', () => {
+    expect(withBeams.edgeBeams.map((b) => [b.id, b.side])).toEqual([
+      ['rl', 'left'],
+      ['rp', 'right'],
+    ]);
+    const [left, right] = withBeams.edgeBeams;
+    expect(left?.segment.stations).toEqual(withBeams.samples.stations);
+    // vonkajšia hrana ľavej rímsy 0,35 m za ľavým okrajom NK (v strede NK)
+    const mid = Math.floor(withBeams.outline.left.length / 2);
+    const deckEdge = withBeams.outline.left[mid] as Vec2;
+    const outer = left?.outline.left ?? [];
+    expect(Math.min(...outer.map((p) => plan2(p, deckEdge)))).toBeCloseTo(0.35, 3);
+    // šikmé konce ako NK: prvý bod vonkajšej hrany pravej rímsy leží na čele NK
+    const end0 = withBeams.outline.right[0] as Vec2;
+    const start = withBeams.outline.left[0] as Vec2;
+    const p = right?.outline.right[0] as Vec2;
+    const cross = (p.x - start.x) * (end0.y - start.y) - (p.y - start.y) * (end0.x - start.x);
+    expect(Math.abs(cross) / plan2(start, end0)).toBeLessThan(1e-6);
+  });
+
+  it('draws the edge beams in plan, section and longitudinal profile on layer RIMSY', () => {
+    const plan = planDrawing({ alignment: ref.alignment, decks: [withBeams], supports: [] });
+    expect(on(plan, 'edgeBeam').map((e) => e.owner)).toEqual(['rl', 'rp']);
+    const section = sectionDrawing({
+      decks: [],
+      edgeBeams: [
+        { id: 'rl', loops: [{ role: 'outer', points: [vec2(0, 0), vec2(1, 0), vec2(1, 1)] }] },
+      ],
+      supports: [],
+      terrain: [],
+    });
+    expect(on(section, 'edgeBeam')).toEqual([
+      expect.objectContaining({ closed: true, owner: 'rl' }),
+    ]);
+
+    const lines = profileEdgeBeamLines(withBeams, axisLine);
+    expect(lines.map((l) => [l.id, l.lines.length])).toEqual([
+      ['rl', 2],
+      ['rp', 2],
+    ]);
+    // horná hrana nad horným povrchom NK, spodok nosa pod ním; v dĺžke NK (± šikmý koniec)
+    const deckTop = Math.max(...cuts.deck.outer.flat().map((q) => q.y));
+    const [top, bottom] = lines[0]?.lines ?? [];
+    expect(Math.min(...(top ?? []).map((q) => q.y))).toBeGreaterThan(deckTop - 1);
+    expect(Math.max(...(bottom ?? []).map((q) => q.y))).toBeLessThan(deckTop);
+    const xs = (top ?? []).map((q) => q.x);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(50);
+    const profile = profileDrawing({
+      line: axisLine,
+      decks: [],
+      supports: [],
+      terrain: [],
+      edgeBeams: lines,
+    });
+    expect(on(profile, 'edgeBeam')).toHaveLength(4);
   });
 });
 

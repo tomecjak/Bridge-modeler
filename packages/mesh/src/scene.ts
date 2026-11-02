@@ -19,10 +19,10 @@ import {
 import { clearanceMesh } from './clearance.ts';
 import { type GeometryKernel, MeshKernel } from './kernel.ts';
 import { meshBounds, type TriangleMesh } from './mesh.ts';
-import { superstructureMesh } from './superstructure.ts';
+import { edgeBeamMesh, superstructureMesh } from './superstructure.ts';
 import { supportMesh } from './supports.ts';
 
-export type SceneObjectKind = 'superstructure' | 'support' | 'clearance';
+export type SceneObjectKind = 'superstructure' | 'edgeBeam' | 'support' | 'clearance';
 
 export interface SceneObject {
   kind: SceneObjectKind;
@@ -39,7 +39,7 @@ export interface SceneCache {
 }
 
 export interface SceneUpdate {
-  /** všetky objekty v stabilnom poradí (NK, potom podpery, v poradí modelu) */
+  /** všetky objekty v stabilnom poradí (NK a jej rímsy, potom podpery, v poradí modelu) */
   objects: SceneObject[];
   /** `kind:id` objektov, ktoré sa prepočítali */
   changed: string[];
@@ -78,6 +78,7 @@ export function buildScene(
         bearingLines: project.bearingLines,
         planLines: project.planLines,
         surveys: project.surveys,
+        edgeBeams: project.edgeBeams,
       };
       if (!project.bearingLines.some((l) => l.crossbeam)) return base;
       // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
@@ -91,6 +92,11 @@ export function buildScene(
         ? [own, own.map((l) => project.profiles.find((p) => p.id === l.crossbeam?.profile))]
         : [];
     };
+    /** úseky priebehov ríms NK (ADR 0023): ich zlomy sú aj vo vzorkách NK */
+    const edgeBeamBreaks = (sup: Superstructure) =>
+      project.edgeBeams
+        .filter((b) => b.superstructure === sup.id)
+        .flatMap((b) => Object.values(b.parameterLaws).filter((l) => l.kind === 'piecewise'));
     /** NK podľa id osi uloženia (podpera patrí NK cez os, ADR 0017) */
     const lineDeck = new Map(project.bearingLines.map((l) => [l.id, l.superstructure]));
     const globalLaws: LawRef[] = project.parameters.map((p) => ({ law: p.law, unit: p.unit }));
@@ -132,7 +138,8 @@ export function buildScene(
       const deckInputs = project.supports.some((s) => lineDeck.get(s.bearingLine) === sup.id)
         ? own().map((r) => [r.support.kind, r.s, r.crossingAngle, r.bearings.map((b) => b.s)])
         : [];
-      const key = JSON.stringify([sup, ...base(sup), deckInputs, crossbeamInputs(sup)]);
+      const breaks = edgeBeamBreaks(sup);
+      const key = JSON.stringify([sup, ...base(sup), deckInputs, crossbeamInputs(sup), breaks]);
       reuse('superstructure', sup.id, key, () => {
         const r = superstructureMesh(kernel, {
           ctx: ctx(),
@@ -148,6 +155,20 @@ export function buildScene(
           issues: r.issues,
         };
       });
+      // rímsy NK (ADR 0023): vzorky NK, vlastný objekt na výber
+      for (const beam of project.edgeBeams.filter((b) => b.superstructure === sup.id)) {
+        const profile = project.profiles.find((p) => p.id === beam.profile);
+        reuse('edgeBeam', beam.id, `${key}|${JSON.stringify([beam, profile])}`, () => {
+          const r = edgeBeamMesh(kernel, {
+            ctx: ctx(),
+            superstructure: sup,
+            supports: own(),
+            globalLaws,
+            beam,
+          });
+          return { kind: 'edgeBeam', id: beam.id, name: beam.name, mesh: r.mesh, issues: r.issues };
+        });
+      }
     }
     project.supports.forEach((support, i) => {
       const line = project.bearingLines.find((l) => l.id === support.bearingLine);

@@ -1,8 +1,9 @@
 import type { Alignment } from '@bridge/alignment';
 import { type DrawnSection, projectSection } from '@bridge/drawing';
-import type { ModelIssue, ParameterSet, Superstructure } from '@bridge/model';
+import type { EdgeBeam, ModelIssue, ParameterSet, Superstructure } from '@bridge/model';
 import {
   type CrossbeamBand,
+  evaluateEdgeBeam,
   evaluateSuperstructure,
   type SectionContext,
   type SuperstructureSection,
@@ -15,11 +16,13 @@ export interface SectionResult {
   section: SuperstructureSection | undefined;
   drawn: DrawnSection | undefined;
   issues: ModelIssue[];
+  /** rímsy NK na staničení rezu (ADR 0023), kotvené na hlavný prierez NK */
+  edgeBeams: { beam: EdgeBeam; section: SuperstructureSection; drawn: DrawnSection | undefined }[];
 }
 
 /**
- * Prierezy všetkých NK na zobrazovanom staničení (v páse priečnika prierez priečnika, ADR 0018) a čas výpočtu
- * (cieľ < 100 ms, PLAN.md Fáza 3).
+ * Prierezy všetkých NK a ich ríms na zobrazovanom staničení (v páse priečnika prierez priečnika, ADR 0018) a čas
+ * výpočtu (cieľ < 100 ms, PLAN.md Fáza 3).
  */
 export function useSectionResults(
   alignments: ReadonlyMap<string, Alignment>,
@@ -31,6 +34,7 @@ export function useSectionResults(
   const profiles = useProject((s) => s.project.profiles);
   const superstructures = useProject((s) => s.project.superstructures);
   const planLines = useProject((s) => s.project.planLines);
+  const edgeBeams = useProject((s) => s.project.edgeBeams);
   return useMemo(() => {
     const start = performance.now();
     const ctx: SectionContext = {
@@ -40,6 +44,7 @@ export function useSectionResults(
       profiles,
       planLines,
       crossbeams,
+      edgeBeams,
     };
     const results = superstructures.map((sup): SectionResult => {
       const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
@@ -56,14 +61,29 @@ export function useSectionResults(
               },
             ]
           : section.issues;
-        return { superstructure: sup, section: undefined, drawn: undefined, issues };
+        return { superstructure: sup, section: undefined, drawn: undefined, issues, edgeBeams: [] };
       }
       const section = evaluateSuperstructure(ctx, sup, s);
+      const beams = edgeBeams.filter((b) => b.superstructure === sup.id);
+      // v páse priečnika sa rímsa drží hlavného prierezu NK
+      const main =
+        beams.length > 0 && crossbeams.get(sup.id)?.length
+          ? evaluateSuperstructure(
+              ctx,
+              sup,
+              s,
+              profiles.find((p) => p.id === sup.profile),
+            )
+          : section;
       return {
         superstructure: sup,
         section,
         drawn: projectSection(section, road, s, sup.id, sup.name),
         issues: section.issues,
+        edgeBeams: beams.map((beam) => {
+          const own = evaluateEdgeBeam(ctx, beam, main);
+          return { beam, section: own, drawn: projectSection(own, road, s, beam.id, beam.name) };
+        }),
       };
     });
     return { results, elapsed: performance.now() - start };
@@ -76,5 +96,6 @@ export function useSectionResults(
     superstructures,
     station,
     crossbeams,
+    edgeBeams,
   ]);
 }

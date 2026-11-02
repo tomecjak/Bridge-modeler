@@ -899,6 +899,12 @@ input[aria-invalid="true"] {
   stroke-width: 1.5;
 }
 
+/* rímsy (ADR 0023): svetlejšia výplň ako NK */
+.edge-beam .deck-fill {
+  fill: color-mix(in srgb, var(--muted) 12%, transparent);
+  stroke-width: 1.2;
+}
+
 .deck-selected .deck-fill {
   fill: color-mix(in srgb, var(--series) 30%, transparent);
   stroke: var(--series);
@@ -988,6 +994,27 @@ input[aria-invalid="true"] {
   fill: color-mix(in srgb, var(--series) 30%, transparent);
   stroke: var(--series);
   stroke-width: 2;
+}
+
+/* rímsy (ADR 0023): obrys v pôdoryse s výplňou, v profile len čiary pohľadu */
+.dw-edge-beam {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+polygon.dw-edge-beam {
+  fill: color-mix(in srgb, var(--muted) 12%, transparent);
+}
+
+.dw-edge-beam.dw-selected {
+  stroke: var(--series);
+  stroke-width: 2;
+}
+
+polygon.dw-edge-beam.dw-selected {
+  fill: color-mix(in srgb, var(--series) 30%, transparent);
 }
 
 .dw-support-axis {

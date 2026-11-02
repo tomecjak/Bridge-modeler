@@ -394,6 +394,8 @@ export function App() {
   );
   const selectedSuperstructureId =
     selectedElement?.collection === 'superstructures' ? selectedElement.id : undefined;
+  const selectedEdgeBeamId =
+    selectedElement?.collection === 'edgeBeams' ? selectedElement.id : undefined;
 
   const tins = useTerrainTins();
   const road = item?.alignment;
@@ -406,7 +408,12 @@ export function App() {
 
   /** Rez v 3D: rovina kolmá na os mosta prvej NK na staničení prierezu, uzávery z prierezov NK. */
   const cut = useMemo((): Cut | undefined => {
-    const withAxis = sections.results.flatMap((r) => (r.section?.axis ? [r.section] : []));
+    // NK aj rímsy (ADR 0023) dostanú v reze výplň
+    const withAxis = sections.results.flatMap((r) =>
+      [r.section, ...r.edgeBeams.map((e) => e.section)].flatMap((sec) =>
+        sec?.axis && sec.loops.length > 0 ? [sec] : [],
+      ),
+    );
     const axis = withAxis[0]?.axis;
     if (!axis) return undefined;
     const t = axis.frame.tangent;
@@ -581,9 +588,13 @@ export function App() {
     });
   }
   const drawnSections = sections.results.flatMap((r) => (r.drawn ? [r.drawn] : []));
+  const drawnEdgeBeams = sections.results.flatMap((r) =>
+    r.edgeBeams.flatMap((e) => (e.drawn ? [e.drawn] : [])),
+  );
   const sectionS = road?.stationing.fromDisplay(sectionAt);
   const sectionView = sectionDrawing({
     decks: drawnSections,
+    edgeBeams: drawnEdgeBeams,
     supports: sectionSupports,
     terrain: sectionTerrain.flatMap((t) => t.runs),
     clearances:
@@ -2652,11 +2663,13 @@ export function App() {
               selected={
                 selectedElement?.collection === 'superstructures'
                   ? { kind: 'superstructure', id: selectedElement.id }
-                  : selectedElement?.collection === 'supports'
-                    ? { kind: 'support', id: selectedElement.id }
-                    : selectedElement?.collection === 'obstacles'
-                      ? { kind: 'clearance', id: selectedElement.id }
-                      : undefined
+                  : selectedElement?.collection === 'edgeBeams'
+                    ? { kind: 'edgeBeam', id: selectedElement.id }
+                    : selectedElement?.collection === 'supports'
+                      ? { kind: 'support', id: selectedElement.id }
+                      : selectedElement?.collection === 'obstacles'
+                        ? { kind: 'clearance', id: selectedElement.id }
+                        : undefined
               }
               onSelect={(picked) => {
                 if (!picked) {
@@ -2668,7 +2681,9 @@ export function App() {
                     ? 'supports'
                     : picked.kind === 'clearance'
                       ? 'obstacles'
-                      : 'superstructures';
+                      : picked.kind === 'edgeBeam'
+                        ? 'edgeBeams'
+                        : 'superstructures';
                 setSelectedElement({ collection, id: picked.id });
                 const station = lineStationOf(picked.id);
                 if (station !== undefined) setSectionStation(station);
@@ -2721,11 +2736,13 @@ export function App() {
           ) : (
             <SectionView
               sections={drawnSections}
+              edgeBeams={drawnEdgeBeams}
+              onSelectEdgeBeam={(id) => setSelectedElement({ collection: 'edgeBeams', id })}
               station={sectionAt}
               range={sectionRange}
               onStation={setSectionStation}
               elapsed={sections.elapsed}
-              selectedId={selectedSuperstructureId}
+              selectedId={selectedSuperstructureId ?? selectedEdgeBeamId}
               onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
               canInsert={defaultDeckRange() !== undefined}
               supports={sectionSupports}

@@ -9,6 +9,7 @@ const LAYER_CLASS: Record<LayerId, string> = {
   stationing: 'dw-stationing',
   deck: 'dw-deck',
   deckVoid: 'dw-void',
+  edgeBeam: 'dw-edge-beam',
   support: 'support-body',
   footing: 'support-footing',
   bearing: 'support-bearing',

@@ -14,6 +14,8 @@ export const LAYERS = {
   stationing: { name: 'STANICENIE', color: 7, linetype: 'CONTINUOUS' },
   deck: { name: 'NK', color: 4, linetype: 'CONTINUOUS' },
   deckVoid: { name: 'NK_DUTINY', color: 4, linetype: 'CONTINUOUS' },
+  /** rímsy (ADR 0023) */
+  edgeBeam: { name: 'RIMSY', color: 8, linetype: 'CONTINUOUS' },
   support: { name: 'PODPERY', color: 3, linetype: 'CONTINUOUS' },
   footing: { name: 'ZAKLADY', color: 8, linetype: 'CONTINUOUS' },
   bearing: { name: 'LOZISKA', color: 5, linetype: 'CONTINUOUS' },

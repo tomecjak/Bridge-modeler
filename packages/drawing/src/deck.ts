@@ -1,4 +1,4 @@
-import type { Superstructure } from '@bridge/model';
+import type { EdgeBeam, Superstructure } from '@bridge/model';
 import {
   type AxisLinePoint,
   type BearingLineResult,
@@ -6,9 +6,12 @@ import {
   type DeckOutline,
   type DeckSamples,
   type DeckSamplingOptions,
+  type DeckSegment,
+  deckEdgeBeams,
   deckOutline,
   type SectionContext,
   type SupportResult,
+  sampleEdgeBeam,
   sampleSuperstructure,
 } from '@bridge/sections';
 
@@ -27,9 +30,23 @@ export interface DeckDrawingData {
   own: SupportResult[];
   /** vyhodnotené osi uloženia tejto NK (ADR 0017) */
   lines: BearingLineResult[];
+  /** rímsy NK (ADR 0023): vzorky ako NK a obrys v pôdoryse (vľavo / vpravo = krajné hrany rímsy) */
+  edgeBeams: EdgeBeamDrawingData[];
 }
 
-/** Vzorky NK, obrys a os mosta v pôdoryse, jej podpery a osi uloženia; `undefined`, ak NK nie je vyhodnotiteľná. */
+/** Rímsa NK pre výkresy (ADR 0023). */
+export interface EdgeBeamDrawingData {
+  id: string;
+  name: string;
+  side: EdgeBeam['side'];
+  segment: DeckSegment;
+  outline: DeckOutline;
+}
+
+/**
+ * Vzorky NK, obrys a os mosta v pôdoryse, jej podpery, osi uloženia a rímsy; `undefined`, ak NK nie je
+ * vyhodnotiteľná.
+ */
 export function deckDrawingData(
   ctx: SectionContext,
   sup: Superstructure,
@@ -50,5 +67,15 @@ export function deckDrawingData(
     samples,
     own,
     lines: lines.filter((l) => l.line.superstructure === sup.id && l.axis),
+    edgeBeams: deckEdgeBeams(ctx, sup).map((b) => {
+      const segment = sampleEdgeBeam(ctx, b, samples);
+      return {
+        id: b.id,
+        name: b.name,
+        side: b.side,
+        segment,
+        outline: deckOutline({ ...segment, endAngles: samples.endAngles }),
+      };
+    }),
   };
 }

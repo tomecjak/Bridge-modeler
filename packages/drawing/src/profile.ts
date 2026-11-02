@@ -9,9 +9,12 @@ import {
   type DeckLongitudinal,
   deckCutAlong,
   deckLongitudinal,
+  type EvaluatedLoop,
+  edgeBeamEdges,
   highestCrossing,
   lowestCrossing,
   type ProfileLine,
+  type SuperstructureSection,
   supportParts,
 } from '@bridge/sections';
 import type { DeckDrawingData } from './deck.ts';
@@ -52,7 +55,15 @@ export interface ProfileInput {
   terrain: readonly (readonly { u: number; z: number }[])[];
   /** prekážky: rez voľným prierezom (u, lokálne z) a u priesečníkov s osou prekážky (ADR 0020) */
   obstacles?: readonly ProfileObstacle[];
+  /** pohľad na rímsy (ADR 0023) */
+  edgeBeams?: readonly ProfileEdgeBeam[];
   scale?: number;
+}
+
+/** Pohľad na rímsu v pozdĺžnom profile (ADR 0023): čiary x = u čiary profilu, y = lokálne z. */
+export interface ProfileEdgeBeam {
+  id: string;
+  lines: readonly (readonly Vec2[])[];
 }
 
 /** Prekážka v pozdĺžnom profile: obrys voľného prierezu a zvislica kríženia s popisom. */
@@ -167,6 +178,49 @@ function runsNear(
     }
   }
   return runs;
+}
+
+const cot = (a: number) => Math.cos(a) / Math.sin(a);
+
+/** Najnižší bod vonkajších obrysov prierezu. */
+function lowestPoint(loops: readonly EvaluatedLoop[]): Vec2 | undefined {
+  let best: Vec2 | undefined;
+  for (const l of loops)
+    if (l.role === 'outer') for (const p of l.polygon) if (!best || p.y < best.y) best = p;
+  return best;
+}
+
+/**
+ * Pohľad na rímsy NK v čiare profilu (ADR 0023): horná vonkajšia hrana a spodok nosa (najnižší bod rímsy) vo vzorkách.
+ * x = u čiary v priečnej rovine vzorky (`lengthAt`); na šikmom konci NK sa staničenie posunie o −x·cot α ako obrys
+ * NK a body za šikmým koncom sa vynechajú. Bod mimo čiary profilu sa vynechá.
+ */
+export function profileEdgeBeamLines(
+  deck: Pick<DeckDrawingData, 'edgeBeams'>,
+  line: ProfileLine,
+): ProfileEdgeBeam[] {
+  return deck.edgeBeams.map((b) => {
+    const { segment } = b;
+    const cot0 = cot(segment.startAngle);
+    const cot1 = cot(segment.endAngle);
+    const sections = segment.sections.filter((sec) => sec.axis && sec.loops.length > 0);
+    const run = (pick: (sec: SuperstructureSection) => Vec2 | undefined): Vec2[] => {
+      const pts: Vec2[] = [];
+      sections.forEach((sec, k) => {
+        const p = pick(sec);
+        if (!p) return;
+        const start = segment.sFrom - p.x * cot0;
+        const end = segment.sTo - p.x * cot1;
+        if (k > 0 && k < sections.length - 1 && (sec.s <= start || sec.s >= end)) return;
+        const u = line.lengthAt(k === 0 ? start : k === sections.length - 1 ? end : sec.s);
+        if (u !== undefined) pts.push(vec2(u, sec.toWorld(p).z));
+      });
+      return pts;
+    };
+    const top = run((sec) => edgeBeamEdges(sec, b.side).outer);
+    const bottom = run((sec) => lowestPoint(sec.loops));
+    return { id: b.id, lines: [top, bottom].filter((l) => l.length >= 2) };
+  });
 }
 
 /** Predĺženie okrajov NK za jej konce pri teréne na okrajoch [m]. */
@@ -332,6 +386,8 @@ export function profileDrawing(input: ProfileInput): Drawing {
     for (const o of deck.cut.outer) entities.push(polyline('deck', lift(o), true, deck.id));
     for (const v of deck.cut.voids) entities.push(polyline('deckVoid', lift(v), true, deck.id));
   }
+  for (const b of input.edgeBeams ?? [])
+    for (const l of b.lines) entities.push(polyline('edgeBeam', lift(l), false, b.id));
   for (const s of input.supports) {
     for (const c of s.cut) {
       entities.push(

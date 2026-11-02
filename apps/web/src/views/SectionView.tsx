@@ -12,6 +12,10 @@ import { boundsOf, fitView, worldToScreen } from './viewTransform.ts';
 
 interface Props {
   sections: readonly DrawnSection[];
+  /** rímsy NK v reze (ADR 0023) */
+  edgeBeams?: readonly DrawnSection[];
+  /** klik na rímsu vyberie rímsu */
+  onSelectEdgeBeam?: (id: string) => void;
   station: number;
   range: { from: number; to: number } | undefined;
   onStation: (station: number) => void;
@@ -37,13 +41,15 @@ interface Props {
   fitRequest: FitRequest;
 }
 
-const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['deck', 'deckVoid', 'roadAxis']);
+const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['deck', 'deckVoid', 'edgeBeam', 'roadAxis']);
 
 const mm = (m: number) => formatNumber(m * 1000, 0);
 
 /** Priečny rez všetkými NK na zvolenom staničení s kótami šírky a výšky v osi. */
 export function SectionView({
   sections,
+  edgeBeams = [],
+  onSelectEdgeBeam,
   station,
   range,
   onStation,
@@ -62,6 +68,7 @@ export function SectionView({
   // pohľad sa prispôsobí len pri zmene zostavy NK, nie pri každom staničení
   const layoutKey = [
     ...sections.map((s) => s.id),
+    ...edgeBeams.map((s) => s.id),
     ...supports.map((s) => s.id),
     ...terrain.map((t) => t.id),
   ].join('|');
@@ -69,6 +76,7 @@ export function SectionView({
   const bounds = useMemo(() => {
     const pts = [
       ...sections.flatMap((s) => s.loops.flatMap((l) => l.points)),
+      ...edgeBeams.flatMap((s) => s.loops.flatMap((l) => l.points)),
       ...supports.flatMap((s) => [...(s.footing ?? []), ...s.body.flat()]),
     ];
     // terén pod mostom (v šírke NK + 10 m) sa zmestí do pohľadu, celý koridor nie
@@ -183,6 +191,26 @@ export function SectionView({
                 </g>
               );
             })}
+            {edgeBeams.map((b) => (
+              // biome-ignore lint/a11y/useSemanticElements: v SVG nemožno použiť <button>; <g> s rolou je správna náhrada
+              <g
+                key={b.id}
+                className={b.id === selectedId ? 'deck edge-beam deck-selected' : 'deck edge-beam'}
+                role="button"
+                tabIndex={0}
+                aria-label={b.name}
+                onClick={() => onSelectEdgeBeam?.(b.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') onSelectEdgeBeam?.(b.id);
+                }}
+              >
+                <path
+                  className="deck-fill"
+                  d={b.loops.map((l) => path(l.points)).join('')}
+                  fillRule="evenodd"
+                />
+              </g>
+            ))}
           </svg>
         )}
       </div>

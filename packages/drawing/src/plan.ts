@@ -21,6 +21,8 @@ export interface PlanInput {
     axis: readonly AxisLinePoint[];
     /** osi uloženia NK (ADR 0017) */
     lines?: readonly BearingLineResult[];
+    /** rímsy NK s obrysom v pôdoryse (ADR 0023) */
+    edgeBeams?: readonly { id: string; outline: DeckOutline }[];
   }[];
   supports: readonly SupportResult[];
   /** ďalšie osi z LandXML (napr. okraje vozovky) */
@@ -165,6 +167,9 @@ export function planDrawing(input: PlanInput): Drawing {
     if (deck.outline.polygon.length >= 3) {
       entities.push(polyline('deck', deck.outline.polygon, true, deck.id));
     }
+    for (const b of deck.edgeBeams ?? [])
+      if (b.outline.polygon.length >= 3)
+        entities.push(polyline('edgeBeam', b.outline.polygon, true, b.id));
   }
 
   for (const r of input.supports) {

@@ -7,13 +7,21 @@ import {
   levelFoundation,
   type Superstructure,
 } from '@bridge/model';
-import { evaluateSuperstructure, type SectionContext, twinDeckExample } from '@bridge/sections';
+import {
+  edgeBeamTemplate,
+  evaluateSuperstructure,
+  type SectionContext,
+  type SuperstructureSection,
+  sampleEdgeBeam,
+  sampleSuperstructure,
+  twinDeckExample,
+} from '@bridge/sections';
 import { evaluateSupportOnLine, type SupportOnLine } from '@bridge/sections/testing';
 import { describe, expect, it } from 'vitest';
 import { MeshKernel } from './kernel.ts';
 import { meshVolume } from './mesh.ts';
 import { sliceMesh } from './slice.ts';
-import { superstructureMesh } from './superstructure.ts';
+import { edgeBeamMesh, superstructureMesh } from './superstructure.ts';
 
 const kernel = new MeshKernel();
 const data = syntheticAlignmentData(undefined, 1000);
@@ -198,5 +206,43 @@ describe('šikmý koniec NK podľa opory', () => {
     expect(sOf(right)).toBeCloseTo(s0 - right * cot, 6);
     expect(sOf(left)).toBeCloseTo(s0 - left * cot, 6);
     expect(meshVolume(r.mesh)).toBeGreaterThan(0);
+  });
+});
+
+describe('edge beam mesh (ADR 0023)', () => {
+  it('sweeps the edge beam along the deck: volume = ∫ A ds along its centroid ± 0.5 %', () => {
+    const beam = {
+      id: 'r',
+      name: 'Rímsa',
+      superstructure: 'L',
+      side: 'left' as const,
+      profile: 'rimsa',
+      parameterLaws: {},
+    };
+    const withBeam: SectionContext = {
+      ...ctx,
+      profiles: [example.profile, edgeBeamTemplate('rimsa')],
+      edgeBeams: [beam],
+    };
+    const r = edgeBeamMesh(kernel, {
+      ctx: withBeam,
+      superstructure: deck('L'),
+      supports: [],
+      beam,
+    });
+    expect(r.issues).toEqual([]);
+    const samples = sampleSuperstructure(withBeam, deck('L'), []);
+    if (!('sections' in samples)) throw new Error('NK sa nevyhodnotila');
+    const segment = sampleEdgeBeam(withBeam, beam, samples);
+    let expected = 0;
+    for (let i = 1; i < segment.sections.length; i++) {
+      const a = segment.sections[i - 1] as SuperstructureSection;
+      const b = segment.sections[i] as SuperstructureSection;
+      const ca = a.toWorld(a.centroid);
+      const cb = b.toWorld(b.centroid);
+      expected += ((a.area + b.area) / 2) * Math.hypot(cb.x - ca.x, cb.y - ca.y, cb.z - ca.z);
+    }
+    expect(expected).toBeGreaterThan(0.3 * 240);
+    expect(Math.abs(meshVolume(r.mesh) / expected - 1)).toBeLessThan(0.005);
   });
 });

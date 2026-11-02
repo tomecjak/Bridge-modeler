@@ -5,6 +5,7 @@ import {
   type ProfileBearingLine,
   profileCuts,
   profileDrawing,
+  profileEdgeBeamLines,
   profileEdgeLines,
 } from '@bridge/drawing';
 import { type Vec2, vec2 } from '@bridge/geom';
@@ -147,6 +148,8 @@ export function useProfileView(input: {
       lines: cuts?.lines ?? [],
       terrain,
       obstacles: profileObstacles(obstacles, line.points, line.road.origin.z),
+      // pohľad na rímsy NK (ADR 0023)
+      edgeBeams: deck ? profileEdgeBeamLines(deck, line) : [],
     });
     const freeHeights = cuts ? profileFreeHeights(obstacles, line, cuts.deck.outer) : [];
     return { drawing, lines: cuts?.lines ?? [], freeHeights };

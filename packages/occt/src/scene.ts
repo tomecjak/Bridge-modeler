@@ -17,6 +17,7 @@ import {
   type SuperstructureSection,
   type SupportContext,
   type SupportResult,
+  sampleEdgeBeam,
   sampleSuperstructure,
   supportParts,
   transverseOffset,
@@ -38,9 +39,10 @@ export interface ExactObject {
 const END_OVERRUN = 0.5;
 
 /**
- * Presná scéna projektu cez OpenCascade (Fáza 8c, ADR 0014): NK ako loft cez vzorky prierezov s presahom za konce,
- * orezaný zvislou rovinou konca (rovnobežnou s osou krajnej opory, inak kolmou na os mosta); podpera ako zjednotenie
- * jej častí, od ktorého sa odčíta NK, ak doň zasahuje (vrch piliera po podhľad NK); ložiská zvlášť.
+ * Presná scéna projektu cez OpenCascade (Fáza 8c, ADR 0014): NK a jej rímsy (ADR 0023) ako loft cez vzorky prierezov
+ * s presahom za konce, orezaný zvislou rovinou konca (rovnobežnou s osou krajnej opory, inak kolmou na os mosta);
+ * podpera ako zjednotenie jej častí, od ktorého sa odčíta NK, ak doň zasahuje (vrch piliera po podhľad NK); ložiská
+ * zvlášť.
  * Doménový model sa nemení (princíp 6); poradie objektov je ako v `buildScene`.
  */
 export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): ExactObject[] {
@@ -56,6 +58,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     superstructures: project.superstructures,
     bearingLines: project.bearingLines,
     planLines: project.planLines,
+    edgeBeams: project.edgeBeams,
   };
   // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
   const lines = project.bearingLines.map((l) => evaluateBearingLine(base, l));
@@ -69,8 +72,32 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     const own = results.filter((r) => r.superstructure === sup.id);
     const samples = sampleSuperstructure(ctx, sup, own, { globalLaws });
     const name = `${sup.name} (${sup.id})`;
+    const beams = project.edgeBeams.filter((b) => b.superstructure === sup.id);
+    /** rímsy NK (ADR 0023) za NK ako v `buildScene`: loft vo vzorkách NK s rovinami koncov NK */
+    const pushBeams = () => {
+      for (const beam of beams) {
+        const segment = 'sections' in samples ? sampleEdgeBeam(ctx, beam, samples) : undefined;
+        const issues = unique(segment?.sections.flatMap((s) => s.issues) ?? []);
+        const solid =
+          segment &&
+          deckSolid(kernel, segment.sections, { start: segment.startAngle, end: segment.endAngle });
+        objects.push(
+          solid
+            ? {
+                kind: 'edgeBeam',
+                id: beam.id,
+                name: beam.name,
+                solids: [{ name: `${beam.name} (${beam.id})`, solid }],
+                mesh: kernel.tessellate(solid),
+                issues,
+              }
+            : empty('edgeBeam', beam.id, beam.name, issues),
+        );
+      }
+    };
     if (!('sections' in samples)) {
       objects.push(empty('superstructure', sup.id, sup.name, samples.issues));
+      pushBeams();
       continue;
     }
     // úseky NK a priečnikov (ADR 0018) zjednotené do jedného telesa
@@ -80,6 +107,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
     const solid = pieces.length > 1 ? kernel.union(pieces) : pieces[0];
     if (!solid) {
       objects.push(empty('superstructure', sup.id, sup.name, samples.issues));
+      pushBeams();
       continue;
     }
     decks.set(sup.id, solid);
@@ -91,6 +119,7 @@ export function exactScene(project: ProjectFile, kernel: OcctGeometryKernel): Ex
       mesh: kernel.tessellate(solid),
       issues: samples.issues,
     });
+    pushBeams();
   }
 
   project.supports.forEach((support, i) => {
@@ -268,4 +297,15 @@ export function exactSceneStep(
     objects.flatMap((o) => o.solids),
     offset,
   );
+}
+
+/** Problémy bez duplicít (rovnaký problém vo viacerých vzorkách raz). */
+function unique(issues: readonly ModelIssue[]): ModelIssue[] {
+  const seen = new Set<string>();
+  return issues.filter((i) => {
+    const k = JSON.stringify(i);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
