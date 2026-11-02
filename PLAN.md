@@ -494,11 +494,12 @@ Rozhodnutia 2026-11-01 (plan mode): hodnoty predvolieb voľných prierezov sú z
 **Hotové, keď:** vetva z LandXML ako prekážka „cesta“ dá km a uhol kríženia, voľný prierez sa ukáže vo všetkých pohľadoch, znížená niveleta vyvolá `ClearanceViolated` a čiara z DXF meračky sa dá použiť ako prekážka. — *2026-11-02:* overené testami (`obstacles.test.ts`: km, uhol a niveleta krížiacej osi z LandXML; `clearanceChecks.test.ts`: `ClearanceViolated` pri zníženej nivelete; `survey.test.ts`: čiara meračky ako os prekážky s úrovňou z jej výšok) a v prehliadači: voľný prierez v profile, priečnom reze, pôdoryse a 3D (10f, 2026-11-01), meračka z DXF so 153 bodmi a prekážka z jej čiary s krížením a voľnou výškou (2026-11-02); mapa ZBGIS aj v pôdoryse.
   - *Ostáva:* hodnoty predvolieb voľných prierezov sú zástupné (otázka 12); presný obrys priechodného prierezu železnice príde s bodmi od projektanta.
 
-#### 10g — Kontroly
-- [ ] panel „Kontroly“: issues zoskupené (geometria, rozpätia, štíhlosť, voľná výška a podpery v prekážke, klopenie, založenie) s odkazom na prvok
-- [ ] štíhlosť h/L: tabuľka orientačných hodnôt podľa typológie (len upozornenie; TODO statik v Otvorených otázkach)
-- [ ] parser `Superelevation` z LandXML (typované problémy) a kontrola parametra `q` v rozsahu NK: NK v nábehu klopenia, plné klopenie ≠ `q` (tolerancia 0,1 %) → upozornenie; ak LandXML klopenie neobsahuje, kontrola sa nezobrazuje
+#### 10g — Kontroly (ADR 0022)
+Rozhodnutia 2026-11-02 (plan mode): panel = karta „Kontroly“ vo výreze, počty chýb a upozornení v stavovom riadku; `FullSuperelev` z Civil 3D kladné = klesá doprava (ako `q`); nekonzistentné klopenie (125-00) → upozornenie a kontrola `q` sa pre os vynechá; štíhlosť na obe strany rozsahu, h = najväčšia zvislá hrúbka prierezu v strede poľa (pri nábehoch aj nad podperou), L = každé pole.
+- [ ] panel „Kontroly“: issues zoskupené (geometria, rozpätia, štíhlosť, voľná výška a podpery v prekážke, klopenie, založenie) s odkazom na prvok; prierez NK vzorkovaný na koncoch, osiach uloženia a v stredoch polí
 - [ ] pomer krajného a vnútorného poľa mimo 0,7 – 0,8 → upozornenie (nie chyba)
+- [ ] štíhlosť h/L: tabuľka orientačných hodnôt podľa typológie (len upozornenie; TODO statik v Otvorených otázkach)
+- [ ] parser `Superelevation` z LandXML (typované problémy, schéma v14) a kontrola parametra `q` v rozsahu NK: NK v nábehu klopenia, plné klopenie ≠ `q` (tolerancia 0,1 %) → upozornenie; ak LandXML klopenie neobsahuje, kontrola sa nezobrazuje
 
 **Hotové, keď:** všetky kontroly sú na jednom mieste a interpretáciu klopenia overí golden test na podklade s výkazom klopenia.
 
