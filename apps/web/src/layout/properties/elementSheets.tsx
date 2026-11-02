@@ -11,7 +11,12 @@ import type {
   Superstructure,
   Support,
 } from '@bridge/model';
-import type { BearingLineResult, DeckWidthRange, SupportResult } from '@bridge/sections';
+import type {
+  BearingLineResult,
+  BridgeArea,
+  DeckWidthRange,
+  SupportResult,
+} from '@bridge/sections';
 import { formatNumber, parseNumber } from '../../format/number.ts';
 import { formatModelIssue } from '../../i18n/modelIssues.ts';
 import { sk } from '../../i18n/sk.ts';
@@ -586,8 +591,8 @@ export function deckSheet(input: {
   widths: DeckWidthRange | undefined;
   /** voľná šírka zo zadania [m] (predvolená požadovaná) */
   briefFreeWidth: number | undefined;
-  /** pôdorysná plocha mosta vrátane ríms [m²] (ADR 0023) */
-  bridgeArea: number | undefined;
+  /** plocha mosta vrátane ríms medzi lícami úložných prahov [m²] (ADR 0024) */
+  bridgeArea: BridgeArea | undefined;
   onEditLaw: (parameter: string) => void;
   onAddSupport: () => void;
   onSpanLayout: () => void;
@@ -634,7 +639,10 @@ export function deckSheet(input: {
           {
             kind: 'readonly' as const,
             label: t.bridgeArea,
-            value: formatNumber(input.bridgeArea, 1),
+            value:
+              input.bridgeArea.source === 'deck'
+                ? t.bridgeAreaDeck(formatNumber(input.bridgeArea.value, 1))
+                : formatNumber(input.bridgeArea.value, 1),
           },
         ]),
     { kind: 'note', text: t.widthsHint, tone: 'muted' },

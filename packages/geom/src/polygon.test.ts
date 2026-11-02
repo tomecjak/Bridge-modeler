@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   centroid,
+  clipPolygonHalfPlane,
   duplicateVertices,
   isCounterClockwise,
   pointInPolygon,
@@ -76,5 +77,27 @@ describe('validity checks', () => {
   it('tests point containment', () => {
     expect(pointInPolygon(vec2(1, 1), square)).toBe(true);
     expect(pointInPolygon(vec2(3, 1), square)).toBe(false);
+  });
+});
+
+describe('clipPolygonHalfPlane', () => {
+  it('keeps the part on the side of the normal', () => {
+    const half = clipPolygonHalfPlane(square, vec2(1, 0), vec2(1, 0));
+    expect(signedArea(half)).toBeCloseTo(2, 12);
+    expect(half.every((p) => p.x >= 1 - TOL)).toBe(true);
+    expect(clipPolygonHalfPlane(square, vec2(1, 0), vec2(-1, 0)).length).toBeGreaterThan(2);
+  });
+
+  it('returns the whole or nothing when the line misses the polygon', () => {
+    expect(clipPolygonHalfPlane(square, vec2(-1, 0), vec2(1, 0))).toEqual(square);
+    expect(clipPolygonHalfPlane(square, vec2(3, 0), vec2(1, 0))).toEqual([]);
+  });
+
+  it('clips a skew strip of a concave polygon exactly', () => {
+    // L-tvar 3 × 3 bez štvorca 2 × 2 vpravo hore (plocha 5), šikmá priamka x + y ≥ 1
+    const l = [vec2(0, 0), vec2(3, 0), vec2(3, 1), vec2(1, 1), vec2(1, 3), vec2(0, 3)];
+    const clipped = clipPolygonHalfPlane(l, vec2(1, 0), vec2(1, 1));
+    // odrezaný trojuholník (0,0), (1,0), (0,1) má plochu 0,5
+    expect(Math.abs(signedArea(clipped))).toBeCloseTo(4.5, 12);
   });
 });

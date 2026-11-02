@@ -30,6 +30,7 @@ import {
 } from '@bridge/model';
 import {
   type AxisLength,
+  bridgeArea,
   bridgeAxisPlan,
   crossbeamBlock,
   type DeckRange,
@@ -47,7 +48,6 @@ import {
   globalScope,
   layoutStations,
   moveLine,
-  outlineArea,
   previewScope,
   profileParameterValues,
   SPAN_SNAP,
@@ -2427,9 +2427,14 @@ export function App() {
               briefFreeWidth: effectiveFreeWidth(project.brief),
               bridgeArea: (() => {
                 const drawing = roadDecks.find((d) => d.id === deck.id);
-                const area = drawing ? outlineArea(drawing.bridgeOutline) : 0;
+                const area =
+                  drawing &&
+                  bridgeArea(
+                    drawing.bridgeOutline,
+                    supportState.supports.filter((r) => r.superstructure === deck.id),
+                  );
                 // NK bez obrysu (chyba prierezu) plochu nemá
-                return area > 0 ? area : undefined;
+                return area && area.value > 0 ? area : undefined;
               })(),
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
               onAddSupport: () => {

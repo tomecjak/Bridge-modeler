@@ -39,6 +39,27 @@ export function centroid(p: Polygon2D): Vec2 {
   return vec2(o.x + cx / (3 * area2), o.y + cy / (3 * area2));
 }
 
+/**
+ * Časť polygónu na strane normály priamky (bod, normála): (q − point)·normal ≥ 0 (Sutherland–Hodgman). Pri
+ * nekonvexnom polygóne môže výsledok obsahovať úseky po priamke tam a späť; plocha je správna. Menej ako 3 body → [].
+ */
+export function clipPolygonHalfPlane(p: Polygon2D, point: Vec2, normal: Vec2): Vec2[] {
+  const side = (q: Vec2) => (q.x - point.x) * normal.x + (q.y - point.y) * normal.y;
+  const out: Vec2[] = [];
+  for (let i = 0; i < p.length; i++) {
+    const a = p[i] as Vec2;
+    const b = p[(i + 1) % p.length] as Vec2;
+    const da = side(a);
+    const db = side(b);
+    if (da >= 0) out.push(a);
+    if (da >= 0 !== db >= 0) {
+      const t = da / (da - db);
+      out.push(vec2(a.x + t * (b.x - a.x), a.y + t * (b.y - a.y)));
+    }
+  }
+  return out.length >= 3 ? out : [];
+}
+
 /** Plocha a ťažisko oblasti „obrys mínus dutiny“ (nezávisle od orientácie vstupov). */
 export function regionProperties(
   outer: Polygon2D,

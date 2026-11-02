@@ -774,12 +774,13 @@ export const sk = {
     noFreeWidth: 'NK nemá rímsy na oboch stranách — voľná šírka sa nemeria.',
     deckWidth: 'Šírka NK [mm]',
     bridgeWidth: 'Šírka mosta (po vonkajšie hrany ríms) [mm]',
-    bridgeArea: 'Plocha mosta (pôdorys) [m²]',
+    bridgeArea: 'Plocha mosta [m²]',
+    bridgeAreaDeck: (value: string) => `${value} (celá NK, bez dvoch opôr)`,
     widthRange: (min: string, max: string) => (min === max ? min : `${min} – ${max}`),
     freeWidthVariable:
       'Vo výrazoch parametrov NK je vstavané meno volnaSirka = požadovaná voľná šírka NK v m (pri NK, inak zo zadania), napr. bL = volnaSirka / 2 + 1.35.',
     widthsHint:
-      'Šírky sa merajú vodorovne v rovine prierezu na koncoch NK, osiach uloženia a v stredoch polí; voľná šírka medzi vnútornými hranami ríms (ADR 0023).',
+      'Šírky sa merajú vodorovne v rovine prierezu na koncoch NK, osiach uloženia a v stredoch polí; voľná šírka medzi vnútornými hranami ríms (ADR 0023). Plocha mosta = pôdorys vrátane ríms medzi prednými lícami úložných prahov (ADR 0024).',
     lawDefault: (value: string) => `predvolená ${value}`,
     lawEdge: (curve: string, side: string) => `okraj podľa ${curve} (${side})`,
     spanRow: (n: number, from: string, to: string) => `${n}. pole (${from} – ${to})`,
