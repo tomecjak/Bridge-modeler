@@ -6,10 +6,12 @@ import type {
   StationFunction,
   StudyArea,
   Superstructure,
+  Survey,
   TerrainSurface,
 } from '@bridge/model';
 import { formatNumber } from '../../format/number.ts';
 import { sk } from '../../i18n/sk.ts';
+import { surveyHeightRange } from '../../import/importSurvey.ts';
 import { terrainSize } from '../../import/importTerrain.ts';
 import type { Command } from '../../store/commands.ts';
 import type { EvaluatedAlignment } from '../../store/derived.ts';
@@ -247,6 +249,85 @@ export function terrainSheet(input: {
     actions:
       terrain.source === 'zbgis'
         ? [{ label: t.redownload, icon: 'dmr', disabled: input.busy, onClick: input.onRedownload }]
+        : [],
+  };
+}
+
+/**
+ * Meračka z DXF (ADR 0021): názov, pôvodný súbor, hladiny zvolené pri importe, počty bodov a čiar, rozsah výšok
+ * a prekážka z čiary meračky.
+ */
+export function surveySheet(input: {
+  survey: Survey;
+  /** výška lokálneho počiatku [m n. m.] */
+  z0: number;
+  onObstacle: () => void;
+  dispatch: Dispatch;
+}): PropertySheet {
+  const t = sk.survey;
+  const { survey } = input;
+  const range = surveyHeightRange(survey);
+  const withHeight = survey.points.filter((p) => p.z !== undefined).length;
+  const list = (names: readonly string[]) => (names.length > 0 ? names.join(', ') : t.none);
+  return {
+    heading: { icon: 'survey', label: sk.properties.surveyKind },
+    groups: [
+      {
+        id: 'survey-identity',
+        title: sk.properties.identity,
+        rows: [
+          {
+            kind: 'text',
+            label: sk.properties.name,
+            value: survey.name,
+            onCommit: (name) =>
+              input.dispatch({
+                type: 'updateElement',
+                collection: 'surveys',
+                id: survey.id,
+                changes: { name },
+              }),
+          },
+          { kind: 'readonly', label: t.source, value: survey.file },
+        ],
+      },
+      {
+        id: 'survey-layers',
+        title: t.layerRoles,
+        rows: (['points', 'heights', 'numbers', 'codes', 'lines'] as const).map((role) => ({
+          kind: 'readonly' as const,
+          label: t.roles[role],
+          value: list(survey.layers[role]),
+        })),
+      },
+      {
+        id: 'survey-data',
+        title: sk.properties.geometry,
+        rows: [
+          {
+            kind: 'readonly',
+            label: t.pointsCount,
+            value: t.pointsValue(survey.points.length, withHeight),
+          },
+          { kind: 'readonly', label: t.linesCount, value: String(survey.lines.length) },
+          {
+            kind: 'readonly',
+            label: t.heights,
+            value: range
+              ? t.heightRange(
+                  formatNumber(range.min + input.z0, 2),
+                  formatNumber(range.max + input.z0, 2),
+                )
+              : t.noHeights,
+          },
+          { kind: 'note', text: t.lineHeightsHint },
+          { kind: 'note', text: t.reimportHint },
+        ],
+      },
+    ],
+    actions:
+      survey.lines.length > 0
+        ? [{ label: t.obstacle, icon: 'obstacle', onClick: input.onObstacle }]
         : [],
   };
 }

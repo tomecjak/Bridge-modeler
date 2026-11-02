@@ -94,10 +94,11 @@ export const PlanLineSchema = z.object({
 });
 export type PlanLine = z.infer<typeof PlanLineSchema>;
 
-/** Krivka v pôdoryse: os cesty z LandXML (podľa názvu) alebo čiara v pôdoryse (podľa id). */
+/** Krivka v pôdoryse: os cesty z LandXML (podľa názvu), čiara v pôdoryse (podľa id) alebo čiara meračky (ADR 0021). */
 export const CurveRefSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('alignment'), name: z.string() }),
   z.object({ type: z.literal('planLine'), id: z.string() }),
+  z.object({ type: z.literal('survey'), survey: z.string(), line: z.string() }),
 ]);
 export type CurveRef = z.infer<typeof CurveRefSchema>;
 

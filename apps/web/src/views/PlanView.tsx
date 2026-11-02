@@ -107,6 +107,9 @@ const LABEL_TICK_PX = 110;
 const MAX_TICKS = 4000;
 /** os cesty (farby podľa prvkov) a staničenie podľa priblíženia kreslí pohľad sám */
 const OWN_LAYERS: ReadonlySet<LayerId> = new Set(['roadAxis', 'stationing']);
+/** výšky bodov meračky sa pri menšom priblížení [px/m] nekreslia (prekrývali by sa) */
+const SURVEY_TEXT_PX = 25;
+const OWN_AND_SURVEY_TEXT: ReadonlySet<LayerId> = new Set([...OWN_LAYERS, 'surveyText']);
 
 export function PlanView({
   alignment,
@@ -527,7 +530,7 @@ export function PlanView({
             <DrawingEntities
               entities={drawing.entities}
               toScreen={toScreen}
-              skip={OWN_LAYERS}
+              skip={view.sx < SURVEY_TEXT_PX ? OWN_AND_SURVEY_TEXT : OWN_LAYERS}
               selected={selected}
             />
           )}

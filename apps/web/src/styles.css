@@ -11,6 +11,7 @@
   --terrain-right: #be185d;
   --clearance: #0e7490;
   --obstacle: #a21caf;
+  --survey: #57534e;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
@@ -30,6 +31,7 @@
     --terrain-right: #f472b6;
     --clearance: #22d3ee;
     --obstacle: #e879f9;
+    --survey: #d6d3d1;
   }
 }
 
@@ -1026,6 +1028,31 @@ text.dw-stationing {
   fill: color-mix(in srgb, var(--clearance) 14%, transparent);
   stroke: var(--clearance);
   stroke-width: 1.2;
+}
+
+/* meračka (ADR 0021) */
+.survey-layers {
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.mini-table .survey-role {
+  text-align: center;
+}
+
+.dw-survey {
+  fill: none;
+  stroke: var(--survey);
+  stroke-width: 1;
+}
+
+.dw-survey-text {
+  font-size: 10px;
+  fill: var(--survey);
+}
+
+.dw-survey.dw-selected {
+  stroke-width: 2;
 }
 
 .dw-obstacle.dw-selected,

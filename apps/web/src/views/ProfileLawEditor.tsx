@@ -9,6 +9,7 @@ import { edgeBreaks, evaluateSuperstructure, type SectionContext } from '@bridge
 import { useMemo } from 'react';
 import { toDisplayUnits } from '../format/displayValue.ts';
 import { sk } from '../i18n/sk.ts';
+import { curveFromKey, curveKey } from '../store/curves.ts';
 import type { ChartSample } from './chartSamples.ts';
 import { ExpressionInput } from './ExpressionInput.tsx';
 import { ValueChart } from './StationFunctionChart.tsx';
@@ -21,8 +22,13 @@ interface Props {
   range: { from: number; to: number };
   /** predvolená hodnota parametra (pri návrate z okraja na staničnú funkciu) */
   defaultValue: string;
-  /** krivky, ku ktorým sa dá okraj merať: osi z LandXML (okrem vlastnej osi cesty) a čiary v pôdoryse */
-  curves: { alignments: readonly string[]; planLines: readonly { id: string; name: string }[] };
+  /** krivky, ku ktorým sa dá okraj merať: osi z LandXML (okrem vlastnej osi cesty), čiary v pôdoryse a meračky */
+  curves: {
+    alignments: readonly string[];
+    planLines: readonly { id: string; name: string }[];
+    /** čiary meračiek: kľúč `curveKey` a popis */
+    surveyLines: readonly { value: string; label: string }[];
+  };
   /** náhľad výsledných hodnôt okraja */
   preview?:
     | { ctx: SectionContext; sup: Superstructure; parameter: string; unit: ParameterUnit }
@@ -36,8 +42,12 @@ export function ProfileLawEditor({ law, onChange, range, defaultValue, curves, p
     ? { type: 'alignment', name: curves.alignments[0] }
     : curves.planLines[0]
       ? { type: 'planLine', id: curves.planLines[0].id }
-      : undefined;
-  const curveKey = (c: EdgeLaw['curve']) => (c.type === 'alignment' ? `a:${c.name}` : `l:${c.id}`);
+      : curveFromKey(curves.surveyLines[0]?.value ?? '');
+  const keys = new Set([
+    ...curves.alignments.map((name) => curveKey({ type: 'alignment', name })),
+    ...curves.planLines.map((l) => curveKey({ type: 'planLine', id: l.id })),
+    ...curves.surveyLines.map((l) => l.value),
+  ]);
   return (
     <div className="sf-editor">
       <label className="field">
@@ -74,22 +84,18 @@ export function ProfileLawEditor({ law, onChange, range, defaultValue, curves, p
               <select
                 value={curveKey(law.curve)}
                 onChange={(e) => {
-                  const v = e.target.value;
-                  const curve: EdgeLaw['curve'] = v.startsWith('a:')
-                    ? { type: 'alignment', name: v.slice(2) }
-                    : { type: 'planLine', id: v.slice(2) };
-                  onChange({ ...law, curve });
+                  const curve = curveFromKey(e.target.value);
+                  if (curve) onChange({ ...law, curve });
                 }}
               >
                 {/* odkaz na chýbajúcu krivku ostane viditeľný, kým ho projektant nezmení */}
-                {!curves.alignments.some((a) => curveKey(law.curve) === `a:${a}`) &&
-                  !curves.planLines.some((l) => curveKey(law.curve) === `l:${l.id}`) && (
-                    <option value={curveKey(law.curve)}>{t.missing}</option>
-                  )}
+                {!keys.has(curveKey(law.curve)) && (
+                  <option value={curveKey(law.curve)}>{t.missing}</option>
+                )}
                 {curves.alignments.length > 0 && (
                   <optgroup label={t.alignments}>
                     {curves.alignments.map((a) => (
-                      <option key={a} value={`a:${a}`}>
+                      <option key={a} value={curveKey({ type: 'alignment', name: a })}>
                         {a}
                       </option>
                     ))}
@@ -98,8 +104,17 @@ export function ProfileLawEditor({ law, onChange, range, defaultValue, curves, p
                 {curves.planLines.length > 0 && (
                   <optgroup label={t.planLines}>
                     {curves.planLines.map((l) => (
-                      <option key={l.id} value={`l:${l.id}`}>
+                      <option key={l.id} value={curveKey({ type: 'planLine', id: l.id })}>
                         {l.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {curves.surveyLines.length > 0 && (
+                  <optgroup label={t.surveyLines}>
+                    {curves.surveyLines.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
                       </option>
                     ))}
                   </optgroup>

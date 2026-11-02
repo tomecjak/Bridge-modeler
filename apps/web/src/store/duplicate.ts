@@ -202,6 +202,7 @@ export function duplicateElement(
       };
     }
     case 'terrains':
+    case 'surveys':
       return undefined;
   }
 }

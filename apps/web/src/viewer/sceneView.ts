@@ -18,6 +18,8 @@ import {
   MeshStandardMaterial,
   PerspectiveCamera,
   Plane,
+  Points,
+  PointsMaterial,
   Raycaster,
   Scene,
   Sphere,
@@ -40,6 +42,8 @@ interface Theme {
   edges: string;
   /** výplň rezu */
   cut: string;
+  /** čiary a body meračky */
+  survey: string;
 }
 
 /** Obrys prierezu NK pre uzáver rezu: body v rovine prierezu (triangulácia) a v lokálnych súradniciach. */
@@ -106,6 +110,14 @@ export class SceneView {
   private terrainMapMaterials: MeshLambertMaterial[] = [];
   private caps: Mesh[] = [];
   private axisLine: Line | undefined;
+  /** meračka (ADR 0021): úsečky čiar a body */
+  private readonly surveyMaterial = new LineBasicMaterial({ color: 0x57534e });
+  private readonly surveyPointMaterial = new PointsMaterial({
+    color: 0x57534e,
+    size: 4,
+    sizeAttenuation: false,
+  });
+  private surveyObjects: (LineSegments | Points)[] = [];
   private selectedKey: string | undefined;
   private clipping: Plane[] = [];
   private frame = 0;
@@ -167,6 +179,8 @@ export class SceneView {
     this.materials.selectedClearance.color.set(theme.accent);
     this.capMaterial.color.set(theme.cut);
     this.edgeMaterial.color.set(theme.edges);
+    this.surveyMaterial.color.set(theme.survey);
+    this.surveyPointMaterial.color.set(theme.survey);
     this.requestRender();
   }
 
@@ -210,6 +224,39 @@ export class SceneView {
       this.axisLine.position.set(c.x, c.y, c.z);
       this.scene.add(this.axisLine);
       if (this.fitted === 'none' && this.entries.size === 0) this.fit();
+    }
+    this.requestRender();
+  }
+
+  /** Meračka (ADR 0021): čiary a body v lokálnych súradniciach (nahradia predchádzajúce). */
+  setSurvey(lines: readonly (readonly Vec3[])[], points: readonly Vec3[]): void {
+    for (const o of this.surveyObjects) {
+      this.scene.remove(o);
+      o.geometry.dispose();
+    }
+    this.surveyObjects = [];
+    const all = [...lines.flat(), ...points];
+    if (all.length > 0) {
+      const c = center(all);
+      const segments = lines.flatMap((l) => l.slice(1).flatMap((p, i) => [l[i] as Vec3, p]));
+      for (const [list, make] of [
+        [segments, (g: BufferGeometry) => new LineSegments(g, this.surveyMaterial)],
+        [points, (g: BufferGeometry) => new Points(g, this.surveyPointMaterial)],
+      ] as const) {
+        if (list.length === 0) continue;
+        const arr = new Float32Array(list.length * 3);
+        list.forEach((p, i) => {
+          arr[3 * i] = p.x - c.x;
+          arr[3 * i + 1] = p.y - c.y;
+          arr[3 * i + 2] = p.z - c.z;
+        });
+        const g = new BufferGeometry();
+        g.setAttribute('position', new BufferAttribute(arr, 3));
+        const o = make(g);
+        o.position.set(c.x, c.y, c.z);
+        this.scene.add(o);
+        this.surveyObjects.push(o);
+      }
     }
     this.requestRender();
   }
@@ -353,6 +400,9 @@ export class SceneView {
     this.setAxis([]);
     this.setCut(undefined);
     this.setTerrain([]);
+    this.setSurvey([], []);
+    this.surveyMaterial.dispose();
+    this.surveyPointMaterial.dispose();
     this.capMaterial.dispose();
     this.terrainMaterial.dispose();
     this.controls.dispose();

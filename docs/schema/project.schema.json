@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "12"
+      "const": "13"
     },
     "name": {
       "type": "string"
@@ -1162,6 +1162,27 @@
                             "id"
                           ],
                           "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "const": "survey"
+                            },
+                            "survey": {
+                              "type": "string"
+                            },
+                            "line": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "survey",
+                            "line"
+                          ],
+                          "additionalProperties": false
                         }
                       ]
                     },
@@ -1781,6 +1802,27 @@
                           "id"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "survey"
+                          },
+                          "survey": {
+                            "type": "string"
+                          },
+                          "line": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "survey",
+                          "line"
+                        ],
+                        "additionalProperties": false
                       }
                     ]
                   }
@@ -1908,6 +1950,151 @@
         ],
         "additionalProperties": false
       }
+    },
+    "surveys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "layers": {
+            "type": "object",
+            "properties": {
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "heights": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "numbers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "codes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "points",
+              "heights",
+              "numbers",
+              "codes",
+              "lines"
+            ],
+            "additionalProperties": false
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                },
+                "number": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "x",
+                "y"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "layer": {
+                  "type": "string"
+                },
+                "points": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "closed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "layer",
+                "points",
+                "closed"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "file",
+          "layers",
+          "points",
+          "lines"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
@@ -1925,9 +2112,10 @@
     "supports",
     "terrains",
     "planLines",
-    "obstacles"
+    "obstacles",
+    "surveys"
   ],
   "additionalProperties": false,
-  "$id": "https://bridge-modeler.local/schema/project-12.json",
-  "title": "Projekt modelára mostov (schemaVersion 12)"
+  "$id": "https://bridge-modeler.local/schema/project-13.json",
+  "title": "Projekt modelára mostov (schemaVersion 13)"
 }

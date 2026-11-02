@@ -8,7 +8,7 @@ import { StationField } from '../views/StationFunctionEditor.tsx';
 export interface ObstacleForm {
   kind: ObstacleKind;
   name: string;
-  /** `alignment:<meno>`, `planLine:<id>` alebo `station` */
+  /** `alignment:<meno>`, `planLine:<id>`, `survey:<meračka>/<čiara>` alebo `station` */
   source: string;
   road: string;
   station: number;
@@ -18,6 +18,8 @@ export interface ObstacleForm {
 interface Props {
   alignments: readonly string[];
   planLines: readonly { id: string; name: string }[];
+  /** čiary meračiek (kľúč `curveKey`, popis) — ADR 0021 */
+  surveyLines: readonly { value: string; label: string }[];
   initial: { source: string; road: string; station: number };
   nameFor: (kind: ObstacleKind) => string;
   onInsert: (form: ObstacleForm) => void;
@@ -33,10 +35,11 @@ const KINDS: readonly ObstacleKind[] = [
   'other',
 ];
 
-/** Dialóg „Vložiť prekážku“: os z LandXML, čiara v pôdoryse alebo ručné kríženie na km osi cesty s uhlom. */
+/** Dialóg „Vložiť prekážku“: os z LandXML, čiara v pôdoryse, čiara meračky alebo ručné kríženie na km osi cesty. */
 export function ObstacleInsertDialog({
   alignments,
   planLines,
+  surveyLines,
   initial,
   nameFor,
   onInsert,
@@ -114,6 +117,11 @@ export function ObstacleInsertDialog({
               {planLines.map((l) => (
                 <option key={`l:${l.id}`} value={`planLine:${l.id}`}>
                   {t.curvePlanLine(l.name)}
+                </option>
+              ))}
+              {surveyLines.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {t.curveSurvey(l.label)}
                 </option>
               ))}
               <option value="station">{t.manual}</option>

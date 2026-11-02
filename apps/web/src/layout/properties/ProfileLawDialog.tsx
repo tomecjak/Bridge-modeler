@@ -1,6 +1,7 @@
 import type { ProfileLaw } from '@bridge/model';
 import type { SectionContext } from '@bridge/sections';
 import { sk } from '../../i18n/sk.ts';
+import { surveyLineOptions } from '../../store/curves.ts';
 import { projectStore, useProject } from '../../store/projectStore.ts';
 import { ProfileLawEditor } from '../../views/ProfileLawEditor.tsx';
 import { Dialog } from './Dialog.tsx';
@@ -25,6 +26,7 @@ export function ProfileLawDialog({
   const axes = useProject((s) => s.project.bridgeAxes);
   const alignmentNames = useProject((s) => s.project.alignments.map((a) => a.name).join('\n'));
   const planLines = useProject((s) => s.project.planLines);
+  const surveys = useProject((s) => s.project.surveys);
   if (!deck) return null;
   const def = profiles
     .find((p) => p.id === deck.profile)
@@ -35,6 +37,7 @@ export function ProfileLawDialog({
   const curves = {
     alignments: alignmentNames.split('\n').filter((n) => n !== '' && n !== ownRoad),
     planLines: planLines.map((l) => ({ id: l.id, name: l.name })),
+    surveyLines: surveyLineOptions(surveys),
   };
   const law = deck.parameterLaws[parameter];
   const setLaw = (next: ProfileLaw | undefined) => {

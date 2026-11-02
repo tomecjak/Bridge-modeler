@@ -41,6 +41,7 @@ import {
   snapToPrevious,
   twinDeckExample,
 } from '@bridge/sections';
+import type { DxfDrawing, ExtractedSurvey, SurveyLayers } from '@bridge/survey';
 import {
   bridgeRanges,
   type CorridorOptions,
@@ -55,6 +56,13 @@ import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
 import { formatTerrainIssue } from './i18n/terrainIssues.ts';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
+import {
+  buildSurvey,
+  isSurveyFile,
+  readSurveyFile,
+  type SurveyFile,
+  surveyOrigin,
+} from './import/importSurvey.ts';
 import {
   buildTerrain,
   DEFAULT_TERRAIN_MARGIN,
@@ -89,6 +97,7 @@ import {
   bridgeAxisSheet,
   planLineSheet,
   studyAreaSheet,
+  surveySheet,
   terrainSheet,
   viewSheet,
 } from './layout/properties/simpleSheets.tsx';
@@ -108,6 +117,7 @@ import {
   type SpanLayoutForm,
 } from './layout/SpanLayoutDialog.tsx';
 import { SupportLibraryDialog } from './layout/SupportLibraryDialog.tsx';
+import { SurveyImportDialog } from './layout/SurveyImportDialog.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { useSupportSources } from './layout/useSupportSources.ts';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
@@ -117,6 +127,7 @@ import { drawingFileName } from './persistence/fileName.ts';
 import { nextLineName } from './store/bearingLines.ts';
 import { type BrowserTarget, browserTree } from './store/browserTree.ts';
 import type { Command, ElementCollection } from './store/commands.ts';
+import { curveFromKey, surveyLineOptions } from './store/curves.ts';
 import { alignmentsByName, useEvaluatedAlignments } from './store/derived.ts';
 import { useDeckDrawings } from './store/drawings.ts';
 import { duplicateElement } from './store/duplicate.ts';
@@ -140,6 +151,7 @@ import {
   projectSupportEntries,
   supportTypeOptions,
 } from './store/supportTypes.ts';
+import { planSurveys, sectionSurveys } from './store/survey.ts';
 import {
   terrainCrossSections,
   terrainProfiles,
@@ -206,6 +218,8 @@ export function App() {
   /** mapový podklad v pôdoryse (odpoveď 23) */
   const [planBasemap, setPlanBasemap] = useState<BasemapKind>('none');
   const [terrainFile, setTerrainFile] = useState<TerrainFile>();
+  /** načítaná meračka DXF pred výberom hladín (ADR 0021) */
+  const [surveyFile, setSurveyFile] = useState<SurveyFile>();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [supportLibraryOpen, setSupportLibraryOpen] = useState(false);
   /** dialóg Vložiť prekážku s predvolenou osou (ADR 0020) */
@@ -266,6 +280,7 @@ export function App() {
   const [goTo, setGoTo] = useState<{ s: number; nonce: number }>();
   const landXmlInput = useRef<HTMLInputElement>(null);
   const terrainInput = useRef<HTMLInputElement>(null);
+  const surveyInput = useRef<HTMLInputElement>(null);
 
   const item = alignments[selected];
   const parameterState = useParameterState(item?.alignment.stationing);
@@ -287,6 +302,7 @@ export function App() {
             bridgeAxes: project.bridgeAxes,
             profiles: project.profiles,
             planLines: project.planLines,
+            surveys: project.surveys,
           }
         : undefined,
     [
@@ -295,6 +311,7 @@ export function App() {
       project.bridgeAxes,
       project.profiles,
       project.planLines,
+      project.surveys,
       project.crs.origin,
     ],
   );
@@ -481,8 +498,17 @@ export function App() {
         otherAlignments,
         planLines: project.planLines,
         obstacles: planObstacles(obstacleState),
+        surveys: planSurveys(project.surveys, road.origin.z),
       }),
-    [road, roadDecks, roadSupports, otherAlignments, project.planLines, obstacleState],
+    [
+      road,
+      roadDecks,
+      roadSupports,
+      otherAlignments,
+      project.planLines,
+      obstacleState,
+      project.surveys,
+    ],
   );
 
   /** Nakreslená čiara v pôdoryse (súradnice na mm) sa pridá a vyberie. */
@@ -518,6 +544,10 @@ export function App() {
     terrain: sectionTerrain.flatMap((t) => t.runs),
     clearances:
       road && sectionS !== undefined ? sectionClearances(obstacleState, road, sectionS) : [],
+    surveys:
+      road && sectionS !== undefined
+        ? sectionSurveys(project.surveys, road, sectionS, road.origin.z)
+        : [],
   });
 
   /** Prierez vybraný v strome: editor s hodnotami parametrov z NK, ktorá ho používa, inak predvolené. */
@@ -649,17 +679,19 @@ export function App() {
    * kótu odhadnutú 6 m pod niveletou osi cesty v krížení (projektant ju prepíše).
    */
   function insertObstacle(form: ObstacleForm) {
-    const colon = form.source.indexOf(':');
-    const reference: Obstacle['reference'] =
-      form.source === 'station'
-        ? { type: 'station', alignment: form.road, station: form.station, angle: form.angle }
-        : form.source.startsWith('alignment:')
-          ? { type: 'curve', curve: { type: 'alignment', name: form.source.slice(colon + 1) } }
-          : { type: 'curve', curve: { type: 'planLine', id: form.source.slice(colon + 1) } };
+    const curve = curveFromKey(form.source);
+    const reference: Obstacle['reference'] = curve
+      ? { type: 'curve', curve }
+      : { type: 'station', alignment: form.road, station: form.station, angle: form.angle };
     const graded =
-      reference.type === 'curve' &&
-      reference.curve.type === 'alignment' &&
-      alignmentMap.get(reference.curve.name)?.profile !== undefined;
+      curve?.type === 'alignment' && alignmentMap.get(curve.name)?.profile !== undefined;
+    // čiara meračky so zameranou výškou dá úroveň prekážky (ADR 0021)
+    const surveyed =
+      curve?.type === 'survey' &&
+      project.surveys
+        .find((s) => s.id === curve.survey)
+        ?.lines.find((l) => l.id === curve.line)
+        ?.points.some((p) => p.z !== undefined) === true;
     const draft = newObstacle({
       id: newId('obst'),
       name: form.name,
@@ -675,6 +707,7 @@ export function App() {
         bridgeAxes: project.bridgeAxes,
         superstructures: project.superstructures,
         planLines: project.planLines,
+        surveys: project.surveys,
       },
       draft,
     ).crossings[0];
@@ -694,9 +727,11 @@ export function App() {
         : crossing && axisRoad
           ? roadAt(axisRoad, crossing.station)
           : undefined;
-    const obstacle = graded
+    const obstacle: Obstacle = graded
       ? draft
-      : newObstacle({ ...draft, reference, graded, level: (grade ?? 6) - 6 });
+      : surveyed
+        ? { ...draft, level: { kind: 'line' } }
+        : newObstacle({ ...draft, reference, graded, level: (grade ?? 6) - 6 });
     projectStore.getState().dispatch({ type: 'addElements', obstacles: [obstacle] });
     setSelectedElement({ collection: 'obstacles', id: obstacle.id });
     setObstacleDialog(undefined);
@@ -1418,6 +1453,7 @@ export function App() {
       case 'planLines':
       case 'bridgeAxes':
       case 'obstacles':
+      case 'surveys':
         setMode('2d');
         return;
     }
@@ -1540,6 +1576,7 @@ export function App() {
     terrains: 'terrain',
     obstacles: 'obstacle',
     bridgeAxes: 'bridgeAxis',
+    surveys: 'survey',
   };
   const placing =
     tool === 'support'
@@ -1572,7 +1609,9 @@ export function App() {
         label: sk.elements.titles[selectedElement.collection],
         onDelete: deleteSelected,
         onDuplicate:
-          selectedElement.collection !== 'terrains' ? () => duplicate(selectedElement) : undefined,
+          selectedElement.collection !== 'terrains' && selectedElement.collection !== 'surveys'
+            ? () => duplicate(selectedElement)
+            : undefined,
         onRename: renameSelected,
         onShowInSection: () => {
           const station = targetStation({ type: 'element', ...selectedElement });
@@ -1596,7 +1635,10 @@ export function App() {
           setMode('section');
         },
         onVertices: () => setPlanLineVertices(selectedElement.id),
-        onObstacleFromLine: () => openObstacleDialog(`planLine:${selectedElement.id}`),
+        onObstacleFromLine: () =>
+          selectedElement.collection === 'surveys'
+            ? openSurveyObstacle(selectedElement.id)
+            : openObstacleDialog(`planLine:${selectedElement.id}`),
         onRedownload:
           project.terrains.find((t) => t.id === selectedElement.id)?.source === 'zbgis'
             ? () => void downloadDmrTerrain(selectedElement.id)
@@ -1646,6 +1688,7 @@ export function App() {
     },
     onImportLandXml: () => landXmlInput.current?.click(),
     onImportTerrain: () => terrainInput.current?.click(),
+    onImportSurvey: () => surveyInput.current?.click(),
     onInsertObstacle: () => openObstacleDialog(),
     onDownloadDmr: () => void downloadDmrTerrain(),
     onCancelDmr: () => {
@@ -1798,6 +1841,83 @@ export function App() {
     } catch {
       setMessage(sk.import.readFailed);
     }
+  }
+
+  async function openSurveyFile(file: File) {
+    if (!isSurveyFile(file.name)) {
+      setMessage(sk.survey.unsupportedFile);
+      return;
+    }
+    try {
+      setSurveyFile(await readSurveyFile(file));
+    } catch {
+      setMessage(sk.import.readFailed);
+    }
+  }
+
+  /**
+   * Meračka z dialógu (ADR 0021): orezaná na koridor okolo zobrazenej osi (ako terén), v lokálnych súradniciach na mm;
+   * projekt bez počiatku ho dostane z meračky. Jeden krok späť.
+   */
+  function importSurvey(input: {
+    drawing: DxfDrawing;
+    layers: SurveyLayers;
+    name: string;
+    clip: CorridorOptions | undefined;
+    extracted: ExtractedSurvey;
+  }) {
+    const origin = project.crs.origin ?? surveyOrigin(input.drawing);
+    if (!origin || !surveyFile) return;
+    const road = item?.alignment;
+    const clip =
+      input.clip && road && project.crs.origin
+        ? corridorAround(
+            road,
+            bridgeRanges(road, project.superstructures, project.bridgeAxes, project.studyArea),
+            input.clip,
+          )
+        : undefined;
+    const built = buildSurvey({
+      drawing: input.drawing,
+      fileName: surveyFile.fileName,
+      layers: input.layers,
+      id: newId('survey'),
+      name: input.name,
+      origin,
+      clip,
+      extracted: input.extracted,
+    });
+    setSurveyFile(undefined);
+    if (!built.survey) {
+      setMessage(sk.survey.empty);
+      return;
+    }
+    projectStore.getState().dispatch({
+      type: 'addElements',
+      surveys: [built.survey],
+      ...(project.crs.origin ? {} : { origin }),
+    });
+    setSelectedElement({ collection: 'surveys', id: built.survey.id });
+    setMode('2d');
+    setMessage(
+      [
+        sk.survey.imported(
+          built.survey.name,
+          built.survey.points.length,
+          built.survey.lines.length,
+        ),
+        ...(built.dropped.points + built.dropped.lines > 0
+          ? [sk.survey.dropped(built.dropped.points, built.dropped.lines)]
+          : []),
+        ...(built.issues.length > 0 ? [sk.survey.warnings(built.issues.length)] : []),
+      ].join(' '),
+    );
+  }
+
+  /** Prekážka z prvej čiary meračky (os prekážky sa dá v dialógu zmeniť na inú čiaru meračky). */
+  function openSurveyObstacle(surveyId: string) {
+    const line = project.surveys.find((s) => s.id === surveyId)?.lines[0];
+    if (line) openObstacleDialog(`survey:${surveyId}/${line.id}`);
   }
 
   /** Oreže vybrané povrchy na koridor okolo zobrazenej osi a pridá ich do projektu (jeden krok späť). */
@@ -1963,8 +2083,23 @@ export function App() {
               check: clearanceChecks.get(obstacle.id),
               alignments: project.alignments,
               planLines: project.planLines,
+              surveyLines: surveyLineOptions(project.surveys),
               bridgeAxes: project.bridgeAxes,
               onDelete: deleteSelected,
+              dispatch,
+            })}
+          />
+        );
+    }
+    if (el?.collection === 'surveys') {
+      const survey = project.surveys.find((s) => s.id === el.id);
+      if (survey)
+        return (
+          <PropertiesPalette
+            sheet={surveySheet({
+              survey,
+              z0: project.crs.origin?.z ?? 0,
+              onObstacle: () => openSurveyObstacle(survey.id),
               dispatch,
             })}
           />
@@ -2172,7 +2307,8 @@ export function App() {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) void openLandXml(file);
+    if (file && isSurveyFile(file.name)) void openSurveyFile(file);
+    else if (file) void openLandXml(file);
   }
 
   return (
@@ -2232,6 +2368,17 @@ export function App() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) void openTerrainFile(file);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={surveyInput}
+        type="file"
+        accept=".dxf"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void openSurveyFile(file);
           e.target.value = '';
         }}
       />
@@ -2422,6 +2569,7 @@ export function App() {
         <ObstacleInsertDialog
           alignments={project.alignments.map((a) => a.name)}
           planLines={project.planLines}
+          surveyLines={surveyLineOptions(project.surveys)}
           initial={obstacleDialog}
           nameFor={(kind) =>
             obstacleName(
@@ -2576,6 +2724,14 @@ export function App() {
           busy={terrainBusy}
           onConfirm={(selected, options) => void importTerrains(selected, options)}
           onCancel={() => setTerrainFile(undefined)}
+        />
+      )}
+      {surveyFile && (
+        <SurveyImportDialog
+          file={surveyFile}
+          alignmentName={project.crs.origin ? item?.alignment.name : undefined}
+          onConfirm={importSurvey}
+          onCancel={() => setSurveyFile(undefined)}
         />
       )}
     </div>

@@ -18,6 +18,7 @@
     "@bridge/model": "workspace:*",
     "@bridge/occt": "workspace:*",
     "@bridge/sections": "workspace:*",
+    "@bridge/survey": "workspace:*",
     "@bridge/terrain": "workspace:*",
     "comlink": "4.4.2",
     "immer": "11.2.9",

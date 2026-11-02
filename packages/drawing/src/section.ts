@@ -1,5 +1,6 @@
 import { type Polygon2D, type Vec2, vec2 } from '@bridge/geom';
-import { type Drawing, drawingBounds, type Entity, polyline } from './model.ts';
+import { type Drawing, drawingBounds, type Entity, polyline, textHeight } from './model.ts';
+import { surveyEntities } from './plan.ts';
 
 export interface SectionInput {
   /** obrysy NK (x = odsadenie od osi cesty vpravo [m], y = výška [m n. m.]) */
@@ -12,6 +13,8 @@ export interface SectionInput {
   terrain: readonly (readonly Vec2[])[];
   /** rez voľnými prierezmi prekážok (x, výška v m n. m.; ADR 0020) */
   clearances?: readonly { id: string; polygons: readonly Polygon2D[] }[];
+  /** meračka v reze: priesečníky čiar a zamerané body pri rovine rezu (x, výška v m n. m.; ADR 0021) */
+  surveys?: readonly { id: string; points: readonly { at: Vec2; label: string | undefined }[] }[];
   scale?: number;
 }
 
@@ -21,10 +24,12 @@ export interface SectionInput {
  */
 export function sectionDrawing(input: SectionInput): Drawing {
   const scale = input.scale ?? 100;
+  const th = textHeight(scale);
   const entities: Entity[] = [];
   for (const run of input.terrain) if (run.length >= 2) entities.push(polyline('terrain', run));
   for (const c of input.clearances ?? [])
     for (const p of c.polygons) entities.push(polyline('clearance', p, true, c.id));
+  for (const s of input.surveys ?? []) entities.push(...surveyEntities(s, scale / 1000, th * 0.6));
   for (const s of input.supports) {
     if (s.footing) entities.push(polyline('footing', s.footing, true, s.id));
     for (const b of s.body) entities.push(polyline('support', b, true, s.id));

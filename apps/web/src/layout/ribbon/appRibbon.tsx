@@ -33,6 +33,8 @@ export interface RibbonContext {
   onEditStudyArea: () => void;
   onImportLandXml: () => void;
   onImportTerrain: () => void;
+  /** meračka z DXF (ADR 0021) */
+  onImportSurvey: () => void;
   /** prekážka pod mostom (ADR 0020) */
   onInsertObstacle: () => void;
   onDownloadDmr: () => void;
@@ -211,6 +213,19 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
                   disabled: !c.hasRoad,
                   onClick: c.onDownloadDmr,
                 },
+          ],
+        },
+        {
+          label: t.groups.survey,
+          items: [
+            {
+              kind: 'button',
+              id: 'survey-file',
+              label: t.surveyFile,
+              icon: 'survey',
+              title: t.surveyFileTitle,
+              onClick: c.onImportSurvey,
+            },
           ],
         },
         {
@@ -564,7 +579,8 @@ export type ContextualKind =
   | 'planLine'
   | 'terrain'
   | 'bridgeAxis'
-  | 'obstacle';
+  | 'obstacle'
+  | 'survey';
 
 export interface ContextualContext {
   kind: ContextualKind;
@@ -717,6 +733,15 @@ export function contextualTab(c: ContextualContext): RibbonTab {
           : [];
       case 'obstacle':
         return [];
+      case 'survey':
+        return [
+          {
+            label: t.groups.survey,
+            items: [
+              button('survey-obstacle', sk.survey.obstacle, 'obstacle', c.onObstacleFromLine),
+            ],
+          },
+        ];
       case 'bridgeAxis':
         return [
           {

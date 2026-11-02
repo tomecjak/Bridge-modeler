@@ -36,12 +36,16 @@ export function useObstacleState(
   const bridgeAxes = useProject((s) => s.project.bridgeAxes);
   const superstructures = useProject((s) => s.project.superstructures);
   const planLines = useProject((s) => s.project.planLines);
+  const surveys = useProject((s) => s.project.surveys);
   return useMemo(
     () =>
       obstacles.map((o) =>
-        evaluateObstacle({ alignments, parameters, bridgeAxes, superstructures, planLines }, o),
+        evaluateObstacle(
+          { alignments, parameters, bridgeAxes, superstructures, planLines, surveys },
+          o,
+        ),
       ),
-    [obstacles, alignments, parameters, bridgeAxes, superstructures, planLines],
+    [obstacles, alignments, parameters, bridgeAxes, superstructures, planLines, surveys],
   );
 }
 

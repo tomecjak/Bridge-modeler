@@ -8,10 +8,13 @@ import type {
   ParameterSet,
   PlanLine,
   Superstructure,
+  Survey,
 } from '@bridge/model';
+import { surveyLineName } from '@bridge/model';
 import { evaluateNumber } from './expressions.ts';
 import { bridgeAxisPlan } from './longitudinal.ts';
 import { globalScope } from './superstructure.ts';
+import { findSurveyLine, heightAlong, lineHeights, lineLengths } from './survey.ts';
 
 export interface ObstacleContext {
   alignments: ReadonlyMap<string, Alignment>;
@@ -19,6 +22,8 @@ export interface ObstacleContext {
   bridgeAxes: readonly BridgeAxis[];
   superstructures: readonly Superstructure[];
   planLines: readonly PlanLine[];
+  /** meračky (ADR 0021): čiara meračky ako os prekážky a jej výška ako úroveň */
+  surveys?: readonly Survey[];
 }
 
 /** Bod osi prekážky s dĺžkou `t` od jej začiatku (pri osi z LandXML spojité staničenie). */
@@ -150,6 +155,8 @@ export function evaluateObstacle(ctx: ObstacleContext, obstacle: Obstacle): Obst
   const issues: ModelIssue[] = [];
   let points: ObstaclePoint[] = [];
   let lineAlignment: Alignment | undefined;
+  /** výšky vrcholov čiary meračky (lokálne z) a dĺžky k nim */
+  let surveyProfile: { lengths: number[]; heights: number[] } | undefined;
   const ref = obstacle.reference;
   let station = 0;
   if (ref.type === 'curve') {
@@ -162,6 +169,17 @@ export function evaluateObstacle(ctx: ObstacleContext, obstacle: Obstacle): Obst
       const pl = ctx.planLines.find((l) => l.id === id);
       if (pl && pl.points.length >= 2) points = polylinePoints(pl.points);
       else issues.push({ code: 'ObstacleCurveNotFound', curve: pl?.name ?? id });
+    } else {
+      const found = findSurveyLine(ctx.surveys, ref.curve);
+      if (found && found.line.points.length >= 2) {
+        points = polylinePoints(found.line.points);
+        const heights = lineHeights(found.line.points);
+        if (heights) surveyProfile = { lengths: lineLengths(found.line.points), heights };
+      } else
+        issues.push({
+          code: 'ObstacleCurveNotFound',
+          curve: found ? surveyLineName(found.survey, found.line.id) : ref.curve.line,
+        });
     }
   } else {
     station = ref.station;
@@ -197,7 +215,9 @@ export function evaluateObstacle(ctx: ObstacleContext, obstacle: Obstacle): Obst
     if (profiled) levelAt = (t) => profiled.elevation(Math.min(Math.max(t, 0), profiled.length)).z;
     else if (points.length > 0) issues.push({ code: 'ObstacleLevelUnavailable', level: 'grade' });
   } else if (level.kind === 'line') {
-    if (points.length > 0) issues.push({ code: 'ObstacleLevelUnavailable', level: 'line' });
+    const profile = surveyProfile;
+    if (profile) levelAt = (t) => heightAlong(profile.lengths, profile.heights, t);
+    else if (points.length > 0) issues.push({ code: 'ObstacleLevelUnavailable', level: 'line' });
   } else {
     const v = evaluateNumber(level.value, globalScope(ctx.parameters, station), 'value');
     if (v.ok) levelAt = () => v.value - z0;

@@ -18,6 +18,8 @@ const LAYER_CLASS: Record<LayerId, string> = {
   planLine: 'dw-plan-line',
   obstacle: 'dw-obstacle',
   clearance: 'dw-clearance',
+  survey: 'dw-survey',
+  surveyText: 'dw-survey-text',
 };
 
 interface Props {

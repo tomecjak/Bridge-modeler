@@ -174,6 +174,7 @@ export const sk = {
       terrains: 'Terén',
       planLines: 'Čiara v pôdoryse',
       obstacles: 'Prekážka',
+      surveys: 'Meračka',
     },
     name: 'Názov',
     remove: 'Odstrániť prvok',
@@ -428,6 +429,7 @@ export const sk = {
     manual: 'ručne na km osi cesty',
     curveAlignment: (name: string) => `os ${name} (LandXML)`,
     curvePlanLine: (name: string) => `čiara ${name}`,
+    curveSurvey: (name: string) => `meračka ${name}`,
     missingCurve: '(krivka neexistuje)',
     road: 'Os cesty',
     station: 'Staničenie kríženia',
@@ -466,7 +468,7 @@ export const sk = {
       `${free} m (potrebná ${required} m) · ${station}`,
     insert: 'Prekážka',
     insertTitle:
-      'Vložiť prekážku pod mostom z osi z LandXML, čiary v pôdoryse alebo ručne na km osi cesty',
+      'Vložiť prekážku pod mostom z osi z LandXML, čiary v pôdoryse, čiary meračky alebo ručne na km osi cesty',
     dialogTitle: 'Vložiť prekážku',
     name: 'Názov',
     source: 'Os prekážky',
@@ -524,6 +526,7 @@ export const sk = {
     curve: 'Krivka',
     alignments: 'Osi z LandXML',
     planLines: 'Čiary v pôdoryse',
+    surveyLines: 'Čiary meračky',
     missing: '(krivka neexistuje)',
     side: 'Strana',
     sides: { left: 'vľavo od osi mosta', right: 'vpravo od osi mosta' },
@@ -540,6 +543,60 @@ export const sk = {
     removeVertex: 'Odstrániť vrchol',
     usedBy: (names: string) => `Okraj NK: ${names}`,
     unused: 'Žiadna NK ju nepoužíva ako okraj.',
+  },
+  survey: {
+    dialogTitle: 'Import meračky (DXF)',
+    file: 'Súbor',
+    fileInfo: (version: string, encoding: string, scale: number) =>
+      `${version} · ${encoding} · ${scale === 1 ? 'm' : scale === 0.01 ? 'cm' : 'mm'}`,
+    layers: 'Hladiny',
+    layersHint:
+      'Výška bodu je najbližší číselný text na hladinách výšok do 1 m, číslo a kód bodu sú texty v bode. Návrh hladín upravte podľa výkresu.',
+    layer: 'Hladina',
+    contents: 'Obsah',
+    hiddenLayer: '(vypnutá)',
+    counts: (points: number, texts = 0, lines = 0, inserts = 0) =>
+      [
+        points > 0 ? `${points} b.` : '',
+        texts > 0 ? `${texts} t.` : '',
+        lines > 0 ? `${lines} č.` : '',
+        inserts > 0 ? `${inserts} bl.` : '',
+      ]
+        .filter((x) => x !== '')
+        .join(' · '),
+    roles: { points: 'Body', heights: 'Výšky', numbers: 'Čísla', codes: 'Kódy', lines: 'Čiary' },
+    preview: (points: number, withHeight: number, lines: number) =>
+      `${points} bodov (${withHeight} s výškou) · ${lines} čiar`,
+    moreIssues: (n: number) => `… a ďalších ${n} upozornení`,
+    clip: 'Orezanie',
+    clipAround: (name: string) => `Orezať na koridor okolo osi ${name} (ako terén)`,
+    clipNoAlignment: 'Bez osi cesty sa importuje celá meračka',
+    clipHint:
+      'Ostanú body v koridore a celé čiary, ktoré doň zasahujú. Pri zmene koridoru treba meračku importovať znova.',
+    name: 'Názov',
+    cancel: 'Zrušiť',
+    confirm: 'Importovať',
+    unsupportedFile: 'Meračka sa importuje z DXF (ASCII); DWG uložte v AutoCADe ako DXF.',
+    imported: (name: string, points: number, lines: number) =>
+      `Meračka „${name}“: ${points} bodov a ${lines} čiar.`,
+    dropped: (points: number, lines: number) =>
+      `Mimo koridoru ostalo ${points} bodov a ${lines} čiar.`,
+    warnings: (n: number) => `${n} upozornení k výškam (vlastnosti meračky).`,
+    empty: 'V koridore okolo mosta z meračky nič neostalo.',
+    source: 'Súbor',
+    layerRoles: 'Hladiny',
+    pointsCount: 'Body',
+    pointsValue: (points: number, withHeight: number) => `${points} (${withHeight} s výškou)`,
+    linesCount: 'Čiary',
+    heights: 'Výšky',
+    heightRange: (min: string, max: string) => `${min} – ${max} m n. m.`,
+    noHeights: 'bez výšok',
+    reimportHint:
+      'Pôvodný súbor sa neukladá; pri zmene hladín alebo koridoru meračku importujte znova a starú odstráňte.',
+    lineHeightsHint:
+      'Výška čiary je známa len v zameraných bodoch; medzi nimi sa v 3D, reze a úrovni prekážky interpoluje po dĺžke čiary, čiara bez výšok leží v 3D na teréne (predpoklad, PLAN.md §7).',
+    obstacle: 'Prekážka z čiary meračky',
+    none: '—',
   },
   terrain: {
     foundation: 'Pre založenie podpier',
@@ -630,6 +687,7 @@ export const sk = {
     lawExpression: (expr: string) => `výraz: ${expr}`,
     studyAreaKind: 'Oblasť mosta',
     terrainKind: 'Terén',
+    surveyKind: 'Meračka (DXF)',
     planLineKind: 'Čiara v pôdoryse',
     bridgeAxisKind: 'Os mosta',
     offsets: 'Posuny od osi cesty',
@@ -761,6 +819,8 @@ export const sk = {
     terrains: 'Terén',
     planLines: 'Čiary v pôdoryse',
     obstacles: 'Prekážky',
+    surveys: 'Meračky',
+    surveyDetail: (points: number, lines: number) => `${points} b. · ${lines} č.`,
     profiles: 'Prierezy',
     parameters: 'Parametre',
     unassigned: 'Nepriradené',
@@ -835,6 +895,7 @@ export const sk = {
       plan: 'Pôdorys',
       longitudinal: 'Pozdĺžny profil',
       view3d: '3D',
+      survey: 'Meračka',
       windows: 'Okná',
       project: 'Projekt',
       library: 'Knižnica',
@@ -857,6 +918,9 @@ export const sk = {
     landxmlTitle: 'Importovať os a niveletu z LandXML (Civil 3D); súbor sa dá aj pustiť do okna',
     terrainFile: 'Zo súboru',
     terrainFileTitle: 'Importovať terén z LandXML (Civil 3D) alebo GeoTIFF (DMR 5.0)',
+    surveyFile: 'Meračka DXF',
+    surveyFileTitle:
+      'Importovať zameranie existujúceho stavu z DXF: body s výškami z textov a čiary (2D podklad, bez terénu)',
     dmr: 'DMR 5.0',
     dmrTitle: 'Stiahnuť DMR 5.0 zo služby ZBGIS (ÚGKK) pre oblasť mosta',
     cancelDmr: 'Zrušiť',

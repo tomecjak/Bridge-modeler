@@ -27,7 +27,7 @@ export interface SurveyTolerances {
 
 export const SURVEY_TOLERANCES: SurveyTolerances = { height: 1.0, label: 0.02, vertex: 0.05 };
 
-export interface SurveyPoint {
+export interface ExtractedPoint {
   x: number;
   y: number;
   /** výška [m n. m.]; undefined = bod bez výšky */
@@ -37,21 +37,21 @@ export interface SurveyPoint {
   layer: string;
 }
 
-export interface SurveyVertex {
+export interface ExtractedVertex {
   x: number;
   y: number;
   z: number | undefined;
 }
 
-export interface SurveyLine {
+export interface ExtractedLine {
   layer: string;
-  points: SurveyVertex[];
+  points: ExtractedVertex[];
   closed: boolean;
 }
 
-export interface Survey {
-  points: SurveyPoint[];
-  lines: SurveyLine[];
+export interface ExtractedSurvey {
+  points: ExtractedPoint[];
+  lines: ExtractedLine[];
   issues: SurveyIssue[];
 }
 
@@ -112,7 +112,7 @@ export function extractSurvey(
   drawing: DxfDrawing,
   layers: SurveyLayers,
   tol: SurveyTolerances,
-): Survey {
+): ExtractedSurvey {
   const pointLayers = new Set(layers.points);
   const lineLayers = new Set(layers.lines);
   const textsOn = (names: readonly string[]) => {
@@ -178,7 +178,7 @@ export function extractSurvey(
     used.add(q.t);
   }
 
-  const points: SurveyPoint[] = raw.map((r, k) => {
+  const points: ExtractedPoint[] = raw.map((r, k) => {
     const q = assigned.get(k);
     const value = q && (heights[q.t] as { value: number }).value;
     const number = numbers[k];
@@ -214,9 +214,9 @@ export function extractSurvey(
   });
 
   // výšky vrcholov čiar z bodov meračky
-  const withHeight = points.filter((p): p is SurveyPoint & { z: number } => p.z !== undefined);
+  const withHeight = points.filter((p): p is ExtractedPoint & { z: number } => p.z !== undefined);
   const nearHeight = nearIndex(withHeight, tol.vertex);
-  const lines: SurveyLine[] = [];
+  const lines: ExtractedLine[] = [];
   for (const e of drawing.entities) {
     if (e.kind !== 'line' || !lineLayers.has(e.layer) || e.points.length < 2) continue;
     lines.push({

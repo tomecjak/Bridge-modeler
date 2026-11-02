@@ -35,9 +35,51 @@ export interface PlanInput {
     footprint: readonly Polygon2D[];
     at: Vec2 | undefined;
   }[];
+  /** meračky: čiary a body s popisom výšky (ADR 0021) */
+  surveys?: readonly {
+    id: string;
+    lines: readonly { points: readonly Vec2[]; closed: boolean }[];
+    points: readonly { at: Vec2; label: string | undefined }[];
+  }[];
   /** značky staničenia osi cesty [m]; bez nich sa staničenie nekreslí (pohľad má vlastné podľa priblíženia) */
   stationing?: { step: number; labelStep: number };
   scale?: number;
+}
+
+/** Čiary meračky a body ako krížik s polovičnou veľkosťou `mark` a výškou vpravo od bodu. */
+export function surveyEntities(
+  survey: {
+    id: string;
+    lines?: readonly { points: readonly Vec2[]; closed: boolean }[];
+    points: readonly { at: Vec2; label: string | undefined }[];
+  },
+  mark: number,
+  textSize: number,
+): Entity[] {
+  const out: Entity[] = [];
+  for (const l of survey.lines ?? [])
+    if (l.points.length >= 2) out.push(polyline('survey', l.points, l.closed, survey.id));
+  for (const p of survey.points) {
+    const { x, y } = p.at;
+    out.push(
+      polyline('survey', [vec2(x - mark, y - mark), vec2(x + mark, y + mark)], false, survey.id),
+    );
+    out.push(
+      polyline('survey', [vec2(x - mark, y + mark), vec2(x + mark, y - mark)], false, survey.id),
+    );
+    if (p.label)
+      out.push({
+        kind: 'text',
+        layer: 'surveyText',
+        at: vec2(x + 1.5 * mark, y - textSize / 2),
+        text: p.label,
+        height: textSize,
+        rotation: 0,
+        align: 'left',
+        owner: survey.id,
+      });
+  }
+  return out;
 }
 
 /**
@@ -65,6 +107,7 @@ export function planDrawing(input: PlanInput): Drawing {
       ),
     );
   }
+  for (const s of input.surveys ?? []) entities.push(...surveyEntities(s, mm(0.75), th * 0.6));
   for (const line of input.planLines ?? []) {
     if (line.points.length >= 2) entities.push(polyline('planLine', line.points, false, line.id));
   }

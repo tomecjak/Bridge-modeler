@@ -10,6 +10,7 @@ import {
   type PlanLine,
   type ProfileDefinition,
   type Superstructure,
+  type Survey,
 } from '@bridge/model';
 import type { CrossbeamBand } from './crossbeams.ts';
 import { edgeDistance } from './edge.ts';
@@ -28,6 +29,8 @@ export interface SectionContext {
   profiles: readonly ProfileDefinition[];
   /** čiary v pôdoryse (okraje NK podľa krivky) */
   planLines: readonly PlanLine[];
+  /** meračky (ADR 0021): čiara meračky ako krivka okraja NK */
+  surveys?: readonly Survey[];
   /** pásy priečnikov podľa id NK (ADR 0018); v páse má NK prierez priečnika */
   crossbeams?: ReadonlyMap<string, readonly CrossbeamBand[]>;
 }

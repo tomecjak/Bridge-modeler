@@ -11,6 +11,7 @@ import { BASEMAPS, type BasemapKind, loadBasemap } from './basemap.ts';
 
 export type { BasemapKind };
 
+import { sceneSurveys } from '../store/survey.ts';
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
 import { terrainBuffers } from './terrainMesh.ts';
 import { useExactWorker, useMeshWorker } from './useMeshWorker.ts';
@@ -55,6 +56,7 @@ function readTheme() {
     accent: css.getPropertyValue('--accent').trim() || '#2563eb',
     edges: '#2b2f36',
     cut: '#d9773a',
+    survey: css.getPropertyValue('--survey').trim() || '#57534e',
   };
 }
 
@@ -220,6 +222,19 @@ export default function Viewer3D({
   useEffect(() => {
     viewRef.current?.setTerrain(terrainOn ? terrainMeshes : [], terrainOn ? maps : []);
   }, [terrainOn, terrainMeshes, maps]);
+
+  // meračka (ADR 0021): čiary bez výšok ležia na teréne
+  const surveyScene = useMemo(
+    () =>
+      sceneSurveys(
+        project.surveys,
+        terrains.map((t) => t.tin),
+      ),
+    [project.surveys, terrains],
+  );
+  useEffect(() => {
+    viewRef.current?.setSurvey(surveyScene.lines, surveyScene.points);
+  }, [surveyScene]);
 
   function onPointerUp(e: PointerEvent<HTMLDivElement>) {
     const start = down.current;

@@ -77,6 +77,7 @@ export function buildScene(
         superstructures: project.superstructures,
         bearingLines: project.bearingLines,
         planLines: project.planLines,
+        surveys: project.surveys,
       };
       if (!project.bearingLines.some((l) => l.crossbeam)) return base;
       // pásy priečnikov (ADR 0018): prierez NK v páse, aj spodok NK nad ložiskami
@@ -180,11 +181,8 @@ export function buildScene(
         project.alignments.filter((a) => names.has(a.name)),
         project.bridgeAxes,
         project.superstructures.map((d) => [d.id, d.bridgeAxis, d.from, d.to]),
-        o.reference.type === 'curve' && o.reference.curve.type === 'planLine'
-          ? project.planLines.find(
-              (l) =>
-                o.reference.type === 'curve' && l.id === (o.reference.curve as { id: string }).id,
-            )
+        o.reference.type === 'curve' && o.reference.curve.type !== 'alignment'
+          ? curveData(project, o.reference.curve)
           : undefined,
       ]);
       reuse('clearance', o.id, key, () => {
@@ -195,6 +193,7 @@ export function buildScene(
             bridgeAxes: project.bridgeAxes,
             superstructures: project.superstructures,
             planLines: project.planLines,
+            surveys: project.surveys,
           },
           o,
         );
@@ -248,9 +247,9 @@ export function toRenderBuffers(mesh: TriangleMesh): RenderBuffers {
   return { center, positions, normals: mesh.normals.slice(), indices: mesh.indices.slice() };
 }
 
-/** Dáta krivky okraja NK (os z LandXML alebo čiara v pôdoryse) do kľúča cache. */
+/** Dáta krivky (os z LandXML, čiara v pôdoryse alebo čiara meračky) do kľúča cache. */
 function curveData(project: ProjectFile, ref: CurveRef) {
-  return ref.type === 'alignment'
-    ? project.alignments.find((a) => a.name === ref.name)
-    : project.planLines.find((l) => l.id === ref.id);
+  if (ref.type === 'alignment') return project.alignments.find((a) => a.name === ref.name);
+  if (ref.type === 'planLine') return project.planLines.find((l) => l.id === ref.id);
+  return project.surveys.find((s) => s.id === ref.survey)?.lines.find((l) => l.id === ref.line);
 }

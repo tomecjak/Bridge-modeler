@@ -1,11 +1,20 @@
 import type { Alignment } from '@bridge/alignment';
 import { type Vec2, vec2 } from '@bridge/geom';
-import type { CurveRef, ModelIssue, PlanLine } from '@bridge/model';
+import {
+  type CurveRef,
+  type ModelIssue,
+  type PlanLine,
+  type Survey,
+  surveyLineName,
+} from '@bridge/model';
+import { findSurveyLine } from './survey.ts';
 
-/** Krivky, na ktoré sa môže odkazovať okraj NK: osi z LandXML a čiary v pôdoryse. */
+/** Krivky, na ktoré sa môže odkazovať okraj NK: osi z LandXML, čiary v pôdoryse a čiary meračky. */
 export interface EdgeCurveContext {
   alignments: ReadonlyMap<string, Alignment>;
   planLines: readonly PlanLine[];
+  /** meračky (ADR 0021); bez nich sa čiara meračky nenájde */
+  surveys?: readonly Survey[];
 }
 
 type EdgeResult = { ok: true; value: number } | { ok: false; issue: ModelIssue };
@@ -23,9 +32,17 @@ const REFINE_TOLERANCE = 1e-10;
 
 /** Názov krivky do hlásení: názov osi, názov čiary, alebo id neznámej čiary. */
 export function edgeCurveName(ctx: EdgeCurveContext, ref: CurveRef): string {
-  return ref.type === 'alignment'
-    ? ref.name
-    : (ctx.planLines.find((l) => l.id === ref.id)?.name ?? ref.id);
+  if (ref.type === 'alignment') return ref.name;
+  if (ref.type === 'planLine') return ctx.planLines.find((l) => l.id === ref.id)?.name ?? ref.id;
+  const found = findSurveyLine(ctx.surveys, ref);
+  return found ? surveyLineName(found.survey, found.line.id) : ref.line;
+}
+
+/** Body lomenej čiary krivky (čiara v pôdoryse, čiara meračky); undefined pre os z LandXML alebo neznámu čiaru. */
+function curvePolyline(ctx: EdgeCurveContext, ref: CurveRef): readonly Vec2[] | undefined {
+  if (ref.type === 'planLine') return ctx.planLines.find((l) => l.id === ref.id)?.points;
+  if (ref.type === 'survey') return findSurveyLine(ctx.surveys, ref)?.line.points;
+  return undefined;
 }
 
 /**
@@ -47,10 +64,10 @@ export function edgeDistance(
     ok: false,
     issue: { code: 'EdgeCurveNotReached', curve, station },
   };
-  if (ref.type === 'planLine') {
-    const line = ctx.planLines.find((l) => l.id === ref.id);
+  if (ref.type !== 'alignment') {
+    const line = curvePolyline(ctx, ref);
     if (!line) return { ok: false, issue: { code: 'EdgeCurveNotFound', curve } };
-    const t = rayPolyline(origin, d, line.points);
+    const t = rayPolyline(origin, d, line);
     return t === undefined || t > MAX_EDGE_DISTANCE
       ? notReached
       : { ok: true, value: Math.max(0, t) };
@@ -70,8 +87,8 @@ export function edgeDistance(
  */
 export function edgeBreaks(ctx: EdgeCurveContext, ref: CurveRef, road: Alignment): number[] {
   let points: Vec2[] = [];
-  if (ref.type === 'planLine') {
-    points = [...(ctx.planLines.find((l) => l.id === ref.id)?.points ?? [])];
+  if (ref.type !== 'alignment') {
+    points = [...(curvePolyline(ctx, ref) ?? [])];
   } else {
     const a = ctx.alignments.get(ref.name);
     if (a) {

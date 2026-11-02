@@ -86,9 +86,13 @@ export function profileParameterValues(
   return { values, issues };
 }
 
-/** Názov krivky okraja do hlásení (názov osi alebo id čiary). */
+/** Názov krivky okraja do hlásení (názov osi, id čiary alebo id čiary meračky). */
 export const curveName = (law: EdgeLaw): string =>
-  law.curve.type === 'alignment' ? law.curve.name : law.curve.id;
+  law.curve.type === 'alignment'
+    ? law.curve.name
+    : law.curve.type === 'planLine'
+      ? law.curve.id
+      : law.curve.line;
 
 // výrazy bodov sa vyhodnocujú pri každom staničení → rozparsované AST sa držia v cache podľa textu
 const parsed = new Map<string, ReturnType<typeof parse>>();

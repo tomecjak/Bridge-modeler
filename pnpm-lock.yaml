@@ -205,6 +205,9 @@ importers:
       '@bridge/sections':
         specifier: workspace:*
         version: link:../../packages/sections
+      '@bridge/survey':
+        specifier: workspace:*
+        version: link:../../packages/survey
       '@bridge/terrain':
         specifier: workspace:*
         version: link:../../packages/terrain

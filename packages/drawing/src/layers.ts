@@ -25,6 +25,10 @@ export const LAYERS = {
   obstacle: { name: 'PREKAZKY', color: 210, linetype: 'DASHED' },
   /** voľný (priechodný) prierez prekážky */
   clearance: { name: 'VOLNY_PRIEREZ', color: 140, linetype: 'CONTINUOUS' },
+  /** meračka: čiary a značky bodov (ADR 0021) */
+  survey: { name: 'MERACKA', color: 8, linetype: 'CONTINUOUS' },
+  /** výšky bodov meračky */
+  surveyText: { name: 'MERACKA_VYSKY', color: 8, linetype: 'CONTINUOUS' },
 } as const satisfies Record<string, Layer>;
 
 export type LayerId = keyof typeof LAYERS;

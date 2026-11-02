@@ -178,6 +178,7 @@ export const MIGRATIONS: Readonly<
   },
   /** 11 → 12: prekážky (ADR 0020) */
   '11': { to: '12', migrate: (raw) => ({ ...raw, obstacles: [] }) },
+  '12': { to: '13', migrate: (raw) => ({ ...raw, surveys: [] }) },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

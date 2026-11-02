@@ -40,6 +40,14 @@ nechce z meračky robiť terén (odpoveď 23): stačí 2D podklad s výškami bo
 
 **Súbor:** schéma v13 pridá `surveys` (migrácia: prázdne pole).
 
+**Doplnok 2026-11-02 — import v aplikácii** (predpoklady v PLAN.md §7, otázky 24 a 25):
+- čiary dostanú id `L1`, `L2`, … v poradí súboru po orezaní; v UI sa volajú „meračka: hladina n“ (n = poradie na hladine);
+- orezanie rovnakým koridorom ako terén (pás okolo osi cesty, ADR 0011); body mimo koridoru sa vynechajú;
+- výška čiary medzi zameranými vrcholmi je lineárna po dĺžke čiary, na koncoch výška krajného zameraného vrcholu;
+  čiara bez výšok leží v 3D na teréne a v reze sa nekreslí; úroveň prekážky `line` používa tú istú výšku;
+- typy výsledku čítania v balíku `survey` sa volajú `Extracted*`, uložené typy `Survey*` sú v `packages/model`;
+- výšky bodov sa v pôdoryse kreslia na samostatnej hladine `MERACKA_VYSKY` (na obrazovke až pri priblížení).
+
 ## Dôsledky
 
 - Meračku netreba konvertovať v inom programe; stačí DXF uložené z DWG.

@@ -22,6 +22,13 @@ const PATHS = {
   open: <path d="M3 6h6l2 2h10v12H3z" />,
   export: <path d="M12 15V3M8 7l4-4 4 4M4 15v6h16v-6" />,
   deck: <path d="M2 7h20v2h-3l-2 8H7L5 9H2z" />,
+  /** meračka: statív s bodom */
+  survey: (
+    <>
+      <circle cx="12" cy="5" r="2" />
+      <path d="M12 7v4M12 11l-6 10M12 11l6 10M12 11v10M4 21h16" />
+    </>
+  ),
   obstacle: (
     <>
       <path d="M2 20h20M5 20V9l3-3h8l3 3v11" />

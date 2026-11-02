@@ -13,6 +13,7 @@ import { formatNumber } from '../../format/number.ts';
 import { formatModelIssue } from '../../i18n/modelIssues.ts';
 import { sk } from '../../i18n/sk.ts';
 import type { Command } from '../../store/commands.ts';
+import { curveFromKey, curveKey } from '../../store/curves.ts';
 import type { PropertyRow, PropertySheet } from './PropertyGrid.tsx';
 
 type Dispatch = (command: Command) => void;
@@ -27,14 +28,9 @@ const KINDS: readonly ObstacleKind[] = [
 ];
 const CLEARANCE_KEYS = ['left', 'right', 'height', 'slopeLeft', 'slopeRight', 'chamfer'] as const;
 
-/** Kľúč výberu osi prekážky: os z LandXML, čiara v pôdoryse alebo ručné kríženie. */
+/** Kľúč výberu osi prekážky: os z LandXML, čiara v pôdoryse, čiara meračky alebo ručné kríženie. */
 export function referenceKey(reference: Obstacle['reference']): string {
-  if (reference.type === 'station') return 'station';
-  return reference.curve.type === 'alignment'
-    ? `alignment:${reference.curve.name}`
-    : reference.curve.type === 'planLine'
-      ? `planLine:${reference.curve.id}`
-      : 'station';
+  return reference.type === 'station' ? 'station' : curveKey(reference.curve);
 }
 
 /** Predvoľba, ktorej rozmery má voľný prierez (inak vlastné). */
@@ -57,6 +53,8 @@ export function obstacleSheet(input: {
   check?: ClearanceCheck | undefined;
   alignments: readonly { name: string }[];
   planLines: readonly Pick<PlanLine, 'id' | 'name'>[];
+  /** čiary meračiek (kľúč `curveKey`, popis) — ADR 0021 */
+  surveyLines?: readonly { value: string; label: string }[];
   bridgeAxes: readonly Pick<BridgeAxis, 'id' | 'name'>[];
   onDelete: () => void;
   dispatch: Dispatch;
@@ -89,6 +87,10 @@ export function obstacleSheet(input: {
           value: `planLine:${l.id}`,
           label: t.curvePlanLine(l.name),
         })),
+        ...(input.surveyLines ?? []).map((l) => ({
+          value: l.value,
+          label: t.curveSurvey(l.label),
+        })),
         { value: 'station', label: t.manual },
       ],
       onChange: (v) => {
@@ -104,16 +106,8 @@ export function obstacleSheet(input: {
           });
           return;
         }
-        const [type, value] = [v.slice(0, v.indexOf(':')), v.slice(v.indexOf(':') + 1)];
-        set({
-          reference: {
-            type: 'curve',
-            curve:
-              type === 'alignment'
-                ? { type: 'alignment', name: value }
-                : { type: 'planLine', id: value },
-          },
-        });
+        const curve = curveFromKey(v);
+        if (curve) set({ reference: { type: 'curve', curve } });
       },
     },
     ...(ref.type === 'station'

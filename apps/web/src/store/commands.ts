@@ -13,6 +13,7 @@ import {
   type StudyArea,
   type Superstructure,
   type Support,
+  type Survey,
   type TerrainSurface,
 } from '@bridge/model';
 
@@ -26,6 +27,7 @@ export interface ElementCollections {
   terrains: TerrainSurface;
   planLines: PlanLine;
   obstacles: Obstacle;
+  surveys: Survey;
 }
 export type ElementCollection = keyof ElementCollections;
 
@@ -62,6 +64,9 @@ export type Command =
       terrains?: TerrainSurface[];
       planLines?: PlanLine[];
       obstacles?: Obstacle[];
+      surveys?: Survey[];
+      /** lokálny počiatok, ak ho projekt ešte nemá (meračka bez osi, ADR 0021) */
+      origin?: Vec3;
     }
   | ElementUpdate
   /** odstráni prvok; os uloženia aj s podperami na nej (ADR 0017) */
@@ -127,6 +132,8 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       );
       draft.planLines.push(...(command.planLines ?? []));
       draft.obstacles.push(...(command.obstacles ?? []));
+      draft.surveys.push(...(command.surveys ?? []));
+      if (command.origin) draft.crs.origin ??= command.origin;
       return;
     case 'updateElement': {
       const list = draft[command.collection] as { id: string }[];
