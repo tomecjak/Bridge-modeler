@@ -7,6 +7,12 @@ export const sk = {
   app: {
     title: 'Modelér mostov',
   },
+  theme: {
+    toggleTitle: 'Farebná téma — kliknutím prepnete (systém → svetlá → tmavá)',
+    system: 'Systém',
+    light: 'Svetlá',
+    dark: 'Tmavá',
+  },
   persistence: {
     newProject: 'Nový',
     open: 'Otvoriť',

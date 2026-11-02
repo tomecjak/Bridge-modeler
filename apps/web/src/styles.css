@@ -1,38 +1,104 @@
+/*
+ * Vzhľad (ADR 0024): tokeny farieb pre svetlú a tmavú tému. Téma sa riadi systémom,
+ * alebo voľbou používateľa v `<html data-theme="light|dark">` (src/theme/theme.ts).
+ */
 :root {
   --bg: #f4f5f7;
   --panel: #ffffff;
-  --border: #d5d8de;
-  --text: #1d2330;
-  --muted: #6b7280;
-  --accent: #2563eb;
-  --canvas: #e9ecf1;
+  --ribbon: #fafbfc;
+  --border: #dde1e6;
+  --text: #14171a;
+  --muted: #5b636e;
+  --accent: #e08a1e;
+  --accent-text: #8a4b00;
+  --on-accent: #1a1206;
+  --canvas: #eef1f4;
+  --grid: #d6dbe1;
+  --axis-line: #1f6fd1;
+  --axis-arc: #c2410c;
+  --axis-spiral: #2e7d32;
+  --profile: #7c3aed;
+  --series: #7c3aed;
   --terrain: #8a6d3b;
   --terrain-left: #0f766e;
   --terrain-right: #be185d;
   --clearance: #0e7490;
   --obstacle: #a21caf;
   --survey: #57534e;
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --warning: #a16207;
+  --error: #a1251c;
+  --ok: #1e7a3a;
+  --contextual: #1e7a3a;
+  color-scheme: light;
+  --ribbon-hover: color-mix(in srgb, var(--text) 7%, transparent);
+  --ribbon-pressed: color-mix(in srgb, var(--accent) 24%, transparent);
+  --radius: 6px;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-sans);
   font-size: 14px;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15181e;
-    --panel: #1c2028;
-    --border: #2e3440;
-    --text: #e5e7eb;
-    --muted: #9aa1ad;
-    --accent: #60a5fa;
-    --canvas: #101317;
+  :root:not([data-theme="light"]) {
+    --bg: #0e1013;
+    --panel: #121418;
+    --ribbon: #15181c;
+    --border: #262b31;
+    --text: #e8eaed;
+    --muted: #a0a7b1;
+    --accent: #f0a23b;
+    --accent-text: #f3c47e;
+    --on-accent: #1a1206;
+    --canvas: #101216;
+    --grid: #22272e;
+    --axis-line: #6cb4ff;
+    --axis-arc: #f87171;
+    --axis-spiral: #7bc67e;
+    --profile: #a78bfa;
+    --series: #a78bfa;
     --terrain: #c9a66b;
     --terrain-left: #2dd4bf;
     --terrain-right: #f472b6;
     --clearance: #22d3ee;
     --obstacle: #e879f9;
     --survey: #d6d3d1;
+    --warning: #facc15;
+    --error: #f2a79a;
+    --ok: #7bc67e;
+    --contextual: #7bc67e;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1013;
+  --panel: #121418;
+  --ribbon: #15181c;
+  --border: #262b31;
+  --text: #e8eaed;
+  --muted: #a0a7b1;
+  --accent: #f0a23b;
+  --accent-text: #f3c47e;
+  --on-accent: #1a1206;
+  --canvas: #101216;
+  --grid: #22272e;
+  --axis-line: #6cb4ff;
+  --axis-arc: #f87171;
+  --axis-spiral: #7bc67e;
+  --profile: #a78bfa;
+  --series: #a78bfa;
+  --terrain: #c9a66b;
+  --terrain-left: #2dd4bf;
+  --terrain-right: #f472b6;
+  --clearance: #22d3ee;
+  --obstacle: #e879f9;
+  --survey: #d6d3d1;
+  --warning: #facc15;
+  --error: #f2a79a;
+  --ok: #7bc67e;
+  --contextual: #7bc67e;
+  color-scheme: dark;
 }
 
 * {
@@ -98,10 +164,10 @@ body {
 
 .panel-title {
   margin: 0 0 8px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   color: var(--muted);
 }
 
@@ -138,9 +204,11 @@ body {
 }
 
 .viewport-tabs button[aria-selected="true"] {
+  font-weight: 500;
   color: var(--text);
   background: var(--canvas);
   border-color: var(--border);
+  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 .viewport-canvas {
@@ -151,30 +219,6 @@ body {
 }
 
 /* --- Fáza 1: import, strom, vlastnosti, výkresy --- */
-
-:root {
-  --axis-line: #2563eb;
-  --axis-arc: #dc2626;
-  --axis-spiral: #16a34a;
-  --profile: #7c3aed;
-  --series: #7c3aed;
-  --grid: #c9ced8;
-  --warning: #b45309;
-  --error: #b91c1c;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --axis-line: #60a5fa;
-    --axis-arc: #f87171;
-    --axis-spiral: #4ade80;
-    --profile: #8b5cf6;
-    --series: #8b5cf6;
-    --grid: #343b48;
-    --warning: #fbbf24;
-    --error: #f87171;
-  }
-}
 
 .app {
   position: relative;
@@ -211,7 +255,7 @@ body {
   place-items: center;
   font-size: 18px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--bg) 85%, transparent);
   border: 3px dashed var(--accent);
   pointer-events: none;
@@ -450,6 +494,8 @@ body {
   display: flex;
   gap: 24px;
   justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: pre;
 }
@@ -620,11 +666,11 @@ input[aria-invalid="true"] {
 
 .name-input {
   min-width: 90px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 .expr-input input {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 .expr-error {
@@ -650,7 +696,7 @@ input[aria-invalid="true"] {
 .link {
   padding: 0;
   font: inherit;
-  color: var(--accent);
+  color: var(--accent-text);
   background: none;
   border: none;
   cursor: pointer;
@@ -674,7 +720,7 @@ input[aria-invalid="true"] {
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 .badge-error {
@@ -1236,10 +1282,15 @@ text.dw-stationing {
 }
 
 @media (prefers-color-scheme: dark) {
-  .plan-basemap {
+  :root:not([data-theme="light"]) .plan-basemap {
     opacity: 0.45;
     filter: brightness(0.75);
   }
+}
+
+:root[data-theme="dark"] .plan-basemap {
+  opacity: 0.45;
+  filter: brightness(0.75);
 }
 
 .plan-map-note {
@@ -1332,7 +1383,7 @@ text.dw-stationing {
 }
 
 .drawing-toolbar button[aria-pressed="true"] {
-  color: var(--panel);
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -1543,7 +1594,7 @@ text.dw-stationing {
 }
 
 .button.primary {
-  color: var(--panel);
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -1599,16 +1650,6 @@ text.dw-stationing {
 }
 
 /* --- Fáza 10a: postup, zadanie --- */
-
-:root {
-  --ok: #15803d;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ok: #4ade80;
-  }
-}
 
 .visually-hidden {
   position: absolute;
@@ -1853,20 +1894,6 @@ text.dw-stationing {
 
 /* --- 10a2: rozhranie v štýle CAD (ADR 0016) --- */
 
-:root {
-  --ribbon: #f8f9fb;
-  --ribbon-hover: color-mix(in srgb, var(--accent) 12%, transparent);
-  --ribbon-pressed: color-mix(in srgb, var(--accent) 22%, transparent);
-  --contextual: #15803d;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ribbon: #20252e;
-    --contextual: #4ade80;
-  }
-}
-
 .icon {
   flex: none;
 }
@@ -1884,6 +1911,7 @@ text.dw-stationing {
 
 .titlebar-title {
   flex: 1;
+  font-weight: 500;
   overflow: hidden;
   color: var(--muted);
   text-align: center;
@@ -1907,6 +1935,25 @@ text.dw-stationing {
   border: 1px solid transparent;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.theme-toggle {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  font: inherit;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  background: var(--ribbon-hover);
 }
 
 .quick-access button:hover:not(:disabled) {
@@ -1954,6 +2001,7 @@ text.dw-stationing {
   font-weight: 600;
   background: var(--ribbon);
   border-color: var(--border);
+  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 .ribbon-tab-contextual {
@@ -2081,7 +2129,7 @@ text.dw-stationing {
   padding: 5px 16px;
   font: inherit;
   font-weight: 600;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border: none;
   border-radius: 4px 4px 0 0;
@@ -2180,7 +2228,8 @@ text.dw-stationing {
 }
 
 .browser-row[data-selected] {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .browser-chevron {

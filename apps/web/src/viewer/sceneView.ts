@@ -44,6 +44,8 @@ interface Theme {
   cut: string;
   /** čiary a body meračky */
   survey: string;
+  /** os cesty */
+  axis: string;
 }
 
 /** Obrys prierezu NK pre uzáver rezu: body v rovine prierezu (triangulácia) a v lokálnych súradniciach. */
@@ -182,6 +184,7 @@ export class SceneView {
     this.capMaterial.color.set(theme.cut);
     this.edgeMaterial.color.set(theme.edges);
     this.surveyMaterial.color.set(theme.survey);
+    this.axisMaterial.color.set(theme.axis);
     this.surveyPointMaterial.color.set(theme.survey);
     this.requestRender();
   }
