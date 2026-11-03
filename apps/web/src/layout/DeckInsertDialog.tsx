@@ -3,12 +3,14 @@ import { deckFromProfile } from '@bridge/sections';
 import { useState } from 'react';
 import { parseNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
+import { Icon } from '../icons/Icon.tsx';
 import { isDeckProfile } from '../store/edgeBeams.ts';
 import { newId } from '../store/parameters.ts';
 import { projectStore, useProject } from '../store/projectStore.ts';
 import { Field } from '../views/Field.tsx';
 import { ProfileThumbnail } from '../views/ProfileThumbnail.tsx';
 import { StationField } from '../views/StationFunctionEditor.tsx';
+import { DialogFrame } from './DialogFrame.tsx';
 import { type SourceKey, useProfileSources } from './useProfileSources.ts';
 
 interface Props {
@@ -17,7 +19,7 @@ interface Props {
   /** predvolený rozsah (oblasť mosta, inak štvrtina nivelety), zobrazované staničenie */
   range: { from: number; to: number };
   onClose: () => void;
-  /** vložená NK (výber a prechod do záložky Prierez) */
+  /** vložená NK (výber a prechod na priečny rez v 2D) */
   onInserted: (deckId: string, name: string, range: { from: number; to: number }) => void;
   /** príklad dvojice NK z rezu E–E (Fáza 3) */
   onExample: () => void;
@@ -81,88 +83,79 @@ export function DeckInsertDialog({ alignment, range, onClose, onInserted, onExam
   }
 
   return (
-    <div className="modal-backdrop">
-      <div
-        className="modal modal-wide"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deck-insert-title"
-      >
-        <h2 id="deck-insert-title" className="panel-title">
-          {t.title}
-        </h2>
-        <p className="hint">{t.hint}</p>
-        {cloudError && <p className="issue issue-error">{cloudError}</p>}
-        <div className="library-sources">
-          {sources
-            .filter((s) => entries[s.key].length > 0)
-            .map((s) => (
-              <fieldset key={s.key} className="modal-group">
-                <legend>{s.title}</legend>
-                <ul className="library-list">
-                  {entries[s.key].map((e) => {
-                    const checked = choice?.source === s.key && choice.id === e.id;
-                    return (
-                      <li key={e.id} className="library-item" data-selected={checked || undefined}>
-                        <label className="checkbox">
-                          <input
-                            type="radio"
-                            name="deck-profile"
-                            aria-label={t.select(e.name)}
-                            checked={checked}
-                            onChange={() => setChoice({ source: s.key, id: e.id })}
-                          />
-                        </label>
-                        <ProfileThumbnail profile={e.profile} />
-                        <span className="library-name">
-                          {e.name}
-                          {e.typology && <span className="hint"> · {e.typology}</span>}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </fieldset>
-            ))}
-        </div>
-        <div className="deck-insert-fields">
-          <Field label={t.name}>
-            <input
-              type="text"
-              value={name}
-              aria-label={t.name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </Field>
-          <Field label={t.from}>
-            <StationField ariaLabel={t.from} value={from} onCommit={setFrom} />
-          </Field>
-          <Field label={t.to}>
-            <StationField ariaLabel={t.to} value={to} onCommit={setTo} />
-          </Field>
-          <Field label={t.offset}>
-            <input
-              type="text"
-              value={offset}
-              aria-label={t.offset}
-              aria-invalid={offsetValue === undefined}
-              onChange={(e) => setOffset(e.target.value)}
-            />
-          </Field>
-        </div>
-        <div className="toolbar modal-actions">
-          <button type="button" className="button" onClick={onExample}>
-            {t.example}
-          </button>
-          <span className="toolbar-separator" />
+    <DialogFrame
+      title={t.title}
+      subtitle={t.hint}
+      icon="deck"
+      width={780}
+      onClose={onClose}
+      actions={
+        <>
           <button type="button" className="button" onClick={onClose}>
             {t.cancel}
           </button>
           <button type="button" className="button primary" disabled={!valid} onClick={insert}>
             {t.confirm}
           </button>
-        </div>
+        </>
+      }
+    >
+      {cloudError && <p className="issue issue-error">{cloudError}</p>}
+      {sources
+        .filter((s) => entries[s.key].length > 0)
+        .map((s) => (
+          <section key={s.key} className="dialog-section" aria-label={s.title}>
+            <h3 className="dialog-section-title">{s.title}</h3>
+            <div className="typology-grid">
+              {entries[s.key].map((e) => {
+                const checked = choice?.source === s.key && choice.id === e.id;
+                return (
+                  <label key={e.id} className="typology-card" data-checked={checked || undefined}>
+                    <input
+                      type="radio"
+                      className="visually-hidden"
+                      name={`deck-profile-${s.key}`}
+                      aria-label={t.select(e.name)}
+                      checked={checked}
+                      onChange={() => setChoice({ source: s.key, id: e.id })}
+                    />
+                    <ProfileThumbnail profile={e.profile} />
+                    <span className="typology-name">{e.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      <button type="button" className="dialog-row-button" onClick={onExample}>
+        <Icon name="twinDeck" size={18} />
+        {t.example}
+      </button>
+      <div className="dialog-grid dialog-grid-2">
+        <Field label={t.name}>
+          <input
+            type="text"
+            value={name}
+            aria-label={t.name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+        <Field label={t.offset}>
+          <input
+            type="text"
+            value={offset}
+            aria-label={t.offset}
+            aria-invalid={offsetValue === undefined}
+            onChange={(e) => setOffset(e.target.value)}
+          />
+        </Field>
+        <Field label={t.from}>
+          <StationField ariaLabel={t.from} value={from} onCommit={setFrom} />
+        </Field>
+        <Field label={t.to}>
+          <StationField ariaLabel={t.to} value={to} onCommit={setTo} />
+        </Field>
       </div>
-    </div>
+    </DialogFrame>
   );
 }

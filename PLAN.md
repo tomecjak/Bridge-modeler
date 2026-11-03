@@ -540,7 +540,7 @@ Rozhodnutia 2026-11-02 (plan mode): šablóna rímsy = L-tvar s nosom cez koniec
   - Tokeny farieb v jednom bloku `styles.css`, jantárový akcent pre výber, os cesty modrá (aj v 3D), písmo IBM Plex Sans / Mono, prepínač témy v hornej lište (systém → svetlá → tmavá, `src/theme/theme.ts`, uložené v prehliadači). *Ostáva:* doladiť jednotlivé editory a dialógy podľa návrhu (karty výkresov, tabuľka parametrov s chybou v riadku), skontrolovať kontrast farieb terénu a prekážok v oboch témach.
 
 - [x] rozhranie podľa návrhu bez ribbonu (ADR 0025)
-  - Horná lišta, lišta nástrojov s prepínačom 3D | 2D výkresy a kontextovým riadkom, 2D s pôdorysom hore a pozdĺžnym a priečnym rezom dole, editor prierezu / parametre / kontroly ako samostatné okná (`AppWindow`), nové dvojtónové ikony mostných prvkov. *Ostáva:* otvorenie okna v samostatnom okne prehliadača, kontroly v pravom paneli, doladenie dialógov (Rozloženie polí, Vložiť NK) podľa návrhu.
+  - Horná lišta, lišta nástrojov s prepínačom 3D | 2D výkresy a kontextovým riadkom, 2D s pôdorysom hore a pozdĺžnym a priečnym rezom dole, editor prierezu / parametre / kontroly ako samostatné okná (`AppWindow`), nové dvojtónové ikony mostných prvkov. Dialógy Rozloženie polí (náhľad polí v mierke, ukotvenie ako prepínač) a Vložiť NK (karty typológií s náčrtom prierezu) majú spoločný rám `DialogFrame`. *Ostáva:* otvorenie okna v samostatnom okne prehliadača, kontroly v pravom paneli, ostatné dialógy (rímsy, prekážky, terén, meračka, knižnice) do `DialogFrame`.
 
 ### Backlog
 - IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)

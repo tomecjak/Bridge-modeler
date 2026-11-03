@@ -1862,6 +1862,7 @@ text.dw-stationing {
 }
 
 .span-layout-preview {
+  width: 100%;
   border-collapse: collapse;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -1869,13 +1870,23 @@ text.dw-stationing {
 
 .span-layout-preview th,
 .span-layout-preview td {
-  padding: 2px 12px 2px 0;
+  padding: 7px 12px;
   text-align: left;
+  border-top: 1px solid var(--border);
+}
+
+.span-layout-preview td:nth-child(-n + 2) {
+  font-family: var(--font-mono);
 }
 
 .span-layout-preview th {
-  color: var(--muted);
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  text-transform: uppercase;
+  background: var(--bg);
+  border-top: 0;
 }
 
 .deck-insert-fields {
@@ -2735,4 +2746,261 @@ text.dw-stationing {
   right: 0;
   left: auto;
   border-radius: 8px;
+}
+
+/* dialógy vkladania (ADR 0025) */
+.dialog-frame {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 45%);
+}
+
+.dialog-frame-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+  overflow: auto;
+}
+
+.dialog-frame-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.dialog-frame .button {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius);
+}
+
+.dialog-frame .field input,
+.dialog-frame .field select {
+  height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.dialog-frame .field input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.dialog-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.dialog-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dialog-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dialog-section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.typology-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.typology-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 8px 10px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.typology-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
+.typology-card[data-checked] {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+  border-color: var(--accent);
+}
+
+.typology-card svg {
+  width: 100%;
+  height: 44px;
+}
+
+.typology-name {
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.dialog-row-button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dialog-row-button:hover {
+  border-color: var(--accent);
+}
+
+.input-with-note {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px 0 0;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+
+.input-with-note {
+  gap: 8px;
+}
+
+.input-with-note:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dialog-frame .input-with-note input:focus {
+  outline: none;
+}
+
+.input-with-note[data-invalid] {
+  border-color: var(--error);
+}
+
+.dialog-frame .input-with-note input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  border: 0;
+  background: transparent;
+}
+
+.note-ok,
+.note-error {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.note-ok {
+  color: var(--ok);
+}
+
+.note-error {
+  color: var(--error);
+}
+
+.segmented-fill {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+}
+
+.segmented-fill label {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  color: var(--muted);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.segmented-fill label:has(input:focus-visible),
+.typology-card:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.segmented-fill label[data-checked] {
+  font-weight: 500;
+  color: var(--text);
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+}
+
+.span-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.span-preview-deck {
+  fill: color-mix(in srgb, var(--muted) 35%, var(--canvas));
+  stroke: var(--muted);
+}
+
+.span-preview-axis {
+  stroke: var(--axis-line);
+  stroke-dasharray: 3 3;
+}
+
+.span-preview-support {
+  fill: color-mix(in srgb, var(--muted) 25%, var(--canvas));
+  stroke: var(--muted);
+}
+
+.span-preview-pier {
+  fill: color-mix(in srgb, var(--accent) 22%, var(--canvas));
+  stroke: var(--accent);
+}
+
+.span-preview-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--axis-line);
+}
+
+.span-preview-length {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text);
+}
+
+.support-kind {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
 }

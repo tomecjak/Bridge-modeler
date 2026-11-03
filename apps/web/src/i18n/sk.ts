@@ -836,6 +836,7 @@ export const sk = {
   },
   spanLayout: {
     title: 'Rozloženie polí',
+    subtitle: 'Osi uloženia podľa dĺžok polí po osi mosta',
     hint: 'Osi uloženia sa rozmiestnia podľa dĺžok polí po osi mosta a prečíslujú od začiatku. Existujúce podpery sa zachovajú a presunú (opory na krajné osi, piliere podľa poradia), chýbajúce sa doplnia zvoleným typom, nadbytočné sa odstránia. Koniec NK sa nastaví podľa presahu. Jeden krok späť.',
     deck: 'Nosná konštrukcia',
     spans: 'Polia [m]',
