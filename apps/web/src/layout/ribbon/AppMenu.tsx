@@ -16,8 +16,16 @@ export interface MenuSection {
   items: readonly MenuItem[];
 }
 
-/** Menu Súbor (ADR 0016): nový, otvoriť, uložiť a export; zavrie sa výberom, Esc alebo klikom mimo. */
-export function AppMenu({ sections }: { sections: readonly MenuSection[] }) {
+/** Rozbaľovacie menu v hornej lište (ADR 0025), napr. Export; zavrie sa výberom, Esc alebo klikom mimo. */
+export function AppMenu({
+  sections,
+  label = sk.ribbon.file,
+  icon,
+}: {
+  sections: readonly MenuSection[];
+  label?: string;
+  icon?: IconName;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -45,7 +53,9 @@ export function AppMenu({ sections }: { sections: readonly MenuSection[] }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        {sk.ribbon.file}
+        {icon && <Icon name={icon} size={16} />}
+        {label}
+        <Icon name="chevronDown" size={14} />
       </button>
       {open && (
         <div className="app-menu-panel" role="menu">

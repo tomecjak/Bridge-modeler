@@ -85,6 +85,7 @@ import {
   type TerrainFile,
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
+import { AppWindow } from './layout/AppWindow.tsx';
 import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
 import { EdgeBeamInsertDialog } from './layout/EdgeBeamInsertDialog.tsx';
 import { type ObstacleForm, ObstacleInsertDialog } from './layout/ObstacleInsertDialog.tsx';
@@ -124,7 +125,6 @@ import {
   ribbonTabs,
   type View3dState,
 } from './layout/ribbon/appRibbon.tsx';
-import { Ribbon } from './layout/ribbon/Ribbon.tsx';
 import { TitleBar } from './layout/ribbon/TitleBar.tsx';
 import {
   type SpanLayoutDefaults,
@@ -134,6 +134,7 @@ import {
 import { SupportLibraryDialog } from './layout/SupportLibraryDialog.tsx';
 import { SurveyImportDialog } from './layout/SurveyImportDialog.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
+import { type BaseView, Toolbar, ToolGroups } from './layout/Toolbar.tsx';
 import { useSupportSources } from './layout/useSupportSources.ts';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
@@ -212,6 +213,11 @@ export function App() {
   const [lastImport, setLastImport] = useState<LastImport>({ issues: [], fileIssues: [] });
   const [selected, setSelected] = useState(0);
   const [mode, setMode] = useState<ViewMode>('2d');
+  /** pohľad pod oknami (prierez, parametre, kontroly sú samostatné okná, ADR 0025) */
+  const [baseView, setBaseView] = useState<BaseView>('2d');
+  useEffect(() => {
+    if (mode === '3d' || mode === '2d') setBaseView(mode);
+  }, [mode]);
   const [dragging, setDragging] = useState(false);
   const [message, setMessage] = useState<string>();
   const [cursor, setCursor] = useState<CursorInfo>();
@@ -280,8 +286,7 @@ export function App() {
   /** nástroj a druh nového obrysu v editore prierezu (kontextová karta) */
   const [profileTool, setProfileTool] = useState<ProfileTool>('select');
   const [loopRole, setLoopRole] = useState<'outer' | 'void'>('void');
-  /** stav pohľadov ovládaný ribbonom (ADR 0016) */
-  const [ribbonTab, setRibbonTab] = useState('home');
+  /** stav pohľadov ovládaný lištou nástrojov (ADR 0016, 0025) */
   const [tool, setTool] = useState<ViewTool>('none');
   const [fitRequest, setFitRequest] = useState<FitRequest>({ whole: false, nonce: 0 });
   const [exaggeration, setExaggeration] = useState(10);
@@ -633,6 +638,7 @@ export function App() {
   });
 
   /** Prierez vybraný v strome: editor s hodnotami parametrov z NK, ktorá ho používa, inak predvolené. */
+  /** okno editora prierezu je otvorené (ADR 0025) */
   const editedProfile = useMemo(() => {
     if (selectedElement?.collection !== 'profiles') return undefined;
     const def = project.profiles.find((p) => p.id === selectedElement.id);
@@ -1644,7 +1650,6 @@ export function App() {
     switch (target.collection) {
       case 'profiles':
         setMode('section');
-        setRibbonTab('contextual');
         return;
       case 'terrains':
         setMode('3d');
@@ -1695,6 +1700,10 @@ export function App() {
       if (selectedParameterId === target.id) setSelectedParameterId(undefined);
     }
   }
+
+  /** zobrazený pohľad: 3D alebo 2D; prierez bez editora je súčasťou 2D (ADR 0025) */
+  const view: BaseView =
+    mode === '3d' || mode === '2d' ? mode : mode === 'section' && !editedProfile ? '2d' : baseView;
 
   const menuText = sk.ribbon.menu;
   const menuSections: MenuSection[] = [
@@ -1752,13 +1761,13 @@ export function App() {
         {
           label: menuText.stepSjtsk,
           icon: 'cube',
-          disabled: !exactReady || mode !== '3d' || !project.crs.origin,
+          disabled: !exactReady || view !== '3d' || !project.crs.origin,
           title: exactReady ? undefined : menuText.stepHint,
           onClick: () => setStepRequest((r) => ({ sjtsk: true, nonce: (r?.nonce ?? 0) + 1 })),
         },
         {
           label: menuText.stepLocal,
-          disabled: !exactReady || mode !== '3d',
+          disabled: !exactReady || view !== '3d',
           title: exactReady ? undefined : menuText.stepHint,
           onClick: () => setStepRequest((r) => ({ sjtsk: false, nonce: (r?.nonce ?? 0) + 1 })),
         },
@@ -1867,15 +1876,33 @@ export function App() {
         onProfileTables: () => setProfileTables(selectedElement.id),
       }));
 
+  /** NK a rímsy, ktoré používajú prierez (podtitul okna editora) */
+  const profileUsers = (profileId: string) =>
+    [...project.superstructures, ...project.edgeBeams]
+      .filter((x) => x.profile === profileId)
+      .map((x) => x.name)
+      .join(', ');
+
+  const goToField = (
+    <GoToStation
+      onStation={(station) => {
+        const s = road?.stationing.fromDisplay(station);
+        if (s === undefined) return;
+        setMode('2d');
+        setGoTo((g) => ({ s, nonce: (g?.nonce ?? 0) + 1 }));
+        setCursor({ source: 'profile', s });
+      }}
+    />
+  );
+
   const tabs = ribbonTabs({
-    mode,
+    mode: mode === 'section' && !editedProfile ? '2d' : mode,
     setMode,
     tool,
     setTool: (next) => {
       setTool(next);
       if (next !== 'none') setMessage(undefined);
-      // nástroj Podpera ukáže kartu s výberom typu (ADR 0019)
-      if (next === 'support') setRibbonTab('contextual');
+      // nástroj Podpera ukáže kontextový riadok s výberom typu (ADR 0019)
     },
     hasRoad,
     hasOrigin: project.crs.origin !== null,
@@ -1915,17 +1942,7 @@ export function App() {
         : undefined,
     onRename: renameSelected,
     onFit: (whole) => setFitRequest((f) => ({ whole, nonce: f.nonce + 1 })),
-    goTo: (
-      <GoToStation
-        onStation={(station) => {
-          const s = road?.stationing.fromDisplay(station);
-          if (s === undefined) return;
-          setMode('2d');
-          setGoTo((g) => ({ s, nonce: (g?.nonce ?? 0) + 1 }));
-          setCursor({ source: 'profile', s });
-        }}
-      />
-    ),
+    goTo: goToField,
     exaggeration,
     setExaggeration,
     decks: roadDecks,
@@ -2449,7 +2466,6 @@ export function App() {
               onTables: () => setProfileTables(profile.id),
               onEditGraphically: () => {
                 setMode('section');
-                setRibbonTab('contextual');
               },
               onDelete: deleteSelected,
               dispatch,
@@ -2485,20 +2501,10 @@ export function App() {
           )}
         />
       );
-    if (mode === 'parameters')
-      return (
-        <ParameterPanel
-          parameter={selectedParameter}
-          issues={selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []}
-          set={parameterState.set}
-          alignmentRange={displayRange}
-          referenceStation={station}
-        />
-      );
     return (
       <PropertiesPalette
         sheet={viewSheet({
-          mode,
+          mode: view,
           exaggeration,
           setExaggeration,
           decks: roadDecks,
@@ -2569,15 +2575,16 @@ export function App() {
         projectName={project.name}
         canUndo={canUndo}
         canRedo={canRedo}
+        onNew={newProject}
+        onOpen={() => projectInput.current?.click()}
         onSave={() => downloadProject(projectStore.getState().project)}
         onUndo={() => projectStore.getState().undo()}
         onRedo={() => projectStore.getState().redo()}
-      />
-      <Ribbon
-        tabs={tabs}
-        active={ribbonTab}
-        onActive={setRibbonTab}
-        menu={<AppMenu sections={menuSections} />}
+        goTo={goToField}
+        exportMenu={
+          <AppMenu sections={menuSections.slice(1)} label={sk.exportMenu} icon="export" />
+        }
+        onImportLandXml={() => landXmlInput.current?.click()}
       />
       <input
         ref={projectInput}
@@ -2640,8 +2647,8 @@ export function App() {
         />
       </aside>
       <Viewport
-        mode={mode}
-        onModeChange={setMode}
+        view={view}
+        toolbar={<Toolbar tabs={tabs} view={view} onView={setMode} />}
         alignment={item?.alignment}
         cursorS={cursor?.s}
         onPlanCursor={(c) => setCursor(c && { source: 'plan', ...c })}
@@ -2653,26 +2660,6 @@ export function App() {
         planDimensions={deckDimensions}
         profileDimensions={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.chains}
         profileFreeHeights={dimensionsOn ? profile.freeHeights : undefined}
-        checksView={
-          <ChecksView
-            items={checks}
-            onSelect={selectTarget}
-            onOpen={openTarget}
-            selected={checkRow}
-            onSelectRow={setCheckRow}
-          />
-        }
-        parametersView={
-          <ParameterTable
-            parameters={project.parameters}
-            state={parameterState}
-            referenceStation={station}
-            onReferenceStation={setReferenceStation}
-            range={displayRange}
-            selectedId={selectedParameterId}
-            onSelect={setSelectedParameterId}
-          />
-        }
         plan={planView}
         planBasemap={planBasemapSource}
         profile={
@@ -2702,6 +2689,39 @@ export function App() {
         onAddPlanLine={addPlanLine}
         onMovePlanLineVertex={movePlanLineVertex}
         selectedId={selectedElement?.id}
+        crossSection={
+          <SectionView
+            sections={drawnSections}
+            edgeBeams={drawnEdgeBeams}
+            onSelectEdgeBeam={(id) => setSelectedElement({ collection: 'edgeBeams', id })}
+            station={sectionAt}
+            range={sectionRange}
+            onStation={setSectionStation}
+            elapsed={sections.elapsed}
+            selectedId={selectedSuperstructureId ?? selectedEdgeBeamId}
+            onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
+            canInsert={defaultDeckRange() !== undefined}
+            supports={sectionSupports}
+            terrain={sectionTerrain}
+            drawing={sectionView}
+            fitRequest={fitRequest}
+            emptyActions={
+              <div className="toolbar">
+                <button
+                  type="button"
+                  className="button primary"
+                  disabled={!defaultDeckRange()}
+                  onClick={openDeckDialog}
+                >
+                  {sk.ribbon.deck}
+                </button>
+                <button type="button" className="button" onClick={insertTwinExample}>
+                  {sk.section.insertExample}
+                </button>
+              </div>
+            }
+          />
+        }
         view3d={
           <Suspense fallback={<p className="panel-empty centered">{sk.viewer3d.loading}</p>}>
             <Viewer3D
@@ -2746,76 +2766,116 @@ export function App() {
               exactOn={view3d.exact}
               onExactFailed={() => setView3d({ exact: false })}
               onExactReady={setExactReady}
-              fitNonce={mode === '3d' ? fitRequest.nonce : 0}
+              fitNonce={view === '3d' ? fitRequest.nonce : 0}
               stepRequest={stepRequest}
             />
           </Suspense>
         }
-        sectionView={
-          editedProfile ? (
-            <ProfileEditorView
-              key={editedProfile.def.id}
-              profile={editedProfile.def}
-              values={editedProfile.values}
-              globals={editedProfile.globals}
-              station={sectionAt}
-              source={editedProfile.source}
-              stationControl={
-                <StationControl
-                  station={sectionAt}
-                  range={sectionRange}
-                  onStation={setSectionStation}
-                />
-              }
-              selectedPoint={profilePoint}
-              onSelectPoint={setProfilePoint}
-              onMessage={setMessage}
-              onChange={(next) => {
-                const { id, ...changes } = next;
-                projectStore
-                  .getState()
-                  .dispatch({ type: 'updateElement', collection: 'profiles', id, changes });
-              }}
-              tool={profileTool}
-              loopRole={loopRole}
-              fitRequest={fitRequest}
-            />
-          ) : (
-            <SectionView
-              sections={drawnSections}
-              edgeBeams={drawnEdgeBeams}
-              onSelectEdgeBeam={(id) => setSelectedElement({ collection: 'edgeBeams', id })}
-              station={sectionAt}
-              range={sectionRange}
-              onStation={setSectionStation}
-              elapsed={sections.elapsed}
-              selectedId={selectedSuperstructureId ?? selectedEdgeBeamId}
-              onSelect={(id) => setSelectedElement({ collection: 'superstructures', id })}
-              canInsert={defaultDeckRange() !== undefined}
-              supports={sectionSupports}
-              terrain={sectionTerrain}
-              drawing={sectionView}
-              fitRequest={fitRequest}
-              emptyActions={
-                <div className="toolbar">
-                  <button
-                    type="button"
-                    className="button primary"
-                    disabled={!defaultDeckRange()}
-                    onClick={openDeckDialog}
-                  >
-                    {sk.ribbon.deck}
-                  </button>
-                  <button type="button" className="button" onClick={insertTwinExample}>
-                    {sk.section.insertExample}
-                  </button>
-                </div>
-              }
-            />
-          )
-        }
       />
-      {rightPanel()}
+      {mode === 'section' && editedProfile ? (
+        <aside className="panel panel-right" aria-hidden="true" />
+      ) : (
+        rightPanel()
+      )}
+      {mode === 'section' && editedProfile && (
+        <AppWindow
+          title={sk.profileEditor.title(editedProfile.def.name)}
+          subtitle={sk.window.profileSubtitle(profileUsers(editedProfile.def.id))}
+          icon="section"
+          closeOnEscape={false}
+          onClose={() => setMode(baseView)}
+          actions={
+            contextual?.contextual && <ToolGroups groups={contextual.groups} view="2d" labeled />
+          }
+        >
+          <div className="window-split">
+            <div className="window-main drawing-cell">
+              <ProfileEditorView
+                key={editedProfile.def.id}
+                profile={editedProfile.def}
+                values={editedProfile.values}
+                globals={editedProfile.globals}
+                station={sectionAt}
+                source={editedProfile.source}
+                stationControl={
+                  <StationControl
+                    station={sectionAt}
+                    range={sectionRange}
+                    onStation={setSectionStation}
+                  />
+                }
+                selectedPoint={profilePoint}
+                onSelectPoint={setProfilePoint}
+                onMessage={setMessage}
+                onChange={(next) => {
+                  const { id, ...changes } = next;
+                  projectStore
+                    .getState()
+                    .dispatch({ type: 'updateElement', collection: 'profiles', id, changes });
+                }}
+                tool={profileTool}
+                loopRole={loopRole}
+                fitRequest={fitRequest}
+              />
+            </div>
+            <div className="window-side">{rightPanel()}</div>
+          </div>
+        </AppWindow>
+      )}
+      {mode === 'parameters' && (
+        <AppWindow
+          title={sk.window.parametersTitle}
+          subtitle={sk.window.parametersSubtitle(project.parameters.length)}
+          icon="parameters"
+          onClose={() => setMode(baseView)}
+        >
+          <div className="window-split window-split-even">
+            <div className="window-main">
+              <ParameterTable
+                parameters={project.parameters}
+                state={parameterState}
+                referenceStation={station}
+                onReferenceStation={setReferenceStation}
+                range={displayRange}
+                selectedId={selectedParameterId}
+                onSelect={setSelectedParameterId}
+              />
+            </div>
+            <div className="window-side window-side-wide">
+              <ParameterPanel
+                parameter={selectedParameter}
+                issues={
+                  selectedParameter ? issuesOf(parameterState.issues, selectedParameter.name) : []
+                }
+                set={parameterState.set}
+                alignmentRange={displayRange}
+                referenceStation={station}
+              />
+            </div>
+          </div>
+        </AppWindow>
+      )}
+      {mode === 'checks' && (
+        <AppWindow
+          title={sk.checks.title}
+          subtitle={sk.window.checksSubtitle}
+          icon="checks"
+          onClose={() => setMode(baseView)}
+        >
+          <div className="window-main window-scroll">
+            <ChecksView
+              items={checks}
+              onSelect={selectTarget}
+              onOpen={(target) => {
+                setMode(baseView);
+                openTarget(target);
+              }}
+              selected={checkRow}
+              onSelectRow={setCheckRow}
+            />
+          </div>
+        </AppWindow>
+      )}
       <footer className="app-status">
         <span className="status-main">{statusText()}</span>
         {checks.length > 0 && (
@@ -2861,7 +2921,6 @@ export function App() {
             setSupportLibraryOpen(false);
             setMode('2d');
             setTool('support');
-            setRibbonTab('contextual');
             setMessage(sk.supportLibrary.usedInTool(entry.name));
           }}
           onApply={applyTypeToSelected}

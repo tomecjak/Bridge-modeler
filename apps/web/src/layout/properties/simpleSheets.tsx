@@ -482,6 +482,43 @@ export function viewSheet(input: {
 }): PropertySheet {
   const p = sk.properties;
   const heading = { icon: 'cube' as const, label: p.viewKinds[input.mode] };
+  /** priečny rez na staničení: v 2D pod pozdĺžnym rezom aj vo vlastnostiach (ADR 0025) */
+  const sectionGroups: PropertySheet['groups'] = [
+    {
+      id: 'view-section',
+      title: p.sectionCut,
+      rows: [
+        {
+          kind: 'custom',
+          label: sk.section.station,
+          node: (
+            <div className="prop-station">
+              <StationControl
+                station={input.section.station}
+                range={input.section.range}
+                onStation={input.section.onStation}
+                compact
+              />
+            </div>
+          ),
+        },
+      ],
+    },
+    {
+      id: 'view-section-results',
+      title: p.results,
+      ...(input.section.results.length === 0
+        ? { rows: [{ kind: 'note' as const, text: p.noDeckResults }] }
+        : {
+            content: input.section.results.map((r) => (
+              <section key={r.superstructure.id} className="result">
+                <h3 className="panel-subtitle">{r.superstructure.name}</h3>
+                <SectionResultDetails result={r} />
+              </section>
+            )),
+          }),
+    },
+  ];
   switch (input.mode) {
     case '2d':
       return {
@@ -549,47 +586,13 @@ export function viewSheet(input: {
               { kind: 'note', text: sk.viewport.exaggerationTitle },
             ],
           },
+          ...sectionGroups,
         ],
       };
     case 'section':
       return {
         heading: { icon: 'section', label: heading.label },
-        groups: [
-          {
-            id: 'view-section',
-            title: p.sectionCut,
-            rows: [
-              {
-                kind: 'custom',
-                label: sk.section.station,
-                node: (
-                  <div className="prop-station">
-                    <StationControl
-                      station={input.section.station}
-                      range={input.section.range}
-                      onStation={input.section.onStation}
-                      compact
-                    />
-                  </div>
-                ),
-              },
-            ],
-          },
-          {
-            id: 'view-section-results',
-            title: p.results,
-            ...(input.section.results.length === 0
-              ? { rows: [{ kind: 'note' as const, text: p.noDeckResults }] }
-              : {
-                  content: input.section.results.map((r) => (
-                    <section key={r.superstructure.id} className="result">
-                      <h3 className="panel-subtitle">{r.superstructure.name}</h3>
-                      <SectionResultDetails result={r} />
-                    </section>
-                  )),
-                }),
-          },
-        ],
+        groups: sectionGroups,
       };
     case '3d':
       return {

@@ -7,6 +7,15 @@ export const sk = {
   app: {
     title: 'Modelér mostov',
   },
+  window: {
+    close: 'Zavrieť',
+    profileSubtitle: (users: string) => (users ? `používa ${users}` : 'nepoužíva žiadna NK'),
+    parametersTitle: 'Parametre a staničné funkcie',
+    parametersSubtitle: (n: number) =>
+      `${n} ${n === 1 ? 'parameter' : n > 1 && n < 5 ? 'parametre' : 'parametrov'} · zmeny sa prejavia v modeli okamžite`,
+    checksSubtitle: 'Klik na riadok vyberie prvok, dvojklik ho ukáže v pohľade.',
+  },
+  exportMenu: 'Export',
   theme: {
     toggleTitle: 'Farebná téma — kliknutím prepnete (systém → svetlá → tmavá)',
     system: 'Systém',
@@ -62,8 +71,10 @@ export const sk = {
   viewport: {
     tabs: {
       view3d: '3D',
-      view2d: '2D',
+      view2d: '2D výkresy',
     },
+    views: 'Pohľad',
+    section: 'Priečny rez',
     empty2d: 'Importujte os z LandXML, zobrazí sa pôdorys a pozdĺžny profil.',
     wholeAxis: 'Celá os',
     goTo: 'Prejsť na',
@@ -92,9 +103,9 @@ export const sk = {
     mapFailed: (label: string) => `${label} je nedostupná — terén bez mapy.`,
     terrainDownloadTitle:
       'Projekt nemá terén — stiahne sa DMR 5.0 zo služby ZBGIS (ÚGKK) v obdĺžniku okolo mosta',
-    cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako v záložke Prierez)',
+    cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako priečny rez v 2D)',
     loading: 'Načítavam 3D náhľad…',
-    noDeck: 'Vložte nosnú konštrukciu (záložka Prierez), zobrazí sa jej 3D model.',
+    noDeck: 'Vložte nosnú konštrukciu (nástroj Nosná konštrukcia), zobrazí sa jej 3D model.',
     objects: (n: number) =>
       `${n} ${n === 1 ? 'objekt' : n >= 2 && n <= 4 ? 'objekty' : 'objektov'}`,
     generated: (ms: number) => `generované za ${ms.toFixed(0)} ms`,
@@ -197,7 +208,7 @@ export const sk = {
     insertExample: 'Vložiť príklad dvojice NK (rez E–E)',
     addDeck: 'Pridať NK',
     needsAlignment:
-      'Na vytvorenie NK treba os cesty s niveletou — najprv importujte LandXML (záložka 2D alebo tlačidlo Importovať LandXML).',
+      'Na vytvorenie NK treba os cesty s niveletou — najprv importujte LandXML (tlačidlo Importovať LandXML).',
     elapsed: (ms: string) => `výpočet ${ms} ms`,
     area: 'Plocha',
     centroid: 'Ťažisko (od osi mosta)',
@@ -776,8 +787,7 @@ export const sk = {
     tables: 'Tabuľky prierezu',
     profileTablesTitle: (name: string) => `Prierez ${name}: parametre, body a obrysy`,
     editGraphically: 'Upraviť graficky',
-    graphicalHint:
-      'Graficky sa prierez upravuje v záložke Prierez nástrojmi karty „Upraviť | Prierez“.',
+    graphicalHint: 'Graficky sa prierez upravuje v okne Editor prierezu (Upraviť graficky).',
   },
   statusBar: {
     ready: 'Pripravené',
