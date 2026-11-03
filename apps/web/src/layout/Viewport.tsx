@@ -24,6 +24,8 @@ interface Props {
   view: BaseView;
   /** lišta nástrojov nad pohľadmi */
   toolbar: ReactNode;
+  /** prázdny projekt bez osi (import LandXML a podkladov) */
+  empty: ReactNode;
   alignment: Alignment | undefined;
   cursorS: number | undefined;
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
@@ -91,6 +93,7 @@ export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
 export function Viewport({
   view,
   toolbar,
+  empty,
   alignment,
   cursorS,
   onPlanCursor,
@@ -125,9 +128,7 @@ export function Viewport({
       {toolbar}
       <div className="viewport-canvas" id="viewport-canvas">
         {view === '3d' && view3d}
-        {view === '2d' && !alignment && (
-          <p className="panel-empty centered">{sk.viewport.empty2d}</p>
-        )}
+        {view === '2d' && !alignment && empty}
         {view === '2d' && alignment && (
           <div className="drawings">
             <PlanView

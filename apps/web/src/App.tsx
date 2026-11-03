@@ -67,6 +67,7 @@ import { formatNumber } from './format/number.ts';
 import { formatModelIssue } from './i18n/modelIssues.ts';
 import { sk } from './i18n/sk.ts';
 import { formatTerrainIssue } from './i18n/terrainIssues.ts';
+import { Icon } from './icons/Icon.tsx';
 import { fileLevelIssues, importLandXml } from './import/importLandXml.ts';
 import {
   buildSurvey,
@@ -86,8 +87,10 @@ import {
   WHOLE_AXIS_TERRAIN_LIMIT,
 } from './import/importTerrain.ts';
 import { AppWindow } from './layout/AppWindow.tsx';
+import { ChecksPanel } from './layout/ChecksPanel.tsx';
 import { DeckInsertDialog } from './layout/DeckInsertDialog.tsx';
 import { EdgeBeamInsertDialog } from './layout/EdgeBeamInsertDialog.tsx';
+import { EmptyState } from './layout/EmptyState.tsx';
 import { type ObstacleForm, ObstacleInsertDialog } from './layout/ObstacleInsertDialog.tsx';
 import { ParameterPanel } from './layout/ParameterPanel.tsx';
 import { ProfileLibraryDialog } from './layout/ProfileLibraryDialog.tsx';
@@ -178,7 +181,6 @@ import {
 } from './store/terrain.ts';
 import { BASEMAPS, type BasemapKind } from './viewer/basemap.ts';
 import type { Cut } from './viewer/sceneView.ts';
-import { ChecksView } from './views/ChecksView.tsx';
 import { deckReach, planFrame } from './views/Dimensions.tsx';
 import { GoToStation } from './views/GoToStation.tsx';
 import type { LineEditing, LineHandle, LinePreview } from './views/lineEdit.ts';
@@ -2271,6 +2273,17 @@ export function App() {
   /** Panel vpravo: vlastnosti výberu, bez výberu vlastnosti aktívneho pohľadu (ADR 0016). */
   function rightPanel() {
     const dispatch = projectStore.getState().dispatch;
+    if (mode === 'checks')
+      return (
+        <ChecksPanel
+          items={checks}
+          onSelect={selectTarget}
+          onOpen={openTarget}
+          selected={checkRow}
+          onSelectRow={setCheckRow}
+          onClose={() => setMode(baseView)}
+        />
+      );
     const el = selectedElement;
     if (el?.collection === 'bridgeAxes') {
       const axis = project.bridgeAxes.find((a) => a.id === el.id);
@@ -2645,9 +2658,33 @@ export function App() {
           notices={openErrors}
           fileIssues={lastImport.fileIssues}
         />
+        <button
+          type="button"
+          className="browser-checks"
+          aria-pressed={mode === 'checks'}
+          onClick={() => setMode(mode === 'checks' ? baseView : 'checks')}
+        >
+          <Icon
+            name={checkTotals.errors > 0 ? 'error' : checkTotals.warnings > 0 ? 'warning' : 'ok'}
+            size={16}
+          />
+          <span>
+            {sk.checks.title} · {sk.checks.summary(checkTotals.errors, checkTotals.warnings)}
+          </span>
+          <Icon name="chevronRight" size={14} />
+        </button>
       </aside>
       <Viewport
         view={view}
+        empty={
+          <EmptyState
+            onImportLandXml={() => landXmlInput.current?.click()}
+            onOpenProject={() => projectInput.current?.click()}
+            onImportTerrain={() => terrainInput.current?.click()}
+            onImportSurvey={() => surveyInput.current?.click()}
+            onOpenLibrary={() => setLibraryOpen(true)}
+          />
+        }
         toolbar={<Toolbar tabs={tabs} view={view} onView={setMode} />}
         alignment={item?.alignment}
         cursorS={cursor?.s}
@@ -2852,27 +2889,6 @@ export function App() {
                 referenceStation={station}
               />
             </div>
-          </div>
-        </AppWindow>
-      )}
-      {mode === 'checks' && (
-        <AppWindow
-          title={sk.checks.title}
-          subtitle={sk.window.checksSubtitle}
-          icon="checks"
-          onClose={() => setMode(baseView)}
-        >
-          <div className="window-main window-scroll">
-            <ChecksView
-              items={checks}
-              onSelect={selectTarget}
-              onOpen={(target) => {
-                setMode(baseView);
-                openTarget(target);
-              }}
-              selected={checkRow}
-              onSelectRow={setCheckRow}
-            />
           </div>
         </AppWindow>
       )}

@@ -9,6 +9,8 @@ export const sk = {
   },
   window: {
     close: 'Zavrieť',
+    popOut: 'Otvoriť v samostatnom okne',
+    popOutTitle: 'Otvoriť v samostatnom okne prehliadača (napr. na druhom monitore)',
     profileSubtitle: (users: string) => (users ? `používa ${users}` : 'nepoužíva žiadna NK'),
     parametersTitle: 'Parametre a staničné funkcie',
     parametersSubtitle: (n: number) =>
@@ -16,6 +18,17 @@ export const sk = {
     checksSubtitle: 'Klik na riadok vyberie prvok, dvojklik ho ukáže v pohľade.',
   },
   exportMenu: 'Export',
+  emptyState: {
+    text: 'Os a niveleta z Civil 3D. Zobrazí sa pôdorys a pozdĺžny profil, potom vyznačíte oblasť mosta a vložíte NK.',
+    choose: 'Vybrať súbor…',
+    openProject: 'Otvoriť projekt (.json)',
+    terrain: 'Terén',
+    terrainText: 'LandXML povrch alebo GeoTIFF; DMR 5.0 zo ZBGIS pre oblasť mosta.',
+    survey: 'Meračka DXF',
+    surveyText: 'Body s výškami z textov a čiary existujúceho stavu.',
+    library: 'Knižnica prierezov',
+    libraryText: 'Šablóny, firemná knižnica alebo prierez zo súboru.',
+  },
   theme: {
     toggleTitle: 'Farebná téma — kliknutím prepnete (systém → svetlá → tmavá)',
     system: 'Systém',
@@ -129,6 +142,8 @@ export const sk = {
     stepFailed: 'Export STEP zlyhal.',
   },
   checks: {
+    tiles: { errors: 'chyby', warnings: 'upozornenia', ok: 'skupiny bez problémov' },
+    noProblems: 'bez problémov',
     tab: 'Kontroly',
     title: 'Kontroly',
     groups: {

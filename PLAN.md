@@ -537,10 +537,10 @@ Rozhodnutia 2026-11-02 (plan mode): šablóna rímsy = L-tvar s nosom cez koniec
 
 #### Vzhľad (ADR 0024)
 - [x] nový vzhľad podľa návrhu (plátno: pracovná plocha 3D, 2D výkresy, parametre; tmavá aj svetlá verzia)
-  - Tokeny farieb v jednom bloku `styles.css`, jantárový akcent pre výber, os cesty modrá (aj v 3D), písmo IBM Plex Sans / Mono, prepínač témy v hornej lište (systém → svetlá → tmavá, `src/theme/theme.ts`, uložené v prehliadači). *Ostáva:* doladiť jednotlivé editory a dialógy podľa návrhu (karty výkresov, tabuľka parametrov s chybou v riadku), skontrolovať kontrast farieb terénu a prekážok v oboch témach.
+  - Tokeny farieb v jednom bloku `styles.css`, jantárový akcent pre výber, os cesty modrá (aj v 3D), písmo IBM Plex Sans / Mono, prepínač témy v hornej lište (systém → svetlá → tmavá, `src/theme/theme.ts`, uložené v prehliadači). Editory a dialógy sú doladené podľa návrhu (ADR 0025), riadok parametra s chybou je zvýraznený; farby terénu, prekážok a voľného prierezu majú v oboch témach kontrast aspoň 3 : 1 voči ploche výkresu.
 
 - [x] rozhranie podľa návrhu bez ribbonu (ADR 0025)
-  - Horná lišta, lišta nástrojov s prepínačom 3D | 2D výkresy a kontextovým riadkom, 2D s pôdorysom hore a pozdĺžnym a priečnym rezom dole, editor prierezu / parametre / kontroly ako samostatné okná (`AppWindow`), nové dvojtónové ikony mostných prvkov. Dialógy Rozloženie polí (náhľad polí v mierke, ukotvenie ako prepínač) a Vložiť NK (karty typológií s náčrtom prierezu) majú spoločný rám `DialogFrame`. *Ostáva:* otvorenie okna v samostatnom okne prehliadača, kontroly v pravom paneli. Všetky dialógy (rímsy, prekážky, terén, meračka, knižnice prierezov a podpier, dialógy z vlastností, informácie o projekte) sú v ráme `DialogFrame`.
+  - Horná lišta, lišta nástrojov s prepínačom 3D | 2D výkresy a kontextovým riadkom, 2D s pôdorysom hore a pozdĺžnym a priečnym rezom dole, editor prierezu / parametre / kontroly ako samostatné okná (`AppWindow`), nové dvojtónové ikony mostných prvkov. Dialógy Rozloženie polí (náhľad polí v mierke, ukotvenie ako prepínač) a Vložiť NK (karty typológií s náčrtom prierezu) majú spoločný rám `DialogFrame`. Kontroly sú v pravom paneli (odkaz pod stromom), prázdny projekt má plochu na import, okná editora prierezu a parametrov sa dajú presunúť do samostatného okna prehliadača. Všetky dialógy (rímsy, prekážky, terén, meračka, knižnice prierezov a podpier, dialógy z vlastností, informácie o projekte) sú v ráme `DialogFrame`.
 
 ### Backlog
 - IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)

@@ -34,9 +34,16 @@ ktorú projektant chce vidieť naraz. Prehliadač projektu vľavo a vlastnosti v
   - **Editor prierezu**: nástroje kontextovej karty v hlavičke, vlastnosti prierezu vpravo v okne.
     Esc okno nezatvára, patrí nástrojom.
   - **Parametre a staničné funkcie**: tabuľka vľavo, editor vybraného parametra vpravo.
-  - **Kontroly**: tabuľka; dvojklik zatvorí okno a ukáže prvok.
-  - Stav `ViewMode` ostáva. `section` (s upravovaným prierezom), `parameters` a `checks` sú okná nad
-    posledným pohľadom 3D / 2D.
+  - Tlačidlom v hlavičke sa okno presunie do samostatného okna prehliadača (napr. na druhý monitor).
+    Portál React do nového dokumentu so skopírovanými štýlmi a témou; pracovná plocha ostane voľná.
+    Zatvorenie jedného zavrie aj druhé.
+  - Stav `ViewMode` ostáva. `section` (s upravovaným prierezom) a `parameters` sú okná nad posledným
+    pohľadom 3D / 2D.
+- **Kontroly** sú v pravom paneli namiesto vlastností:
+  - súhrn chýb, upozornení a skupín bez problémov;
+  - problémy ako karty po skupinách; klik vyberie prvok, dvojklik ho ukáže.
+  - Otvárajú sa odkazom pod prehliadačom projektu alebo zo stavového riadka.
+- **Prázdny projekt** (2D bez osi): plocha na pustenie LandXML, otvorenie projektu a karty ďalších podkladov.
 - **Ikony** sú prekreslené v jednom štýle:
   - mriežka 24 × 24, ťah 1,5 px;
   - mostné prvky sú dvojtónové: prvok plnou farbou, okolie (NK, zem, podpera) na 38 %.
@@ -47,6 +54,5 @@ ktorú projektant chce vidieť naraz. Prehliadač projektu vľavo a vlastnosti v
 - Pridanie nástroja ostáva: položka v `appRibbon.tsx` + stav v `App.tsx`. Ak sa nemá zobrazovať v lište,
   pridá sa jej id do `Toolbar.tsx`.
 - Komponent `Ribbon` je odstránený, `Ribbon.tsx` drží len dátové typy.
-- Otvorené:
-  - otvorenie okna v samostatnom okne prehliadača (druhý monitor) zatiaľ nie je;
-  - kontroly v pravom paneli namiesto okna podľa návrhu sú možné neskôr.
+- Samostatné okno prehliadača nesleduje zmenu témy po otvorení a pri vývoji (HMR) nedostane nové štýly.
+  Stačí ho zavrieť a otvoriť znova.
