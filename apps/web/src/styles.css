@@ -628,10 +628,6 @@ body {
   box-shadow: inset 2px 0 0 var(--error);
 }
 
-.parameter-table tr[data-error] .status {
-  color: var(--error);
-}
-
 .parameter-table tr[aria-selected="true"] td {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
