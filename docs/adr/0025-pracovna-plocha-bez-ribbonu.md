@@ -48,6 +48,23 @@ ktorú projektant chce vidieť naraz. Prehliadač projektu vľavo a vlastnosti v
   - mriežka 24 × 24, ťah 1,5 px;
   - mostné prvky sú dvojtónové: prvok plnou farbou, okolie (NK, zem, podpera) na 38 %.
 
+- **Popisy výkresov na obrazovke** (návrh „Kóty, staničenie a popisy“, 2026-11-03). Export DXF a SVG sa nemení.
+  - Rady kót: polia, dĺžka NK, celková dĺžka, premostenie. Prvý rad je 40 px od NK, ďalšie po 28 px,
+    v px obrazovky pri každom priblížení.
+  - Vynášacie čiary idú od prvého radu po najvyšší rad, ktorý bod používa, takže kóty sú spojené a ku
+    konštrukcii nesiahajú.
+  - Text kóty je nad čiarou s lemom farby plochy:
+    - krátka krajná kóta má text mimo, krátka vnútorná bez textu;
+    - rad, ktorého texty sa zmestia do menej ako polovice kót, sa skryje;
+    - text kóty väčšej než výrez je pripnutý do viditeľnej časti.
+  - Osi uloženia majú číslo (podpera, inak názov osi) v krúžku nad všetkými kótami a čiarkovanú os až ku
+    konštrukcii. Popis osi uloženia z výkresu sa pri kótach nekreslí.
+  - Staničenie v pôdoryse: značky na osi; čísla na strane bez kót za okrajom najvzdialenejšej NK, s bodkovanou
+    pomocnou čiarou, nad výkresom.
+  - Staničenie v pozdĺžnom reze: pravítko pod profilom a pod ním tabuľka. Tabuľka má riadky os uloženia,
+    staničenie, niveleta a terén. Stĺpce bližšie ako 76 px sa vynechajú.
+  - Sklon nivelety a podobné hodnoty meria nástroj Merať.
+
 ## Dôsledky
 
 - Pohľady majú viac plochy, 2D zobrazuje pôdorys, profil aj rez naraz.

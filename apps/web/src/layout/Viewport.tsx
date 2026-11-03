@@ -8,6 +8,7 @@ import { sk } from '../i18n/sk.ts';
 import type { ProfileFreeHeight } from '../store/obstacles.ts';
 import type { EdgeTerrain } from '../store/profile.ts';
 import type { BasemapSource } from '../viewer/basemap.ts';
+import type { DimensionMarker } from '../views/Dimensions.tsx';
 import type { LineEditing } from '../views/lineEdit.ts';
 import { type PlanCursor, type PlanDimensionSet, PlanView } from '../views/PlanView.tsx';
 import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
@@ -37,6 +38,8 @@ interface Props {
   /** kóty mosta v pôdoryse a kóty NK v reze profilu (len na obrazovke) */
   planDimensions: readonly PlanDimensionSet[] | undefined;
   profileDimensions: readonly DimensionChain[] | undefined;
+  /** osi uloženia v krúžkoch nad kótami profilu (ADR 0025) */
+  profileMarkers: readonly DimensionMarker[] | undefined;
   /** voľné výšky prekážok v profile (ADR 0020), len pri zapnutých kótach */
   profileFreeHeights: readonly ProfileFreeHeight[] | undefined;
   /** pôdorys mosta */
@@ -102,6 +105,7 @@ export function Viewport({
   onMeasure,
   planDimensions,
   profileDimensions,
+  profileMarkers,
   profileFreeHeights,
   crossSection,
   plan,
@@ -181,6 +185,7 @@ export function Viewport({
                     goTo={goTo}
                     onMeasure={onMeasure}
                     dimensions={profileDimensions}
+                    markers={profileMarkers}
                     freeHeights={profileFreeHeights}
                     lineEditing={lineEditing}
                   />

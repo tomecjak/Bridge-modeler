@@ -48,6 +48,7 @@ import {
   previewScope,
   profileParameterValues,
   SPAN_SNAP,
+  type Span,
   setSpanLength,
   snapToPrevious,
   twinDeckEdgeBeams,
@@ -181,7 +182,7 @@ import {
 } from './store/terrain.ts';
 import { BASEMAPS, type BasemapKind } from './viewer/basemap.ts';
 import type { Cut } from './viewer/sceneView.ts';
-import { deckReach, planFrame } from './views/Dimensions.tsx';
+import { type DimensionMarker, deckReach, planFrame } from './views/Dimensions.tsx';
 import { GoToStation } from './views/GoToStation.tsx';
 import type { LineEditing, LineHandle, LinePreview } from './views/lineEdit.ts';
 import { ParameterTable } from './views/ParameterTable.tsx';
@@ -205,6 +206,20 @@ function withEndOffset(geometry: Support['geometry'], endOffset: number): Suppor
   return geometry.type === 'abutment' && geometry.construction === 'bearing'
     ? { ...geometry, endOffset: String(endOffset) }
     : geometry;
+}
+
+/**
+ * Osi uloženia NK pre krúžky nad kótami (ADR 0025): staničenie, číslo (názov podpery na osi, inak názov osi) a id
+ * osi, poradím od začiatku NK.
+ */
+function spanMarkers(spans: readonly Span[]): DimensionMarker[] {
+  const lines = spans.flatMap((sp, i) => (i === 0 ? [sp.from, sp.to] : [sp.to]));
+  return lines.map((l) => ({
+    s: l.s,
+    station: l.station,
+    label: l.supports[0]?.name ?? l.line.name,
+    id: l.line.id,
+  }));
 }
 
 export function App() {
@@ -557,6 +572,7 @@ export function App() {
         {
           deckId: d.id,
           chains: bridgeDimensions(spans.spans, spans.lengths, measure, abutmentSplits(d.own)),
+          markers: spanMarkers(spans.spans),
           ...planFrame(road, d.outline, measure.offsetAt, mid),
         },
       ];
@@ -2696,6 +2712,7 @@ export function App() {
         onMeasure={setMeasureText}
         planDimensions={deckDimensions}
         profileDimensions={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.chains}
+        profileMarkers={deckDimensions.find((d) => d.deckId === profileDeck?.id)?.markers}
         profileFreeHeights={dimensionsOn ? profile.freeHeights : undefined}
         plan={planView}
         planBasemap={planBasemapSource}

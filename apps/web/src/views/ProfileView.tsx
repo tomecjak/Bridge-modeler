@@ -16,7 +16,12 @@ import { type PointerEvent, useEffect, useMemo, useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 import type { ProfileFreeHeight } from '../store/obstacles.ts';
-import { FreeHeightDimension, ProfileDimensions, SpanInput } from './Dimensions.tsx';
+import {
+  type DimensionMarker,
+  FreeHeightDimension,
+  ProfileDimensions,
+  SpanInput,
+} from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
@@ -80,6 +85,8 @@ interface Props {
   onMeasure?: (text: string | undefined) => void;
   /** kóty NK v reze (staničenie osi cesty); kreslia sa len v osi cesty a osi mosta */
   dimensions?: readonly DimensionChain[] | undefined;
+  /** osi uloženia v krúžkoch nad kótami a v tabuľke pod profilom (ADR 0025) */
+  markers?: readonly DimensionMarker[] | undefined;
   /** voľné výšky prekážok pod NK v krížení (u, výšky v m n. m.; ADR 0020) */
   freeHeights?: readonly ProfileFreeHeight[] | undefined;
   /** úpravy osí uloženia (nástroje Os uloženia a Podpera; len v osi cesty a osi mosta, ADR 0017) */
@@ -126,6 +133,15 @@ function elevationsIn(drawing: Drawing | undefined, from: number, to: number): n
   return zs;
 }
 
+/** Výška pravítka staničenia pod profilom [px] (ADR 0025). */
+const RULER_PX = 30;
+/** Výška riadku tabuľky pod profilom [px] (os uloženia, staničenie, niveleta, terén; ADR 0025). */
+const TABLE_ROW_PX = 20;
+/** Najmenšia vzdialenosť stĺpcov tabuľky [px]; bližšie osi sa v tabuľke vynechajú. */
+const TABLE_COL_PX = 76;
+/** Šírka stĺpca s názvami riadkov tabuľky [px]. */
+const TABLE_LABEL_PX = 92;
+
 export function ProfileView({
   line,
   title,
@@ -145,6 +161,7 @@ export function ProfileView({
   onMeasure,
   dimensions,
   freeHeights,
+  markers,
   lineEditing,
 }: Props) {
   const [ref, size] = useElementSize<HTMLDivElement>();
@@ -272,6 +289,36 @@ export function ProfileView({
           Math.min(last, visible.right.x),
         )
       : [];
+  const minorStep = stationStep / 5;
+  const minorTicks =
+    visible && minorStep > 0
+      ? profileTicks(
+          line,
+          minorStep,
+          Math.max(first, visible.left.x),
+          Math.min(last, visible.right.x),
+        )
+      : [];
+  const markerOwners = new Set((markers ?? []).map((m) => m.id));
+  /** tabuľka pod pravítkom: osi uloženia s kótami (ADR 0025) */
+  const tableMarkers = dimensions && markers && markers.length > 0 ? markers : [];
+  const tablePx = tableMarkers.length > 0 ? 4 * TABLE_ROW_PX + 4 : 0;
+  const rulerTop = size.height - tablePx - RULER_PX;
+  const tableColumns = (() => {
+    const cols: { m: DimensionMarker; x: number; u: number }[] = [];
+    for (const m of tableMarkers) {
+      const u = toU(m.s);
+      if (u === undefined) continue;
+      const x = toScreen({ x: u, y: 0 }).x;
+      if (x < TABLE_LABEL_PX + 30 || x > size.width - 30) continue;
+      const prev = cols[cols.length - 1];
+      if (!prev || x - prev.x >= TABLE_COL_PX) cols.push({ m, x, u });
+    }
+    return cols.map(({ m, x, u }) => {
+      const r = profileReadout(drawing, grade, undefined, u);
+      return { m, x, grade: r.grade, terrain: r.terrain };
+    });
+  })();
   const elevations: number[] = [];
   if (visible && elevationStep > 0) {
     for (
@@ -558,14 +605,7 @@ export function ProfileView({
             })}
             {ticks.map((t) => {
               const x = toScreen({ x: t.u, y: 0 }).x;
-              return (
-                <g key={t.u}>
-                  <line x1={x} y1={0} x2={x} y2={size.height} />
-                  <text x={x + 3} y={size.height - 6}>
-                    {formatStation(t.station, stationStep < 1 ? 1 : 0)}
-                  </text>
-                </g>
-              );
+              return <line key={t.u} x1={x} y1={0} x2={x} y2={rulerTop} />;
             })}
           </g>
           <polyline
@@ -581,6 +621,7 @@ export function ProfileView({
               toScreen={toScreen}
               skip={OWN_LAYERS}
               selected={selected}
+              hideLabels={dimensions ? markerOwners : undefined}
             />
           )}
           {edgeTerrain &&
@@ -600,6 +641,97 @@ export function ProfileView({
               )),
             )}
           <polyline className="profile-line" points={gradeLine} />
+          {/* staničenie na pravítku pod profilom (ADR 0025) */}
+          <g className="station-ruler">
+            <rect x={0} y={rulerTop} width={size.width} height={RULER_PX} />
+            <line
+              className="ruler-line"
+              x1={0}
+              y1={rulerTop + 6}
+              x2={size.width}
+              y2={rulerTop + 6}
+            />
+            {minorTicks.map((t) => {
+              const x = toScreen({ x: t.u, y: 0 }).x;
+              return (
+                <line
+                  key={t.u}
+                  className="ruler-line"
+                  x1={x}
+                  y1={rulerTop + 6}
+                  x2={x}
+                  y2={rulerTop + 10}
+                />
+              );
+            })}
+            {ticks.map((t) => {
+              const x = toScreen({ x: t.u, y: 0 }).x;
+              return (
+                <g key={t.u}>
+                  <line
+                    className="ruler-line ruler-major"
+                    x1={x}
+                    y1={rulerTop + 2}
+                    x2={x}
+                    y2={rulerTop + 12}
+                  />
+                  <text
+                    className="ruler-text"
+                    x={x}
+                    y={rulerTop + RULER_PX - 6}
+                    textAnchor="middle"
+                  >
+                    {formatStation(t.station, stationStep < 1 ? 1 : 0)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+          {tableColumns.length > 0 && (
+            <g className="profile-table">
+              <rect x={0} y={size.height - tablePx} width={size.width} height={tablePx} />
+              {[1, 2, 3].map((k) => (
+                <line
+                  key={k}
+                  className="table-line"
+                  x1={0}
+                  x2={size.width}
+                  y1={size.height - tablePx + 2 + k * TABLE_ROW_PX}
+                  y2={size.height - tablePx + 2 + k * TABLE_ROW_PX}
+                />
+              ))}
+              {(['line', 'station', 'grade', 'terrain'] as const).map((row, k) => (
+                <text
+                  key={row}
+                  className="table-head"
+                  x={8}
+                  y={size.height - tablePx + 2 + (k + 0.5) * TABLE_ROW_PX}
+                  dominantBaseline="central"
+                >
+                  {sk.dimensions.table[row]}
+                </text>
+              ))}
+              {tableColumns.map(({ m, x, grade: z, terrain }) => {
+                const y = (k: number) => size.height - tablePx + 2 + (k + 0.5) * TABLE_ROW_PX;
+                return (
+                  <g key={m.id}>
+                    <text className="table-value table-line-name" x={x} y={y(0)}>
+                      {m.label}
+                    </text>
+                    <text className="table-value" x={x} y={y(1)}>
+                      {formatStation(m.station, 3)}
+                    </text>
+                    <text className="table-value table-grade" x={x} y={y(2)}>
+                      {z === undefined ? '—' : formatNumber(z, 2)}
+                    </text>
+                    <text className="table-value table-terrain" x={x} y={y(3)}>
+                      {terrain === undefined ? '—' : formatNumber(terrain, 2)}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          )}
           {cursorPoint && (
             <g className="cursor">
               <line x1={cursorPoint.x} y1={0} x2={cursorPoint.x} y2={size.height} />
@@ -616,7 +748,9 @@ export function ProfileView({
               }}
               top={dimensionFrame.top}
               bottom={dimensionFrame.bottom}
-              height={size.height}
+              width={size.width}
+              height={rulerTop + 40}
+              markers={markers}
               onEdit={
                 linesEditable && tool === 'none'
                   ? (seg, at) =>
@@ -661,7 +795,8 @@ export function ProfileView({
               }}
               top={dimensionFrame.top}
               bottom={dimensionFrame.bottom}
-              height={size.height}
+              width={size.width}
+              height={rulerTop + 40}
             />
           )}
           {tool === 'measure' && (

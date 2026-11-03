@@ -30,6 +30,8 @@ interface Props {
   skip?: ReadonlySet<LayerId>;
   /** id vybraného objektu (zvýrazní jeho entity) */
   selected?: string | undefined;
+  /** objekty, ktorých popis kreslí pohľad sám (osi uloženia v krúžkoch nad kótami, ADR 0025) */
+  hideLabels?: ReadonlySet<string> | undefined;
 }
 
 const ANCHOR = { left: 'start', center: 'middle', right: 'end' } as const;
@@ -40,11 +42,12 @@ const fixed = (p: Vec2) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
  * Entity výkresového modelu v pohľade (ADR 0012): čiary a obrysy v súradniciach obrazovky, texty pevnou veľkosťou
  * písma podľa CSS (nezávisle od priblíženia).
  */
-export function DrawingEntities({ entities, toScreen, skip, selected }: Props) {
+export function DrawingEntities({ entities, toScreen, skip, selected, hideLabels }: Props) {
   return (
     <g className="drawing-entities">
       {entities.map((e, i) => {
         if (skip?.has(e.layer)) return null;
+        if (e.layer === 'label' && e.owner !== undefined && hideLabels?.has(e.owner)) return null;
         const className = `${LAYER_CLASS[e.layer]}${e.owner !== undefined && e.owner === selected ? ' dw-selected' : ''}`;
         if (e.kind === 'polyline') {
           const points = e.points.map((p) => fixed(toScreen(p))).join(' ');

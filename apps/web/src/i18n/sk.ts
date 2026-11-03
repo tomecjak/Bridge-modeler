@@ -949,6 +949,7 @@ export const sk = {
     problems: 'Problémy',
   },
   dimensions: {
+    table: { line: 'Os uloženia', station: 'Staničenie', grade: 'Niveleta', terrain: 'Terén' },
     overall: 'Celková dĺžka mosta (po konce krídel)',
     deck: 'Dĺžka NK a presahy opôr',
     spans: 'Rozpätia polí po osi mosta',
