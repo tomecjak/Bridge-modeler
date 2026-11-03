@@ -20,6 +20,11 @@ niekoľkých blokov `:root`. Akcent (modrý) slúžil naraz na výber aj na os c
   Os cesty má vlastnú modrú (`--axis-line`), aj v 3D scéne.
   - `--accent-text`: tmavší odtieň na text, aby mal kontrast aspoň 4,5 : 1.
   - `--on-accent`: farba textu na akcentovom pozadí.
+- **Farby prvkov mosta** vo výkresoch sú tokeny podľa typu konštrukcie (doplnené 2026-11-03):
+  - NK `--el-deck` je oceľovosivá, rímsy `--el-edge-beam` svetlejší betón, podpery `--el-support` teplá
+    betónová, ložiská `--el-bearing` tyrkysová;
+  - obrys je vo farbe textu, vybraný prvok má jantárovú výplň `--el-selected` a obrys `--accent`;
+  - os mosta a niveleta sú modré ako os cesty (`--axis-line`), grafy priebehov používajú akcent.
 - **Voľba témy** v hornej lište sa prepína v poradí systém → svetlá → tmavá.
   - Ukladá sa do `localStorage` ako nastavenie prehliadača, nie do projektu (princíp 1 v `CLAUDE.md`).
   - Nastavuje sa na `<html data-theme>`. 3D scéna si po udalosti `bridge-theme-change` prečíta nové farby.

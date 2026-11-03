@@ -17,8 +17,13 @@
   --axis-line: #1f6fd1;
   --axis-arc: #c2410c;
   --axis-spiral: #2e7d32;
-  --profile: #7c3aed;
-  --series: #7c3aed;
+  --profile: var(--axis-line);
+  --series: var(--accent);
+  --el-deck: #c3ccd6;
+  --el-edge-beam: #e6e9ed;
+  --el-support: #d3cabd;
+  --el-bearing: #0f766e;
+  --el-selected: color-mix(in srgb, var(--accent) 30%, transparent);
   --terrain: #8a6d3b;
   --terrain-left: #0f766e;
   --terrain-right: #be185d;
@@ -55,8 +60,13 @@
     --axis-line: #6cb4ff;
     --axis-arc: #f87171;
     --axis-spiral: #7bc67e;
-    --profile: #a78bfa;
-    --series: #a78bfa;
+    --profile: var(--axis-line);
+    --series: var(--accent);
+    --el-deck: #3a434e;
+    --el-edge-beam: #5b6370;
+    --el-support: #463f37;
+    --el-bearing: #5ec4b0;
+    --el-selected: color-mix(in srgb, var(--accent) 30%, transparent);
     --terrain: #c9a66b;
     --terrain-left: #2dd4bf;
     --terrain-right: #f472b6;
@@ -86,8 +96,13 @@
   --axis-line: #6cb4ff;
   --axis-arc: #f87171;
   --axis-spiral: #7bc67e;
-  --profile: #a78bfa;
-  --series: #a78bfa;
+  --profile: var(--axis-line);
+  --series: var(--accent);
+  --el-deck: #3a434e;
+  --el-edge-beam: #5b6370;
+  --el-support: #463f37;
+  --el-bearing: #5ec4b0;
+  --el-selected: color-mix(in srgb, var(--accent) 30%, transparent);
   --terrain: #c9a66b;
   --terrain-left: #2dd4bf;
   --terrain-right: #f472b6;
@@ -951,7 +966,7 @@ input[aria-invalid="true"] {
 }
 
 .deck-fill {
-  fill: color-mix(in srgb, var(--series) 14%, transparent);
+  fill: var(--el-deck);
   stroke: var(--text);
   stroke-width: 1.5;
 }
@@ -962,21 +977,25 @@ input[aria-invalid="true"] {
   stroke-width: 1.2;
 }
 
+.edge-beam .deck-fill {
+  fill: var(--el-edge-beam);
+}
+
 .deck-selected .deck-fill {
-  fill: color-mix(in srgb, var(--series) 30%, transparent);
-  stroke: var(--series);
+  fill: var(--el-selected);
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
 .deck-axis {
   fill: none;
-  stroke: var(--series);
+  stroke: var(--axis-line);
   stroke-width: 1;
   stroke-dasharray: 8 3 2 3;
 }
 
 .deck-ref {
-  fill: var(--series);
+  fill: var(--axis-line);
 }
 
 .deck-label {
@@ -1017,7 +1036,7 @@ input[aria-invalid="true"] {
 }
 
 .support-body {
-  fill: color-mix(in srgb, var(--text) 18%, transparent);
+  fill: var(--el-support);
   stroke: var(--text);
   stroke-width: 1;
 }
@@ -1030,12 +1049,12 @@ input[aria-invalid="true"] {
 }
 
 .support-bearing {
-  fill: var(--series);
+  fill: var(--el-bearing);
 }
 
 /* entity výkresového modelu v 2D pohľadoch (ADR 0012) */
 .dw-deck {
-  fill: color-mix(in srgb, var(--series) 14%, transparent);
+  fill: var(--el-deck);
   stroke: var(--text);
   stroke-width: 1.5;
   stroke-linejoin: round;
@@ -1048,8 +1067,8 @@ input[aria-invalid="true"] {
 }
 
 .dw-deck.dw-selected {
-  fill: color-mix(in srgb, var(--series) 30%, transparent);
-  stroke: var(--series);
+  fill: var(--el-selected);
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
@@ -1062,16 +1081,16 @@ input[aria-invalid="true"] {
 }
 
 polygon.dw-edge-beam {
-  fill: color-mix(in srgb, var(--muted) 12%, transparent);
+  fill: var(--el-edge-beam);
 }
 
 .dw-edge-beam.dw-selected {
-  stroke: var(--series);
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
 polygon.dw-edge-beam.dw-selected {
-  fill: color-mix(in srgb, var(--series) 30%, transparent);
+  fill: var(--el-selected);
 }
 
 .dw-support-axis {
@@ -1100,7 +1119,8 @@ text.dw-stationing {
 }
 
 .support-body.dw-selected {
-  stroke: var(--series);
+  fill: var(--el-selected);
+  stroke: var(--accent);
   stroke-width: 2;
 }
 
@@ -1549,7 +1569,7 @@ text.dw-stationing {
 
 .profile-thumb path,
 .support-thumb rect {
-  fill: color-mix(in srgb, var(--series) 30%, transparent);
+  fill: var(--el-deck);
   stroke: var(--text);
   stroke-width: 1;
 }
