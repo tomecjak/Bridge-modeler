@@ -1,5 +1,5 @@
 /**
- * Farebná téma rozhrania (ADR 0024): podľa systému, svetlá alebo tmavá.
+ * Farebná téma rozhrania (ADR 0025): podľa systému, svetlá alebo tmavá.
  * Voľba je nastavenie prehliadača (localStorage), nie súčasť modelu projektu.
  */
 export type ThemePreference = 'system' | 'light' | 'dark';

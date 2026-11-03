@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { chainRows, rowVisible, textPlacement, textWidth } from './Dimensions.tsx';
 
-describe('annotation rules (ADR 0025)', () => {
+describe('annotation rules (ADR 0026)', () => {
   it('orders rows spans, deck, overall, bridged without gaps for missing chains', () => {
     const rows = chainRows([
       { kind: 'overall', segments: [] },

@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * Modálny dialóg na zložité hodnoty z mriežky vlastností (ADR 0016, vzhľad ADR 0025); zmeny sa ukladajú priebežne,
+ * Modálny dialóg na zložité hodnoty z mriežky vlastností (ADR 0016, vzhľad ADR 0026); zmeny sa ukladajú priebežne,
  * Esc zavrie.
  */
 export function Dialog({ title, onClose, children, wide = false, icon = 'rename' }: Props) {

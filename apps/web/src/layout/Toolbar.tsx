@@ -6,7 +6,7 @@ import type { RibbonGroup, RibbonItem, RibbonTab } from './ribbon/Ribbon.tsx';
 export type BaseView = '3d' | '2d';
 
 /**
- * Položky, ktoré v lište nástrojov nie sú (ADR 0025): pole „Prejsť na“ a import LandXML sú v hornej lište,
+ * Položky, ktoré v lište nástrojov nie sú (ADR 0026): pole „Prejsť na“ a import LandXML sú v hornej lište,
  * úpravy prvku v kontextovom riadku, 3D / 2D v prepínači a prierez v samostatnom okne.
  */
 const HIDDEN = new Set([
@@ -29,7 +29,7 @@ const ONLY_2D = new Set(['exaggeration', 'edge-terrain', 'dimensions']);
 /** Prepínače 3D scény: len v 3D. */
 const ONLY_3D = new Set(['cut', 'terrain3d', 'exact']);
 
-/** Položky skupiny viditeľné v danom pohľade (čistá funkcia, ADR 0025). */
+/** Položky skupiny viditeľné v danom pohľade (čistá funkcia, ADR 0026). */
 export function visibleItems(group: RibbonGroup, view: BaseView): RibbonItem[] {
   return group.items.filter(
     (i) =>
@@ -110,7 +110,7 @@ interface Props {
   onView: (view: BaseView) => void;
 }
 
-/** Lišta nad pohľadmi (ADR 0025): prepínač 3D / 2D, nástroje a kontextový riadok vybraného prvku. */
+/** Lišta nad pohľadmi (ADR 0026): prepínač 3D / 2D, nástroje a kontextový riadok vybraného prvku. */
 export function Toolbar({ tabs, view, onView }: Props) {
   const main = tabs.filter((t) => !t.contextual);
   const contextual = tabs.find((t) => t.contextual);

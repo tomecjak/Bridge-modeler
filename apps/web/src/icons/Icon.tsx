@@ -1,5 +1,5 @@
 /**
- * Vlastné ikony rozhrania (ADR 0016, štýl podľa ADR 0025): mriežka 24 × 24, kresba v poli 3–21, ťah 1,5 px,
+ * Vlastné ikony rozhrania (ADR 0016, štýl podľa ADR 0026): mriežka 24 × 24, kresba v poli 3–21, ťah 1,5 px,
  * zaoblené konce, bez výplní, farba podľa textu.
  *
  * Mostné prvky sú dvojtónové: samotný prvok plnou farbou (`d`), okolie — NK, zem, podpera — slabšie (`context`),
@@ -29,6 +29,8 @@ const ICONS = {
   /** priebeh parametra po staničení */
   stationFunction: { d: 'M3 20h18M3 16h5c2 0 3-8 4-8s2 8 4 8h5' },
   expression: { d: 'M10 4c-2 0-3 1-3.5 4L5 20M3 10h6M13 10l6 8M19 10l-6 8' },
+  /** varianty: dva stĺpce na porovnanie */
+  variants: { d: 'M3 4h7v16H3zM14 4h7v16h-7zM5 8h3M5 12h3M5 16h3M16 8h3M16 12h3M16 16h3' },
   /** kontroly: podložka so zaškrtnutím */
   checks: { d: 'M9 3h6v3H9zM8 4.5H5V21h14V4.5h-3M8.5 13.5l2.5 2.5 4.5-5' },
   library: { d: 'M4 4h4v16H4zM10 4h4v16h-4zM15.5 5.5l3.5-1 3 14.5-3.5 1z' },

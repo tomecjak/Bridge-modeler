@@ -14,10 +14,13 @@ import {
 } from '@bridge/drawing';
 import { azimuthToVector, type Vec2, vec2 } from '@bridge/geom';
 import {
+  activeVariantOf,
   type BearingLine,
   createEmptyProject,
   effectiveFreeWidth,
+  effectiveParameters,
   type ModelIssue,
+  nextVariantName,
   type Obstacle,
   openProject,
   type Support,
@@ -27,6 +30,7 @@ import {
 } from '@bridge/model';
 import {
   type AxisLength,
+  bridgeArea,
   bridgeAxisPlan,
   crossbeamBlock,
   type DeckRange,
@@ -44,7 +48,6 @@ import {
   globalScope,
   layoutStations,
   moveLine,
-  outlineArea,
   previewScope,
   profileParameterValues,
   SPAN_SNAP,
@@ -140,6 +143,7 @@ import { SurveyImportDialog } from './layout/SurveyImportDialog.tsx';
 import { TerrainImportDialog } from './layout/TerrainImportDialog.tsx';
 import { type BaseView, Toolbar, ToolGroups } from './layout/Toolbar.tsx';
 import { useSupportSources } from './layout/useSupportSources.ts';
+import { VariantNameDialog } from './layout/VariantNameDialog.tsx';
 import { VIEW_TABS, type ViewMode, Viewport } from './layout/Viewport.tsx';
 import { loadAutosave, startAutosave } from './persistence/autosave.ts';
 import { downloadProject, downloadText } from './persistence/fileIO.ts';
@@ -180,6 +184,7 @@ import {
   terrainProfilesAlong,
   useTerrainTins,
 } from './store/terrain.ts';
+import { compareVariants, useVariantComparison, variantProfile } from './store/variants.ts';
 import { BASEMAPS, type BasemapKind } from './viewer/basemap.ts';
 import type { Cut } from './viewer/sceneView.ts';
 import { type DimensionMarker, deckReach, planFrame } from './views/Dimensions.tsx';
@@ -190,6 +195,8 @@ import type { PlanDimensionSet } from './views/PlanView.tsx';
 import { ProfileEditorView, type ProfileTool } from './views/ProfileEditorView.tsx';
 import { SectionView } from './views/SectionView.tsx';
 import { StationControl } from './views/StationControl.tsx';
+import { VariantsView } from './views/VariantsView.tsx';
+import { comparisonCsv } from './views/variantTable.ts';
 import type { FitRequest, ViewTool } from './views/viewState.ts';
 
 // three.js je veľký → 3D náhľad sa načíta až pri otvorení záložky (samostatný chunk)
@@ -209,7 +216,7 @@ function withEndOffset(geometry: Support['geometry'], endOffset: number): Suppor
 }
 
 /**
- * Osi uloženia NK pre krúžky nad kótami (ADR 0025): staničenie, číslo (názov podpery na osi, inak názov osi) a id
+ * Osi uloženia NK pre krúžky nad kótami (ADR 0026): staničenie, číslo (názov podpery na osi, inak názov osi) a id
  * osi, poradím od začiatku NK.
  */
 function spanMarkers(spans: readonly Span[]): DimensionMarker[] {
@@ -230,7 +237,7 @@ export function App() {
   const [lastImport, setLastImport] = useState<LastImport>({ issues: [], fileIssues: [] });
   const [selected, setSelected] = useState(0);
   const [mode, setMode] = useState<ViewMode>('2d');
-  /** pohľad pod oknami (prierez, parametre, kontroly sú samostatné okná, ADR 0025) */
+  /** pohľad pod oknami (prierez, parametre, kontroly sú samostatné okná, ADR 0026) */
   const [baseView, setBaseView] = useState<BaseView>('2d');
   useEffect(() => {
     if (mode === '3d' || mode === '2d') setBaseView(mode);
@@ -287,6 +294,8 @@ export function App() {
   const [panelTarget, setPanelTarget] = useState<'studyArea' | 'alignment'>();
   /** dialógy: informácie o projekte, posun osi mosta, vrcholy čiary */
   const [projectInfoOpen, setProjectInfoOpen] = useState(false);
+  /** dialóg mena variantu: kópia aktívneho alebo premenovanie (ADR 0024) */
+  const [variantDialog, setVariantDialog] = useState<'duplicate' | 'rename'>();
   const [axisOffset, setAxisOffset] = useState<{
     axisId: string;
     which: 'horizontalOffset' | 'verticalOffset';
@@ -307,6 +316,8 @@ export function App() {
   const [tool, setTool] = useState<ViewTool>('none');
   const [fitRequest, setFitRequest] = useState<FitRequest>({ whole: false, nonce: 0 });
   const [exaggeration, setExaggeration] = useState(10);
+  /** prevýšenie profilov v porovnaní variantov (len okolie mosta, preto menšie ako v 2D) */
+  const [variantExaggeration, setVariantExaggeration] = useState(1);
   const [view3d, setView3dState] = useState<View3dState>({
     cut: false,
     terrain: true,
@@ -334,7 +345,13 @@ export function App() {
       }
     : undefined;
   const station = referenceStation ?? displayRange?.from ?? 0;
-  const selectedParameter = project.parameters.find((p) => p.id === selectedParameterId);
+  // globálne parametre s prepismi aktívneho variantu (ADR 0024)
+  const parameters = effectiveParameters(project);
+  const variant = activeVariantOf(project);
+  /** meno aktívneho variantu, len ak má projekt viac variantov */
+  const variantLabel = project.variants.length > 1 ? variant.name : undefined;
+  const selectedParameter = parameters.find((p) => p.id === selectedParameterId);
+  const sharedParameter = project.parameters.find((p) => p.id === selectedParameterId);
   const alignmentMap = useMemo(() => alignmentsByName(alignments), [alignments]);
   const sectionContext = useMemo(
     () =>
@@ -535,6 +552,15 @@ export function App() {
     supportState.crossbeams,
   );
   const roadDecks = deckDrawings.filter((d) => d.road === item?.data.name);
+  /** porovnanie variantov (ADR 0024): počíta sa len v pohľade Varianty */
+  const comparison = useVariantComparison(mode === 'variants');
+  const variantProfiles = useMemo(
+    () =>
+      comparison?.map(
+        (v) => v.model && variantProfile(v.model, profileDeckId ?? selectedSuperstructureId, tins),
+      ) ?? [],
+    [comparison, profileDeckId, selectedSuperstructureId, tins],
+  );
   const profileDeck =
     roadDecks.find((d) => d.id === (profileDeckId ?? selectedSuperstructureId)) ?? roadDecks[0];
   /** Pohľady na podpery v priereze na aktuálnom staničení (± 0,5 m). */
@@ -656,7 +682,7 @@ export function App() {
   });
 
   /** Prierez vybraný v strome: editor s hodnotami parametrov z NK, ktorá ho používa, inak predvolené. */
-  /** okno editora prierezu je otvorené (ADR 0025) */
+  /** okno editora prierezu je otvorené (ADR 0026) */
   const editedProfile = useMemo(() => {
     if (selectedElement?.collection !== 'profiles') return undefined;
     const def = project.profiles.find((p) => p.id === selectedElement.id);
@@ -698,6 +724,14 @@ export function App() {
     const file = drawingFileName(project.name, view, format);
     if (format === 'dxf') downloadText(toDxf(drawing), file, 'application/dxf');
     else downloadText(toSvg(drawing), file, 'image/svg+xml');
+    setMessage(sk.export.done(file));
+  }
+
+  /** Porovnanie variantov do CSV pre Excel (ADR 0024); mimo pohľadu Varianty sa vyhodnotí na požiadanie. */
+  function exportComparisonCsv() {
+    const variants = comparison ?? compareVariants(projectStore.getState().project);
+    const file = sk.variants.csvName(project.name);
+    downloadText(comparisonCsv(variants), file, 'text/csv');
     setMessage(sk.export.done(file));
   }
 
@@ -1719,7 +1753,7 @@ export function App() {
     }
   }
 
-  /** zobrazený pohľad: 3D alebo 2D; prierez bez editora je súčasťou 2D (ADR 0025) */
+  /** zobrazený pohľad: 3D alebo 2D; prierez bez editora je súčasťou 2D (ADR 0026) */
   const view: BaseView =
     mode === '3d' || mode === '2d' ? mode : mode === 'section' && !editedProfile ? '2d' : baseView;
 
@@ -1770,6 +1804,11 @@ export function App() {
           disabled: drawnSections.length === 0,
           onClick: () =>
             exportDrawing(sectionView, sk.export.names.section(formatStation(sectionAt, 3)), 'svg'),
+        },
+        {
+          label: menuText.variantsCsv,
+          disabled: !project.crs.origin,
+          onClick: exportComparisonCsv,
         },
       ],
     },
@@ -1979,6 +2018,16 @@ export function App() {
     view3d,
     setView3d,
     onProjectInfo: () => setProjectInfoOpen(true),
+    variants: project.variants,
+    activeVariant: project.activeVariant,
+    // aktívny variant ukazuje stavový riadok, správa by po Späť zavádzala
+    setActiveVariant: (id) => projectStore.getState().dispatch({ type: 'setActiveVariant', id }),
+    onDuplicateVariant: () => setVariantDialog('duplicate'),
+    onRenameVariant: () => setVariantDialog('rename'),
+    onRemoveVariant: () => {
+      projectStore.getState().dispatch({ type: 'removeVariant', id: variant.id });
+      setMessage(sk.variants.removed(variant.name));
+    },
   }).concat(contextual ? [contextual] : []);
 
   // Esc zruší aktívny nástroj (rozkreslené čiary a oblasti zahodia pohľady)
@@ -2451,9 +2500,14 @@ export function App() {
               briefFreeWidth: effectiveFreeWidth(project.brief),
               bridgeArea: (() => {
                 const drawing = roadDecks.find((d) => d.id === deck.id);
-                const area = drawing ? outlineArea(drawing.bridgeOutline) : 0;
+                const area =
+                  drawing &&
+                  bridgeArea(
+                    drawing.bridgeOutline,
+                    supportState.supports.filter((r) => r.superstructure === deck.id),
+                  );
                 // NK bez obrysu (chyba prierezu) plochu nemá
-                return area > 0 ? area : undefined;
+                return area && area.value > 0 ? area : undefined;
               })(),
               onEditLaw: (parameter) => setLawDialog({ deckId: deck.id, parameter }),
               onAddSupport: () => {
@@ -2534,6 +2588,10 @@ export function App() {
       <PropertiesPalette
         sheet={viewSheet({
           mode: view,
+          variants: project.variants.map((v) => ({
+            name: v.name,
+            active: v.id === project.activeVariant,
+          })),
           exaggeration,
           setExaggeration,
           decks: roadDecks,
@@ -2886,7 +2944,9 @@ export function App() {
           <div className="window-split window-split-even">
             <div className="window-main">
               <ParameterTable
-                parameters={project.parameters}
+                parameters={parameters}
+                overrides={variant.parameters}
+                variant={variantLabel}
                 state={parameterState}
                 referenceStation={station}
                 onReferenceStation={setReferenceStation}
@@ -2904,13 +2964,57 @@ export function App() {
                 set={parameterState.set}
                 alignmentRange={displayRange}
                 referenceStation={station}
+                override={
+                  sharedParameter && variant.parameters[sharedParameter.id]
+                    ? { shared: sharedParameter.law, variant: variant.name }
+                    : undefined
+                }
               />
             </div>
           </div>
         </AppWindow>
       )}
+      {mode === 'variants' && (
+        <AppWindow
+          title={sk.variants.tab}
+          subtitle={sk.window.variantsSubtitle(project.variants.length)}
+          icon="variants"
+          onClose={() => setMode(baseView)}
+          actions={
+            <label className="toolbar-select">
+              <span>{sk.ribbon.exaggeration}</span>
+              <select
+                value={String(variantExaggeration)}
+                onChange={(e) => setVariantExaggeration(Number(e.target.value))}
+              >
+                {[1, 2, 5, 10].map((k) => (
+                  <option key={k} value={String(k)}>
+                    {k}×
+                  </option>
+                ))}
+              </select>
+            </label>
+          }
+        >
+          <div className="window-main window-scroll">
+            {comparison && (
+              <VariantsView
+                variants={comparison}
+                profiles={variantProfiles}
+                exaggeration={variantExaggeration}
+                onActivate={(id) =>
+                  projectStore.getState().dispatch({ type: 'setActiveVariant', id })
+                }
+                onExportCsv={exportComparisonCsv}
+                noOrigin={!project.crs.origin}
+              />
+            )}
+          </div>
+        </AppWindow>
+      )}
       <footer className="app-status">
         <span className="status-main">{statusText()}</span>
+        {variantLabel && <span className="status-variant">{sk.variants.status(variantLabel)}</span>}
         {checks.length > 0 && (
           <button
             type="button"
@@ -2972,6 +3076,25 @@ export function App() {
         />
       )}
       {projectInfoOpen && <ProjectInfoDialog onClose={() => setProjectInfoOpen(false)} />}
+      {variantDialog && (
+        <VariantNameDialog
+          title={sk.variants.dialog[variantDialog]}
+          confirm={sk.variants.dialog.confirm[variantDialog]}
+          initial={variantDialog === 'duplicate' ? nextVariantName(project.variants) : variant.name}
+          taken={project.variants
+            .filter((v) => v.id !== variant.id || variantDialog === 'duplicate')
+            .map((v) => v.name)}
+          onClose={() => setVariantDialog(undefined)}
+          onConfirm={(name) => {
+            const { dispatch } = projectStore.getState();
+            if (variantDialog === 'duplicate') {
+              dispatch({ type: 'duplicateVariant', id: newId('var'), name });
+              setMessage(sk.variants.duplicated(name));
+            } else dispatch({ type: 'renameVariant', id: variant.id, name });
+            setVariantDialog(undefined);
+          }}
+        />
+      )}
       {axisOffset && (
         <AxisOffsetDialog
           axisId={axisOffset.axisId}

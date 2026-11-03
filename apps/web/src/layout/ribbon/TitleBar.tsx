@@ -5,7 +5,7 @@ import { applyTheme, nextTheme, readStoredTheme, type ThemePreference } from '..
 
 const THEME_ICON = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' } as const;
 
-/** Prepínač farebnej témy (ADR 0024): systém → svetlá → tmavá. */
+/** Prepínač farebnej témy (ADR 0025): systém → svetlá → tmavá. */
 function ThemeToggle() {
   const [theme, setTheme] = useState<ThemePreference>(readStoredTheme);
   const onClick = () => {
@@ -38,7 +38,7 @@ interface Props {
 }
 
 /**
- * Horná lišta (ADR 0025): názov projektu, súbor, späť / znova, prejsť na staničenie, export,
+ * Horná lišta (ADR 0026): názov projektu, súbor, späť / znova, prejsť na staničenie, export,
  * import LandXML a farebná téma.
  */
 export function TitleBar({

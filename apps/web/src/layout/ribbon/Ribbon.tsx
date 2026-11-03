@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { IconName } from '../../icons/Icon.tsx';
 
-/* Dátový model nástrojov (ADR 0016); vykresľuje ho lišta nástrojov `Toolbar` (ADR 0025). */
+/* Dátový model nástrojov (ADR 0016); vykresľuje ho lišta nástrojov `Toolbar` (ADR 0026). */
 
 export interface RibbonButton {
   kind: 'button';

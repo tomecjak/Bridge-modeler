@@ -1,4 +1,4 @@
-# 0024 — Vzhľad: tokeny farieb, svetlá a tmavá téma, písmo IBM Plex
+# 0025 — Vzhľad: tokeny farieb, svetlá a tmavá téma, písmo IBM Plex
 
 - Stav: Prijaté
 - Dátum: 2026-11-02

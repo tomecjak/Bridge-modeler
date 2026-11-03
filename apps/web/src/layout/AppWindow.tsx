@@ -41,7 +41,7 @@ function openExternal(title: string): External | undefined {
 }
 
 /**
- * Samostatné okno nad pracovnou plochou (ADR 0025): editor prierezu, parametre a staničné funkcie.
+ * Samostatné okno nad pracovnou plochou (ADR 0026): editor prierezu, parametre a staničné funkcie.
  * Zmeny sa ukladajú priebežne do modelu, okno len zatvára pohľad. Tlačidlom sa okno presunie do samostatného
  * okna prehliadača (napr. na druhý monitor) a pracovná plocha ostane voľná; zatvorením okna sa zavrie aj pohľad.
  */

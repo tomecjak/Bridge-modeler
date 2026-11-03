@@ -16,12 +16,12 @@ import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
 import type { BaseView } from './Toolbar.tsx';
 
-export type ViewMode = '3d' | '2d' | 'section' | 'parameters' | 'checks';
+export type ViewMode = '3d' | '2d' | 'section' | 'parameters' | 'checks' | 'variants';
 
 export type { BaseView };
 
 interface Props {
-  /** zobrazený pohľad; prierez, parametre a kontroly sú samostatné okná (ADR 0025) */
+  /** zobrazený pohľad; prierez, parametre a kontroly sú samostatné okná (ADR 0026) */
   view: BaseView;
   /** lišta nástrojov nad pohľadmi */
   toolbar: ReactNode;
@@ -38,7 +38,7 @@ interface Props {
   /** kóty mosta v pôdoryse a kóty NK v reze profilu (len na obrazovke) */
   planDimensions: readonly PlanDimensionSet[] | undefined;
   profileDimensions: readonly DimensionChain[] | undefined;
-  /** osi uloženia v krúžkoch nad kótami profilu (ADR 0025) */
+  /** osi uloženia v krúžkoch nad kótami profilu (ADR 0026) */
   profileMarkers: readonly DimensionMarker[] | undefined;
   /** voľné výšky prekážok v profile (ADR 0020), len pri zapnutých kótach */
   profileFreeHeights: readonly ProfileFreeHeight[] | undefined;
@@ -87,10 +87,11 @@ export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
   { mode: 'section', label: sk.section.tab },
   { mode: 'parameters', label: sk.parameters.tab },
   { mode: 'checks', label: sk.checks.tab },
+  { mode: 'variants', label: sk.variants.tab },
 ];
 
 /**
- * Pracovná plocha (ADR 0025): lišta nástrojov a 3D alebo 2D výkresy.
+ * Pracovná plocha (ADR 0026): lišta nástrojov a 3D alebo 2D výkresy.
  * V 2D je pôdorys hore, pozdĺžny rez a priečny rez pod ním.
  */
 export function Viewport({

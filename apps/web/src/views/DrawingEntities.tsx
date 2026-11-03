@@ -30,7 +30,7 @@ interface Props {
   skip?: ReadonlySet<LayerId>;
   /** id vybraného objektu (zvýrazní jeho entity) */
   selected?: string | undefined;
-  /** objekty, ktorých popis kreslí pohľad sám (osi uloženia v krúžkoch nad kótami, ADR 0025) */
+  /** objekty, ktorých popis kreslí pohľad sám (osi uloženia v krúžkoch nad kótami, ADR 0026) */
   hideLabels?: ReadonlySet<string> | undefined;
 }
 

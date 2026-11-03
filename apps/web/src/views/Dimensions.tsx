@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 
-/** Odstup prvého radu kót od konštrukcie [px] (návrh popisov, ADR 0025). */
+/** Odstup prvého radu kót od konštrukcie [px] (návrh popisov, ADR 0026). */
 const GAP_PX = 40;
 /** Vzdialenosť radov kót [px]. */
 const ROW_PX = 28;
@@ -170,7 +170,7 @@ function DimensionLine({
   );
 }
 
-/** Os uloženia nad kótami: číslo v krúžku a čiarkovaná os ku konštrukcii (návrh popisov, ADR 0025). */
+/** Os uloženia nad kótami: číslo v krúžku a čiarkovaná os ku konštrukcii (návrh popisov, ADR 0026). */
 function Marker({ at, to, label }: { at: Vec2; to: Vec2; label: string }) {
   const len = Math.hypot(to.x - at.x, to.y - at.y) || 1;
   const ux = (to.x - at.x) / len;
@@ -243,7 +243,7 @@ export function SpanInput({
 }
 
 /**
- * Kóty mosta v pozdĺžnom profile (len na obrazovke, ADR 0012, popisy ADR 0025): nad NK rady polia, dĺžka NK
+ * Kóty mosta v pozdĺžnom profile (len na obrazovke, ADR 0012, popisy ADR 0026): nad NK rady polia, dĺžka NK
  * a celková dĺžka 40 px od NK po 28 px, spojené vynášacími čiarami; nad nimi osi uloženia v krúžkoch s čiarkovanou
  * osou k NK; pod NK premostenie. `toX` prevedie staničenie osi cesty na x obrazovky; `top` a `bottom` sú y horného
  * povrchu a spodku NK na obrazovke.
@@ -369,7 +369,7 @@ export function ProfileDimensions({
 }
 
 /**
- * Kóty mosta v pôdoryse (popisy ADR 0025): reťazce rovnobežné s osou mosta mimo obrysu NK na strane `side`
+ * Kóty mosta v pôdoryse (popisy ADR 0026): reťazce rovnobežné s osou mosta mimo obrysu NK na strane `side`
  * (+1 vpravo), 40 px od NK po 28 px — polia, dĺžka NK, celková dĺžka, premostenie — spojené vynášacími čiarami;
  * nad nimi osi uloženia v krúžkoch s čiarkovanou osou až k NK. `pointAt(s, x)` = bod v odsadení x od osi mosta.
  */

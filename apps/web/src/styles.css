@@ -1,5 +1,5 @@
 /*
- * Vzhľad (ADR 0024): tokeny farieb pre svetlú a tmavú tému. Téma sa riadi systémom,
+ * Vzhľad (ADR 0025): tokeny farieb pre svetlú a tmavú tému. Téma sa riadi systémom,
  * alebo voľbou používateľa v `<html data-theme="light|dark">` (src/theme/theme.ts).
  */
 :root {
@@ -524,6 +524,13 @@ body {
   color: var(--text);
 }
 
+/* aktívny variant (ADR 0024) */
+.status-variant {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--accent);
+}
+
 /* kontroly (ADR 0022) */
 .status-checks {
   flex-shrink: 0;
@@ -543,6 +550,10 @@ body {
 
 .status-checks:hover {
   border-color: var(--border);
+}
+
+.status-variant + .status-checks {
+  margin-left: 0;
 }
 
 .toolbar {
@@ -653,6 +664,15 @@ body {
 
 .parameter-table .wide {
   width: 32%;
+}
+
+/* prepis parametra vo variante (ADR 0024) */
+.parameter-table tr.parameter-overridden td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.parameter-table .parameter-override {
+  text-align: center;
 }
 
 .parameter-table .num {
@@ -1940,7 +1960,7 @@ text.dw-stationing {
   flex: none;
 }
 
-/* --- vzhľad podľa návrhu (ADR 0025): horná lišta, lišta nástrojov, 2D, okná --- */
+/* --- vzhľad podľa návrhu (ADR 0026): horná lišta, lišta nástrojov, 2D, okná --- */
 
 .titlebar {
   grid-area: title;
@@ -2549,7 +2569,7 @@ text.dw-stationing {
   border-radius: 4px;
 }
 
-/* panel vlastností podľa návrhu (ADR 0025): hlavička s ikonou, akcie, polia s popisom nad hodnotou */
+/* panel vlastností podľa návrhu (ADR 0026): hlavička s ikonou, akcie, polia s popisom nad hodnotou */
 .properties {
   display: flex;
   flex-direction: column;
@@ -2840,6 +2860,110 @@ text.dw-stationing {
   overflow: auto;
 }
 
+/* porovnanie variantov (ADR 0024) */
+.variants-view {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 12px 16px;
+  background: var(--panel);
+}
+
+.variants-csv {
+  margin-left: auto;
+}
+
+.variants-view .panel-title {
+  white-space: nowrap;
+}
+
+.mini-table.variants-table {
+  width: auto;
+  min-width: 480px;
+  margin: 12px 0 8px;
+}
+
+.mini-table.variants-table tr th,
+.mini-table.variants-table tr td {
+  padding: 3px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mini-table.variants-table tr th[scope="row"] {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.variants-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-table.variants-table .variants-group th {
+  padding-top: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.variants-table .variant-best {
+  font-weight: 600;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
+}
+
+.variants-table .tag {
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--warning);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+
+.variants-table thead .tag {
+  color: var(--accent);
+}
+
+.variants-help {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: help;
+}
+
+.variant-profile {
+  margin: 8px 0 16px;
+}
+
+.variant-profile figcaption {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.variant-profile-svg {
+  display: block;
+  width: 100%;
+  max-width: 1200px;
+  height: auto;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+}
+
 /* panel Kontroly (ADR 0022) */
 .checks-view {
   position: absolute;
@@ -2898,7 +3022,7 @@ text.dw-stationing {
   border-radius: 8px;
 }
 
-/* dialógy vkladania (ADR 0025) */
+/* dialógy vkladania (ADR 0026) */
 .dialog-frame {
   display: flex;
   flex-direction: column;
@@ -3168,7 +3292,7 @@ text.dw-stationing {
   align-items: center;
 }
 
-/* skupiny a polia v dialógoch v novom ráme (ADR 0025) */
+/* skupiny a polia v dialógoch v novom ráme (ADR 0026) */
 .dialog-frame .modal-group {
   gap: 8px;
   padding: 10px 14px 14px;
@@ -3190,7 +3314,7 @@ text.dw-stationing {
   display: none;
 }
 
-/* okno presunuté do samostatného okna prehliadača (ADR 0025) */
+/* okno presunuté do samostatného okna prehliadača (ADR 0026) */
 .app-window-external {
   height: 100vh;
 }
@@ -3203,7 +3327,7 @@ text.dw-stationing {
   box-shadow: none;
 }
 
-/* kontroly v pravom paneli a odkaz pod stromom (ADR 0025) */
+/* kontroly v pravom paneli a odkaz pod stromom (ADR 0026) */
 .panel-left {
   display: flex;
   flex-direction: column;
@@ -3383,7 +3507,7 @@ text.dw-stationing {
   color: var(--muted);
 }
 
-/* prázdny projekt (ADR 0025) */
+/* prázdny projekt (ADR 0026) */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -3474,8 +3598,8 @@ text.dw-stationing {
   color: var(--muted);
 }
 
-/* popisy výkresov (ADR 0025) */
-/* osi uloženia nad kótami (ADR 0025) */
+/* popisy výkresov (ADR 0026) */
+/* osi uloženia nad kótami (ADR 0026) */
 .dim-marker circle {
   fill: var(--canvas);
   stroke: var(--axis-line);
@@ -3511,7 +3635,7 @@ text.dw-stationing {
   stroke-linejoin: round;
 }
 
-/* pravítko staničenia pod pozdĺžnym profilom (ADR 0025) */
+/* pravítko staničenia pod pozdĺžnym profilom (ADR 0026) */
 .station-ruler rect {
   fill: var(--canvas);
 }
@@ -3531,7 +3655,7 @@ text.dw-stationing {
   fill: var(--muted);
 }
 
-/* tabuľka pod pozdĺžnym profilom (ADR 0025) */
+/* tabuľka pod pozdĺžnym profilom (ADR 0026) */
 .profile-table rect {
   fill: var(--panel);
   stroke: var(--border);

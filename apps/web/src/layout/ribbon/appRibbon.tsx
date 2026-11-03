@@ -74,6 +74,13 @@ export interface RibbonContext {
   view3d: View3dState;
   setView3d: (changes: Partial<View3dState>) => void;
   onProjectInfo: () => void;
+  /** varianty návrhu (ADR 0024) a aktívny variant */
+  variants: readonly { id: string; name: string }[];
+  activeVariant: string;
+  setActiveVariant: (id: string) => void;
+  onDuplicateVariant: () => void;
+  onRenameVariant: () => void;
+  onRemoveVariant: () => void;
 }
 
 /** Ponúkané prevýšenia pozdĺžneho profilu (výšky : dĺžky); export je vždy 1 : 1. */
@@ -85,6 +92,7 @@ const VIEW_ICONS = {
   section: 'section',
   parameters: 'parameters',
   checks: 'checks',
+  variants: 'variants',
 } as const;
 
 /** Karty ribbonu podľa druhu práce ako v Revite (ADR 0016). */
@@ -123,6 +131,49 @@ export function ribbonTabs(c: RibbonContext): RibbonTab[] {
       id: 'home',
       label: t.tabs.home,
       groups: [
+        {
+          label: t.groups.variant,
+          items: [
+            {
+              kind: 'select',
+              id: 'variant',
+              label: t.variant,
+              title: t.variantTitle,
+              value: c.activeVariant,
+              options: c.variants.map((v) => ({ value: v.id, label: v.name })),
+              onChange: c.setActiveVariant,
+              disabled: c.variants.length < 2,
+            },
+            {
+              kind: 'button',
+              id: 'variant-duplicate',
+              label: sk.variants.duplicate,
+              title: sk.variants.duplicateTitle,
+              icon: 'duplicate',
+              size: 'small',
+              onClick: c.onDuplicateVariant,
+            },
+            {
+              kind: 'button',
+              id: 'variant-rename',
+              label: sk.variants.rename,
+              title: sk.variants.renameTitle,
+              icon: 'rename',
+              size: 'small',
+              onClick: c.onRenameVariant,
+            },
+            {
+              kind: 'button',
+              id: 'variant-remove',
+              label: sk.variants.remove,
+              title: sk.variants.removeTitle,
+              icon: 'trash',
+              size: 'small',
+              disabled: c.variants.length < 2,
+              onClick: c.onRemoveVariant,
+            },
+          ],
+        },
         {
           label: t.groups.bridge,
           items: [

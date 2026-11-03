@@ -16,7 +16,7 @@ export interface MenuSection {
   items: readonly MenuItem[];
 }
 
-/** Rozbaľovacie menu v hornej lište (ADR 0025), napr. Export; zavrie sa výberom, Esc alebo klikom mimo. */
+/** Rozbaľovacie menu v hornej lište (ADR 0026), napr. Export; zavrie sa výberom, Esc alebo klikom mimo. */
 export function AppMenu({
   sections,
   label = sk.ribbon.file,

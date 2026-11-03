@@ -3,6 +3,7 @@ import {
   defaultAbutmentGeometry,
   defaultFoundation,
   type ParameterSet,
+  type ProjectFile,
   type Support,
 } from '@bridge/model';
 import {
@@ -60,6 +61,94 @@ export interface SupportState {
   spans: Map<string, DeckSpans>;
 }
 
+/** Prvky projektu, z ktorých sa počítajú osi uloženia, podpery a polia. */
+export type SupportStateInput = Pick<
+  ProjectFile,
+  | 'bridgeAxes'
+  | 'profiles'
+  | 'superstructures'
+  | 'bearingLines'
+  | 'supports'
+  | 'planLines'
+  | 'brief'
+>;
+
+/**
+ * Osi uloženia, pásy priečnikov, podpery a polia NK z prvkov projektu (čistá funkcia; aj pre neaktívne varianty,
+ * ADR 0024).
+ */
+export function supportStateOf(
+  project: SupportStateInput,
+  alignments: ReadonlyMap<string, Alignment>,
+  parameters: ParameterSet,
+  axisLengths: ReadonlyMap<string, AxisLength>,
+): SupportState {
+  const { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines, brief } =
+    project;
+  const base = {
+    alignments,
+    parameters,
+    bridgeAxes,
+    profiles,
+    superstructures,
+    bearingLines,
+    planLines,
+    // voľná šírka pre výrazy NK (ADR 0023)
+    brief,
+  };
+  const lines = bearingLines.map((l) => evaluateBearingLine(base, l));
+  // pásy priečnikov (ADR 0018) menia prierez NK, a tým aj spodok NK nad ložiskami
+  const crossbeams = deckCrossbeams(
+    base,
+    lines,
+    (axis, road) => axisLengths.get(axis.id) ?? bridgeAxisLength(axis, road, parameters),
+  );
+  const ctx = { ...base, crossbeams };
+  const byId = new Map(lines.map((l) => [l.line.id, l]));
+  const results = supports.map((s) => evaluateSupport(ctx, s, byId.get(s.bearingLine)));
+  const spans = new Map<string, DeckSpans>();
+  for (const sup of superstructures) {
+    const ownLines = lines.filter((l) => l.line.superstructure === sup.id);
+    if (ownLines.length === 0) continue;
+    const own = results.filter((r) => r.superstructure === sup.id);
+    const minSpan = parameters.evaluateAt(sup.from).values.get('minSpan');
+    const typology = profiles.find((p) => p.id === sup.profile)?.typology;
+    const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
+    const measure = axisLengths.get(sup.bridgeAxis);
+    const result: DeckSpans = evaluateSpans(sup, spanLines(ownLines, own), {
+      ...(minSpan === undefined ? {} : { minSpan }),
+      typology,
+      measure: measure?.lengthAt,
+    });
+    const road = alignments.get(axis?.alignment ?? '');
+    const sFrom = road?.stationing.fromDisplay(sup.from);
+    const sTo = road?.stationing.fromDisplay(sup.to);
+    if (axis && road && measure && sFrom !== undefined && sTo !== undefined) {
+      result.lengths = bridgeLengths({
+        measure,
+        supports: own,
+        sFrom,
+        sTo,
+        axisLine: bridgeAxisPlan(axis, road, parameters, sFrom - AXIS_REACH, sTo + AXIS_REACH),
+      });
+    }
+    if (road && measure) {
+      const cb = crossbeamBands({
+        deck: sup,
+        lines,
+        profiles,
+        parameters,
+        alignment: road,
+        measure,
+      });
+      result.crossbeams = cb.bands;
+      result.issues.push(...cb.issues);
+    }
+    spans.set(sup.id, result);
+  }
+  return { lines, supports: results, spans, crossbeams };
+}
+
 /** Osi uloženia, podpery a polia projektu; prepočítajú sa pri zmene osí, parametrov alebo prvkov mosta. */
 export function useSupportState(
   alignments: ReadonlyMap<string, Alignment>,
@@ -69,81 +158,27 @@ export function useSupportState(
   const project = useProject((s) => s.project);
   const { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines, brief } =
     project;
-  return useMemo(() => {
-    const base = {
+  return useMemo(
+    () =>
+      supportStateOf(
+        { bridgeAxes, profiles, superstructures, bearingLines, supports, planLines, brief },
+        alignments,
+        parameters,
+        axisLengths,
+      ),
+    [
       alignments,
       parameters,
+      axisLengths,
       bridgeAxes,
       profiles,
       superstructures,
       bearingLines,
+      supports,
       planLines,
-      // voľná šírka pre výrazy NK (ADR 0023)
       brief,
-    };
-    const lines = bearingLines.map((l) => evaluateBearingLine(base, l));
-    // pásy priečnikov (ADR 0018) menia prierez NK, a tým aj spodok NK nad ložiskami
-    const crossbeams = deckCrossbeams(
-      base,
-      lines,
-      (axis, road) => axisLengths.get(axis.id) ?? bridgeAxisLength(axis, road, parameters),
-    );
-    const ctx = { ...base, crossbeams };
-    const byId = new Map(lines.map((l) => [l.line.id, l]));
-    const results = supports.map((s) => evaluateSupport(ctx, s, byId.get(s.bearingLine)));
-    const spans = new Map<string, DeckSpans>();
-    for (const sup of superstructures) {
-      const ownLines = lines.filter((l) => l.line.superstructure === sup.id);
-      if (ownLines.length === 0) continue;
-      const own = results.filter((r) => r.superstructure === sup.id);
-      const minSpan = parameters.evaluateAt(sup.from).values.get('minSpan');
-      const typology = profiles.find((p) => p.id === sup.profile)?.typology;
-      const axis = bridgeAxes.find((a) => a.id === sup.bridgeAxis);
-      const measure = axisLengths.get(sup.bridgeAxis);
-      const result: DeckSpans = evaluateSpans(sup, spanLines(ownLines, own), {
-        ...(minSpan === undefined ? {} : { minSpan }),
-        typology,
-        measure: measure?.lengthAt,
-      });
-      const road = alignments.get(axis?.alignment ?? '');
-      const sFrom = road?.stationing.fromDisplay(sup.from);
-      const sTo = road?.stationing.fromDisplay(sup.to);
-      if (axis && road && measure && sFrom !== undefined && sTo !== undefined) {
-        result.lengths = bridgeLengths({
-          measure,
-          supports: own,
-          sFrom,
-          sTo,
-          axisLine: bridgeAxisPlan(axis, road, parameters, sFrom - AXIS_REACH, sTo + AXIS_REACH),
-        });
-      }
-      if (road && measure) {
-        const cb = crossbeamBands({
-          deck: sup,
-          lines,
-          profiles,
-          parameters,
-          alignment: road,
-          measure,
-        });
-        result.crossbeams = cb.bands;
-        result.issues.push(...cb.issues);
-      }
-      spans.set(sup.id, result);
-    }
-    return { lines, supports: results, spans, crossbeams };
-  }, [
-    alignments,
-    parameters,
-    axisLengths,
-    bridgeAxes,
-    profiles,
-    superstructures,
-    bearingLines,
-    supports,
-    planLines,
-    brief,
-  ]);
+    ],
+  );
 }
 
 /**

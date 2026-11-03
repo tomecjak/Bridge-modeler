@@ -10,13 +10,18 @@ import {
   type PlanLine,
   type ProfileDefinition,
   type ProjectFile,
+  renameInStationFunction,
   renameParameter,
+  type StationFunction,
   type StudyArea,
   type Superstructure,
   type Support,
   type Survey,
   type TerrainSurface,
+  type VariantElements,
+  variantElements,
 } from '@bridge/model';
+import { current, type Draft, isDraft } from 'immer';
 
 /** Kolekcie prvkov mosta s rovnakými príkazmi (pridať / upraviť / odstrániť). */
 export interface ElementCollections {
@@ -53,8 +58,17 @@ export type Command =
   | { type: 'addParameter'; parameter: Parameter }
   | { type: 'updateParameter'; id: string; changes: Partial<Omit<Parameter, 'id'>> }
   | { type: 'removeParameter'; id: string }
-  /** premenovanie vrátane prepisu odkazov v ostatných výrazoch */
+  /** premenovanie vrátane prepisu odkazov v ostatných výrazoch aj v prepisoch variantov */
   | { type: 'renameParameter'; id: string; name: string }
+  /** prepis priebehu globálneho parametra v aktívnom variante (ADR 0024); null prepis zruší */
+  | { type: 'setParameterOverride'; id: string; law: StationFunction | null }
+  /** prepnutie aktívneho variantu = výmena prvkov mosta s pracovnou kópiou (ADR 0024) */
+  | { type: 'setActiveVariant'; id: string }
+  /** kópia aktívneho variantu (prvky s rovnakými id, prepisy parametrov) ako nový aktívny variant */
+  | { type: 'duplicateVariant'; id: string; name: string }
+  | { type: 'renameVariant'; id: string; name: string }
+  /** odstráni variant; aktívny najprv prepne na susedný, posledný variant ostane */
+  | { type: 'removeVariant'; id: string }
   /** pridá prvky naraz (napr. príklad dvojice NK) — jeden krok späť/znova */
   | {
       type: 'addElements';
@@ -78,6 +92,33 @@ export type Command =
   | { type: 'replaceTerrain'; id: string; terrain: TerrainSurface }
   /** viac príkazov za sebou ako jeden krok späť/znova (napr. posun osí uloženia a konca NK, ADR 0017) */
   | { type: 'batch'; commands: Command[] };
+
+/** Kolekcie prvkov mosta pracovnej kópie ako nemenné hodnoty (bez draftov immer, nezmenené bez kópie). */
+function snapshotElements(draft: Draft<ProjectFile>): VariantElements {
+  const value = <T>(x: T): T => (isDraft(x) ? (current(x as Draft<T>) as T) : x);
+  const e = variantElements(draft);
+  return {
+    bridgeAxes: value(e.bridgeAxes),
+    profiles: value(e.profiles),
+    superstructures: value(e.superstructures),
+    edgeBeams: value(e.edgeBeams),
+    bearingLines: value(e.bearingLines),
+    supports: value(e.supports),
+  };
+}
+
+/** Prepne aktívny variant výmenou kolekcií s pracovnou kópiou (ADR 0024); aktívny alebo neznámy nič nemení. */
+function activateVariant(draft: Draft<ProjectFile>, id: string): void {
+  const next = draft.variants.find((v) => v.id === id);
+  const active = draft.variants.find((v) => v.id === draft.activeVariant);
+  if (!next?.elements || !active || next === active) return;
+  // immer dovoľuje presunúť drafty v strome: kolekcie sa vymenia bez kópie
+  const stored = variantElements(draft);
+  Object.assign(draft, next.elements);
+  delete next.elements;
+  active.elements = stored;
+  draft.activeVariant = next.id;
+}
 
 /** Aplikuje príkaz na draft projektu (immer). Čistá funkcia nad draftom. */
 export function applyCommand(draft: ProjectFile, command: Command): void {
@@ -110,6 +151,13 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
       return;
     }
     case 'renameParameter': {
+      const old = draft.parameters.find((x) => x.id === command.id)?.name;
+      if (old !== undefined && old !== command.name)
+        for (const v of draft.variants)
+          for (const [id, law] of Object.entries(v.parameters)) {
+            const next = renameInStationFunction(law, old, command.name);
+            if (JSON.stringify(next) !== JSON.stringify(law)) v.parameters[id] = next;
+          }
       const renamed = renameParameter(draft.parameters, command.id, command.name);
       renamed.forEach((p, i) => {
         const current = draft.parameters[i];
@@ -167,6 +215,45 @@ export function applyCommand(draft: ProjectFile, command: Command): void {
     case 'removeParameter': {
       const i = draft.parameters.findIndex((x) => x.id === command.id);
       if (i >= 0) draft.parameters.splice(i, 1);
+      for (const v of draft.variants) delete v.parameters[command.id];
+      return;
+    }
+    case 'setParameterOverride': {
+      const variant = draft.variants.find((v) => v.id === draft.activeVariant);
+      if (!variant || !draft.parameters.some((x) => x.id === command.id)) return;
+      if (command.law) variant.parameters[command.id] = command.law;
+      else delete variant.parameters[command.id];
+      return;
+    }
+    case 'setActiveVariant':
+      activateVariant(draft, command.id);
+      return;
+    case 'duplicateVariant': {
+      const active = draft.variants.find((v) => v.id === draft.activeVariant);
+      if (!active || draft.variants.some((v) => v.id === command.id)) return;
+      // nemenné dáta sa môžu zdieľať: uložený variant aj pracovná kópia odkazujú na tie isté kolekcie
+      active.elements = snapshotElements(draft);
+      draft.variants.push({
+        id: command.id,
+        name: command.name,
+        parameters: { ...active.parameters },
+      });
+      draft.activeVariant = command.id;
+      return;
+    }
+    case 'renameVariant': {
+      const v = draft.variants.find((x) => x.id === command.id);
+      if (v) v.name = command.name;
+      return;
+    }
+    case 'removeVariant': {
+      const i = draft.variants.findIndex((v) => v.id === command.id);
+      if (i < 0 || draft.variants.length < 2) return;
+      if (command.id === draft.activeVariant) {
+        const neighbour = draft.variants[i + 1] ?? draft.variants[i - 1];
+        if (neighbour) activateVariant(draft, neighbour.id);
+      }
+      draft.variants.splice(i, 1);
       return;
     }
     case 'batch':

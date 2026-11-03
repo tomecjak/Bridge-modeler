@@ -1,4 +1,4 @@
-import type { ProjectFile } from '@bridge/model';
+import { effectiveParameters, type ProjectFile } from '@bridge/model';
 import { resolveDeckEnds } from '@bridge/sections';
 import type { Draft } from 'immer';
 import { alignmentsOf, measureOf, parametersOf } from './modelCache.ts';
@@ -13,7 +13,7 @@ export function syncDeckEnds(
   const origin = project.crs.origin;
   if (!origin || project.superstructures.length === 0 || project.bearingLines.length === 0)
     return undefined;
-  const parameters = parametersOf(project.parameters);
+  const parameters = parametersOf(effectiveParameters(project));
   const changes = resolveDeckEnds({
     superstructures: project.superstructures,
     bearingLines: project.bearingLines,

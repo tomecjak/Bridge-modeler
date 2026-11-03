@@ -117,9 +117,9 @@ export interface PlanDimensionSet {
   pointAt: (s: number, x: number) => Vec2;
   side: 1 | -1;
   reach: number;
-  /** vzdialenosť okraja NK na druhej strane [m] (čísla staničenia sa odsadia za ňu, ADR 0025) */
+  /** vzdialenosť okraja NK na druhej strane [m] (čísla staničenia sa odsadia za ňu, ADR 0026) */
   reachOther?: number;
-  /** osi uloženia v krúžkoch nad kótami (ADR 0025) */
+  /** osi uloženia v krúžkoch nad kótami (ADR 0026) */
   markers?: readonly DimensionMarker[];
 }
 
@@ -263,7 +263,7 @@ export function PlanView({
     [alignment, samples],
   );
 
-  /** obrysy NK vo výkrese (odsadenie čísel staničenia za okraj NK, ADR 0025) */
+  /** obrysy NK vo výkrese (odsadenie čísel staničenia za okraj NK, ADR 0026) */
   const deckOutlines = useMemo(
     () =>
       (drawing?.entities ?? []).flatMap((e) =>
@@ -274,7 +274,7 @@ export function PlanView({
     [drawing],
   );
 
-  /** osi uloženia s krúžkom nad kótami: ich popis z výkresu sa nekreslí (ADR 0025) */
+  /** osi uloženia s krúžkom nad kótami: ich popis z výkresu sa nekreslí (ADR 0026) */
   const markerOwners = useMemo(
     () => new Set((dimensions ?? []).flatMap((d) => (d.markers ?? []).map((m) => m.id))),
     [dimensions],
@@ -552,8 +552,8 @@ export function PlanView({
           )}
           {ticks.map((t) => {
             const p = toScreen(t.point);
-            // normála vpravo (cos, −sin) vo svete → (cos, +sin) na obrazovke; čísla na strane bez kót (ADR 0025)
-            // všetky čísla na strane bez kót (ADR 0025)
+            // normála vpravo (cos, −sin) vo svete → (cos, +sin) na obrazovke; čísla na strane bez kót (ADR 0026)
+            // všetky čísla na strane bez kót (ADR 0026)
             const sign = dimensions?.[0] ? -dimensions[0].side : -1;
             const nx = sign * Math.cos(t.azimuth);
             const ny = sign * Math.sin(t.azimuth);

@@ -232,7 +232,7 @@ export function PropertyGroups({ groups }: { groups: readonly PropertyGroup[] })
 }
 
 /**
- * Panel Vlastnosti vpravo (ADR 0016, vzhľad ADR 0025): ikona a druh prvku, výber typu, akcie prvku,
+ * Panel Vlastnosti vpravo (ADR 0016, vzhľad ADR 0026): ikona a druh prvku, výber typu, akcie prvku,
  * skupiny polí s popisom nad hodnotou.
  */
 export function PropertiesPalette({

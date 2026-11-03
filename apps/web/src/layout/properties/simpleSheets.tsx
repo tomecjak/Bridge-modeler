@@ -447,7 +447,9 @@ export function bridgeAxisSheet(input: {
 
 /** Vlastnosti aktívneho pohľadu, keď nie je nič vybrané (ako v Revite). */
 export function viewSheet(input: {
-  mode: '3d' | '2d' | 'section' | 'parameters' | 'checks';
+  mode: '3d' | '2d' | 'section' | 'parameters' | 'checks' | 'variants';
+  /** varianty projektu (karta Varianty, ADR 0024) */
+  variants?: readonly { name: string; active: boolean }[];
   /** súhrn kontrol po skupinách (karta Kontroly, ADR 0022) */
   checks?: readonly { label: string; errors: number; warnings: number }[];
   exaggeration: number;
@@ -482,7 +484,7 @@ export function viewSheet(input: {
 }): PropertySheet {
   const p = sk.properties;
   const heading = { icon: 'cube' as const, label: p.viewKinds[input.mode] };
-  /** priečny rez na staničení: v 2D pod pozdĺžnym rezom aj vo vlastnostiach (ADR 0025) */
+  /** priečny rez na staničení: v 2D pod pozdĺžnym rezom aj vo vlastnostiach (ADR 0026) */
   const sectionGroups: PropertySheet['groups'] = [
     {
       id: 'view-section',
@@ -662,6 +664,46 @@ export function viewSheet(input: {
                   })),
           },
           { id: 'view-checks-hint', title: p.view, rows: [{ kind: 'note', text: sk.checks.hint }] },
+        ],
+      };
+    case 'variants':
+      return {
+        heading: { icon: 'variants', label: heading.label },
+        groups: [
+          {
+            id: 'view-variants',
+            title: sk.variants.sheetVariants,
+            rows: (input.variants ?? []).map((v) => ({
+              kind: 'readonly' as const,
+              label: v.name,
+              value: v.active ? sk.variants.active : '',
+            })),
+          },
+          {
+            id: 'view-variants-profiles',
+            title: sk.variants.profiles,
+            rows: [
+              {
+                kind: 'select',
+                label: sk.ribbon.exaggeration,
+                value: String(input.exaggeration),
+                options: [1, 2, 5, 10].map((k) => ({ value: String(k), label: `${k}×` })),
+                onChange: (v) => input.setExaggeration(Number(v)),
+              },
+              ...(input.decks.length > 1
+                ? [
+                    {
+                      kind: 'select' as const,
+                      label: sk.ribbon.profileDeck,
+                      value: input.profileDeckId ?? '',
+                      options: input.decks.map((d) => ({ value: d.id, label: d.name })),
+                      onChange: input.setProfileDeckId,
+                    },
+                  ]
+                : []),
+              { kind: 'note', text: sk.variants.hint },
+            ],
+          },
         ],
       };
   }

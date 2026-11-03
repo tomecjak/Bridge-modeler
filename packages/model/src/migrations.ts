@@ -2,6 +2,7 @@ import { emptyBrief } from './brief.ts';
 import type { ModelIssue } from './issues.ts';
 import { SCHEMA_VERSION } from './schema.ts';
 import { defaultAbutmentGeometry, levelFoundation } from './types.ts';
+import { DEFAULT_VARIANT_ID, defaultVariant } from './variants.ts';
 
 type RawProject = Record<string, unknown>;
 
@@ -183,6 +184,11 @@ export const MIGRATIONS: Readonly<
   '13': { to: '14', migrate: (raw) => raw },
   /** 14 → 15: rímsy (ADR 0023); požadovaná voľná šírka NK je voliteľná */
   '14': { to: '15', migrate: (raw) => ({ ...raw, edgeBeams: [] }) },
+  /** 15 → 16: varianty (ADR 0024); doterajšie prvky mosta sú „Variant A“ */
+  '15': {
+    to: '16',
+    migrate: (raw) => ({ ...raw, variants: [defaultVariant()], activeVariant: DEFAULT_VARIANT_ID }),
+  },
 };
 
 /** Prevedie surový objekt projektu na aktuálnu verziu schémy (bez validácie obsahu). */

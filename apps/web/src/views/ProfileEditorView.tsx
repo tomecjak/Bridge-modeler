@@ -154,7 +154,7 @@ export function ProfileEditorView({
         onSelectPoint(undefined);
       }
     };
-    // editor môže byť v samostatnom okne prehliadača (ADR 0025): klávesy počúva okno, v ktorom je
+    // editor môže byť v samostatnom okne prehliadača (ADR 0026): klávesy počúva okno, v ktorom je
     const win = ref.current?.ownerDocument.defaultView ?? window;
     win.addEventListener('keydown', onKey);
     return () => win.removeEventListener('keydown', onKey);

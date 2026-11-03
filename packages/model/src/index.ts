@@ -12,3 +12,4 @@ export * from './stationFunction.ts';
 export * from './supportLibrary.ts';
 export * from './survey.ts';
 export * from './types.ts';
+export * from './variants.ts';

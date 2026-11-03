@@ -85,7 +85,7 @@ interface Props {
   onMeasure?: (text: string | undefined) => void;
   /** kóty NK v reze (staničenie osi cesty); kreslia sa len v osi cesty a osi mosta */
   dimensions?: readonly DimensionChain[] | undefined;
-  /** osi uloženia v krúžkoch nad kótami a v tabuľke pod profilom (ADR 0025) */
+  /** osi uloženia v krúžkoch nad kótami a v tabuľke pod profilom (ADR 0026) */
   markers?: readonly DimensionMarker[] | undefined;
   /** voľné výšky prekážok pod NK v krížení (u, výšky v m n. m.; ADR 0020) */
   freeHeights?: readonly ProfileFreeHeight[] | undefined;
@@ -133,9 +133,9 @@ function elevationsIn(drawing: Drawing | undefined, from: number, to: number): n
   return zs;
 }
 
-/** Výška pravítka staničenia pod profilom [px] (ADR 0025). */
+/** Výška pravítka staničenia pod profilom [px] (ADR 0026). */
 const RULER_PX = 30;
-/** Výška riadku tabuľky pod profilom [px] (os uloženia, staničenie, niveleta, terén; ADR 0025). */
+/** Výška riadku tabuľky pod profilom [px] (os uloženia, staničenie, niveleta, terén; ADR 0026). */
 const TABLE_ROW_PX = 20;
 /** Najmenšia vzdialenosť stĺpcov tabuľky [px]; bližšie osi sa v tabuľke vynechajú. */
 const TABLE_COL_PX = 76;
@@ -300,7 +300,7 @@ export function ProfileView({
         )
       : [];
   const markerOwners = new Set((markers ?? []).map((m) => m.id));
-  /** tabuľka pod pravítkom: osi uloženia s kótami (ADR 0025) */
+  /** tabuľka pod pravítkom: osi uloženia s kótami (ADR 0026) */
   const tableMarkers = dimensions && markers && markers.length > 0 ? markers : [];
   const tablePx = tableMarkers.length > 0 ? 4 * TABLE_ROW_PX + 4 : 0;
   const rulerTop = size.height - tablePx - RULER_PX;
@@ -641,7 +641,7 @@ export function ProfileView({
               )),
             )}
           <polyline className="profile-line" points={gradeLine} />
-          {/* staničenie na pravítku pod profilom (ADR 0025) */}
+          {/* staničenie na pravítku pod profilom (ADR 0026) */}
           <g className="station-ruler">
             <rect x={0} y={rulerTop} width={size.width} height={RULER_PX} />
             <line

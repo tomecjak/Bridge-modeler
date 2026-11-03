@@ -9,7 +9,7 @@ interface Props {
   onOpenLibrary: () => void;
 }
 
-/** Prázdny projekt (ADR 0025): plocha na pustenie LandXML a ďalšie podklady. */
+/** Prázdny projekt (ADR 0026): plocha na pustenie LandXML a ďalšie podklady. */
 export function EmptyState({
   onImportLandXml,
   onOpenProject,

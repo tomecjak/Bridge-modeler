@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * Modálny dialóg vkladania a úprav (ADR 0025): hlavička s ikonou, popisom a zatvorením, telo a spodný riadok
+ * Modálny dialóg vkladania a úprav (ADR 0026): hlavička s ikonou, popisom a zatvorením, telo a spodný riadok
  * s tlačidlami. Esc zavrie.
  */
 export function DialogFrame({

@@ -114,6 +114,36 @@ export function buildProfileLine(key: ProfileAxisKey, src: ProfileSources): Prof
     : roadProfileLine(road);
 }
 
+/**
+ * Výkres pozdĺžneho profilu v čiare `line`: rez NK, podpery a osi uloženia, terén pozdĺž čiary, prekážky a pohľad na
+ * rímsy; aj voľné výšky prekážok pod NK (čistá funkcia, aj pre porovnanie variantov).
+ */
+export function profileViewDrawing(
+  line: ProfileLine,
+  deck: DeckDrawingData | undefined,
+  measure: AxisLength | undefined,
+  tins: readonly TerrainTin[],
+  obstacles: readonly ObstacleResult[],
+): { drawing: Drawing; lines: ProfileBearingLine[]; freeHeights: ProfileFreeHeight[] } {
+  const cuts = deck ? profileCuts(deck, line, measure) : undefined;
+  const path = line.points.map((p) => ({ s: p.u, point: p.point }));
+  const terrain = terrainProfilesAlong(tins, path, line.road.origin.z).flatMap((t) =>
+    t.runs.map((r) => r.map((p) => ({ u: p.s, z: p.z }))),
+  );
+  const drawing = profileDrawing({
+    line,
+    decks: cuts && deck ? [{ id: deck.id, cut: cuts.deck }] : [],
+    supports: cuts?.supports ?? [],
+    lines: cuts?.lines ?? [],
+    terrain,
+    obstacles: profileObstacles(obstacles, line.points, line.road.origin.z),
+    // pohľad na rímsy NK (ADR 0023)
+    edgeBeams: deck ? profileEdgeBeamLines(deck, line) : [],
+  });
+  const freeHeights = cuts ? profileFreeHeights(obstacles, line, cuts.deck.outer) : [];
+  return { drawing, lines: cuts?.lines ?? [], freeHeights };
+}
+
 /** Pozdĺžny profil v zvolenej osi: čiara, ponuka osí a výkres (NK, podpery, terén pozdĺž čiary). */
 export function useProfileView(input: {
   key: ProfileAxisKey | undefined;
@@ -150,26 +180,10 @@ export function useProfileView(input: {
     () => (road ? buildProfileLine(axis, { road, deck, measure, others, planLines }) : undefined),
     [axis, road, deck, measure, others, planLines],
   );
-  const view = useMemo(() => {
-    if (!line) return undefined;
-    const cuts = deck ? profileCuts(deck, line, measure) : undefined;
-    const path = line.points.map((p) => ({ s: p.u, point: p.point }));
-    const terrain = terrainProfilesAlong(tins, path, line.road.origin.z).flatMap((t) =>
-      t.runs.map((r) => r.map((p) => ({ u: p.s, z: p.z }))),
-    );
-    const drawing = profileDrawing({
-      line,
-      decks: cuts && deck ? [{ id: deck.id, cut: cuts.deck }] : [],
-      supports: cuts?.supports ?? [],
-      lines: cuts?.lines ?? [],
-      terrain,
-      obstacles: profileObstacles(obstacles, line.points, line.road.origin.z),
-      // pohľad na rímsy NK (ADR 0023)
-      edgeBeams: deck ? profileEdgeBeamLines(deck, line) : [],
-    });
-    const freeHeights = cuts ? profileFreeHeights(obstacles, line, cuts.deck.outer) : [];
-    return { drawing, lines: cuts?.lines ?? [], freeHeights };
-  }, [line, deck, measure, tins, obstacles]);
+  const view = useMemo(
+    () => line && profileViewDrawing(line, deck, measure, tins, obstacles),
+    [line, deck, measure, tins, obstacles],
+  );
   const showEdges = input.edgeTerrain;
   const edgeTerrain = useMemo(() => {
     if (!showEdges || line?.kind !== 'bridgeAxis' || !deck || !measure || tins.length === 0)

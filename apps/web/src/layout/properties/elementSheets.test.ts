@@ -339,7 +339,7 @@ describe('deckSheet', () => {
       deck: widths.deck ?? deck,
       widths: widths.widths,
       briefFreeWidth: widths.brief,
-      bridgeArea: widths.widths ? 552.3 : undefined,
+      bridgeArea: widths.widths ? { value: 552.3, source: 'bridged' } : undefined,
       profiles: [profile],
       axes: [{ id: 'ax', name: 'Os mosta' }],
       curveName: () => '',
@@ -404,7 +404,7 @@ describe('deckSheet', () => {
     ).toEqual([
       ['Šírka NK [mm]', '12 750 – 12 800'],
       ['Šírka mosta (po vonkajšie hrany ríms) [mm]', '12 750 – 12 800'],
-      ['Plocha mosta (pôdorys) [m²]', '552,3'],
+      ['Plocha mosta [m²]', '552,3'],
     ]);
     if (rows[0]?.kind === 'text') rows[0].onCommit('13 000');
     expect(commands.at(-1)).toMatchObject({ changes: { freeWidth: 13 } });

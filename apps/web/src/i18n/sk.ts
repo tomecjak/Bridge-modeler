@@ -15,6 +15,8 @@ export const sk = {
     parametersTitle: 'Parametre a staničné funkcie',
     parametersSubtitle: (n: number) =>
       `${n} ${n === 1 ? 'parameter' : n > 1 && n < 5 ? 'parametre' : 'parametrov'} · zmeny sa prejavia v modeli okamžite`,
+    variantsSubtitle: (n: number) =>
+      `${n} ${n === 1 ? 'variant' : n < 5 ? 'varianty' : 'variantov'} · ukazovatele a pozdĺžne profily v rovnakej mierke`,
     checksSubtitle: 'Klik na riadok vyberie prvok, dvojklik ho ukáže v pohľade.',
   },
   exportMenu: 'Export',
@@ -178,6 +180,146 @@ export const sk = {
     landxmlFile: 'Súbor LandXML',
     parameter: 'Parameter',
   },
+  variants: {
+    tab: 'Varianty',
+    title: 'Porovnanie variantov',
+    hint: 'Ukazovatele variantov nad tými istými podkladmi; zvýraznená je lepšia hodnota. Vysvetlivku ukáže kurzor nad ukazovateľom.',
+    indicator: 'Ukazovateľ',
+    active: 'aktívny',
+    activateTitle: 'Prepnúť na tento variant',
+    exportCsv: 'Export CSV',
+    csvName: (project: string) => `${project} – porovnanie variantov.csv`,
+    partial: '* hodnota len z časti — pozri vysvetlivku ukazovateľa',
+    noOrigin:
+      'Projekt nemá os z LandXML — ukazovatele sa počítajú z NK, podpier a prekážok na osi.',
+    profiles: 'Pozdĺžne profily v osi mosta',
+    profilesHint: (exaggeration: number) =>
+      `Rovnaká mierka pre všetky varianty, prevýšenie ${exaggeration}× (panel Vlastnosti).`,
+    noProfile: 'Variant nemá NK.',
+    sheetVariants: 'Varianty',
+    status: (name: string) => `Variant: ${name}`,
+    duplicate: 'Duplikovať',
+    duplicateTitle:
+      'Kópia aktívneho variantu (prvky mosta aj prepisy parametrov) ako nový aktívny variant',
+    rename: 'Premenovať',
+    renameTitle: 'Premenovať aktívny variant',
+    remove: 'Odstrániť',
+    removeTitle: 'Odstrániť aktívny variant (Späť ho vráti); posledný variant ostane',
+    duplicated: (name: string) => `Nový variant ${name} je aktívny`,
+    removed: (name: string) => `Variant ${name} odstránený (Späť ho vráti)`,
+    groups: {
+      layout: 'Dispozícia',
+      areas: 'Plochy a objemy',
+      supports: 'Podpery',
+      checks: 'Kontroly',
+      cost: 'Cena',
+    },
+    /** štítok pri cene: jednotkové ceny sú zatiaľ zástupné (ADR 0024) */
+    placeholderPrices: 'zástupné ceny',
+    /** ukazovatele (ADR 0024): popis v tabuľke a vysvetlivka */
+    indicators: {
+      spanCount: {
+        label: 'Počet polí',
+        hint: 'Počet polí NK medzi osami uloženia (pri viacerých NK najväčší).',
+      },
+      spans: {
+        label: 'Rozpätia [m]',
+        hint: 'Dĺžky polí vodorovne v osi mosta medzi osami uloženia, po NK.',
+      },
+      maxSpan: { label: 'Najdlhšie pole [m]', hint: 'Najdlhšie pole v osi mosta.' },
+      economicSpan: {
+        label: 'Ekonomické rozpätie [m]',
+        hint: 'Informatívne ekonomické rozpätie medziľahlých polí pre typológiu NK s najdlhším poľom (VŠB-TU Ostrava).',
+      },
+      piers: { label: 'Piliere', hint: 'Počet pilierov; menej je lepšie.' },
+      abutments: { label: 'Opory', hint: 'Počet opôr.' },
+      deckLength: { label: 'Dĺžka NK [m]', hint: 'Dĺžka NK v osi mosta (od – do).' },
+      bridgedLength: {
+        label: 'Dĺžka premostenia [m]',
+        hint: 'Vzdialenosť predných líc úložných prahov oboch opôr v osi mosta.',
+      },
+      overallLength: {
+        label: 'Celková dĺžka [m]',
+        hint: 'Dĺžka mosta po konce krídel opôr v osi mosta.',
+      },
+      deckWidth: { label: 'Šírka NK [m]', hint: 'Šírka NK po okraje prierezu, rozsah po dĺžke.' },
+      bridgeWidth: {
+        label: 'Šírka mosta [m]',
+        hint: 'Šírka po vonkajšie hrany ríms (bez rímsy po okraj NK), rozsah po dĺžke.',
+      },
+      freeWidth: {
+        label: 'Voľná šírka [m]',
+        hint: 'Voľná šírka medzi vnútornými hranami ríms, rozsah po dĺžke (ADR 0023).',
+      },
+      minCrossingAngle: {
+        label: 'Min. uhol kríženia [°]',
+        hint: 'Najmenší ostrý uhol osi uloženia s osou mosta (90° = kolmý most); väčší je lepší.',
+      },
+      bridgeArea: {
+        label: 'Plocha mosta [m²]',
+        hint: 'Pôdorys vrátane ríms medzi prednými lícami úložných prahov; pri konštantnej šírke dĺžka premostenia × šírka mosta. Hviezdička = celá NK, chýbajú opory.',
+      },
+      deckPlanArea: {
+        label: 'Pôdorysná plocha NK [m²]',
+        hint: 'Pôdorys NK po okraje prierezu po celej dĺžke NK.',
+      },
+      deckVolume: {
+        label: 'Objem NK [m³]',
+        hint: '∫A·dL prierezu NK po osi mosta vrátane priečnikov, bez ríms.',
+      },
+      edgeBeamVolume: { label: 'Objem ríms [m³]', hint: '∫A·dL prierezov ríms po dĺžke NK.' },
+      substructureVolume: {
+        label: 'Objem spodnej stavby [m³]',
+        hint: 'Betón podpier vrátane základov, bez ložísk a pilót.',
+      },
+      equivalentThickness: {
+        label: 'Ekvivalentná hrúbka NK [m]',
+        hint: 'Objem NK / pôdorysná plocha NK.',
+      },
+      pierHeights: {
+        label: 'Výšky pilierov [m]',
+        hint: 'Od hornej hrany základu po hornú hranu piliera, rozsah.',
+      },
+      supportsInObstacle: {
+        label: 'Podpery v prekážke',
+        hint: 'Počet podpier, ktorých pôdorys zasahuje do voľného prierezu prekážky.',
+      },
+      bearings: { label: 'Ložiská', hint: 'Počet ložísk na podperách so spojom „ložisko“.' },
+      freeHeight: {
+        label: 'Najmenšia voľná výška [m]',
+        hint: 'Najmenšia voľná výška pod NK nad voľnými prierezmi prekážok.',
+      },
+      freeHeightReserve: {
+        label: 'Rezerva voľnej výšky [m]',
+        hint: 'Voľná výška mínus požadovaná výška voľného prierezu; záporná = nesplnené.',
+      },
+      slenderness: {
+        label: 'Štíhlosť L/h',
+        hint: 'Najdlhšie pole / konštrukčná výška NK v jeho strede.',
+      },
+      slendernessRange: {
+        label: 'Orientačná štíhlosť typológie',
+        hint: 'Rozsah L/h pre typológiu NK (orientačné hodnoty, TODO statik, ADR 0022).',
+      },
+      cost: {
+        label: 'Orientačná cena [€]',
+        hint: 'Plocha mosta × jednotková cena €/m² podľa typológie NK, zaokrúhlené na tisíce €. ZÁSTUPNÉ ceny na porovnanie variantov, skutočné doplní projektant. Hviezdička = NK bez ceny typológie nie je zarátaná.',
+      },
+      endSpanRatios: {
+        label: 'Krajné / vnútorné pole',
+        hint: 'Krajné pole / susedné vnútorné na začiatku a na konci (orientačne 0,7 – 0,8).',
+      },
+    },
+    dialog: {
+      duplicate: 'Duplikovať variant',
+      rename: 'Premenovať variant',
+      confirm: { duplicate: 'Duplikovať', rename: 'Premenovať' },
+      name: 'Meno variantu',
+      cancel: 'Zrušiť',
+      empty: 'Zadajte meno variantu.',
+      taken: 'Variant s týmto menom už existuje.',
+    },
+  },
   parameters: {
     tab: 'Parametre',
     add: 'Pridať parameter',
@@ -195,6 +337,11 @@ export const sk = {
     kinds: { constant: 'konštanta', piecewise: 'po častiach', expression: 'výraz so sta' },
     segments: (n: number) =>
       `po častiach: ${n} ${n === 1 ? 'úsek' : n < 5 ? 'úseky' : 'úsekov'} — upraviť`,
+    override: 'Len vo variante',
+    overrideTitle: (variant: string) =>
+      `Prepísať priebeh len vo variante ${variant}; ostatné varianty ponechajú spoločnú hodnotu (ADR 0024).`,
+    overrideNote: (variant: string, shared: string) =>
+      `Priebeh platí len vo variante ${variant}. Spoločná hodnota pre ostatné varianty: ${shared}.`,
   },
   stationFunction: {
     title: 'Priebeh po staničení',
@@ -743,6 +890,7 @@ export const sk = {
       section: 'Priečny rez',
       parameters: 'Parametre',
       checks: 'Kontroly',
+      variants: 'Porovnanie variantov',
     },
     plan: 'Pôdorys',
     longitudinal: 'Pozdĺžny profil',
@@ -780,12 +928,13 @@ export const sk = {
     noFreeWidth: 'NK nemá rímsy na oboch stranách — voľná šírka sa nemeria.',
     deckWidth: 'Šírka NK [mm]',
     bridgeWidth: 'Šírka mosta (po vonkajšie hrany ríms) [mm]',
-    bridgeArea: 'Plocha mosta (pôdorys) [m²]',
+    bridgeArea: 'Plocha mosta [m²]',
+    bridgeAreaDeck: (value: string) => `${value} (celá NK, bez dvoch opôr)`,
     widthRange: (min: string, max: string) => (min === max ? min : `${min} – ${max}`),
     freeWidthVariable:
       'Vo výrazoch parametrov NK je vstavané meno volnaSirka = požadovaná voľná šírka NK v m (pri NK, inak zo zadania), napr. bL = volnaSirka / 2 + 1.35.',
     widthsHint:
-      'Šírky sa merajú vodorovne v rovine prierezu na koncoch NK, osiach uloženia a v stredoch polí; voľná šírka medzi vnútornými hranami ríms (ADR 0023).',
+      'Šírky sa merajú vodorovne v rovine prierezu na koncoch NK, osiach uloženia a v stredoch polí; voľná šírka medzi vnútornými hranami ríms (ADR 0023). Plocha mosta = pôdorys vrátane ríms medzi prednými lícami úložných prahov (ADR 0024).',
     lawDefault: (value: string) => `predvolená ${value}`,
     lawEdge: (curve: string, side: string) => `okraj podľa ${curve} (${side})`,
     spanRow: (n: number, from: string, to: string) => `${n}. pole (${from} – ${to})`,
@@ -989,7 +1138,11 @@ export const sk = {
       view: 'Pohľad',
       manage: 'Správa',
     },
+    variant: 'Aktívny',
+    variantTitle:
+      'Aktívny variant návrhu mosta (ADR 0024): prvky mosta má každý variant vlastné, podklady sú spoločné',
     groups: {
+      variant: 'Variant',
       obstacle: 'Prekážky',
       tools: 'Nástroje',
       support: 'Podpera',
@@ -1105,6 +1258,7 @@ export const sk = {
       profileSvg: 'Pozdĺžny rez — SVG',
       sectionDxf: 'Priečny rez — DXF',
       sectionSvg: 'Priečny rez — SVG',
+      variantsCsv: 'Porovnanie variantov — CSV',
       model: 'Presný model',
       stepSjtsk: 'STEP v S-JTSK',
       stepLocal: 'STEP v lokálnych súradniciach',

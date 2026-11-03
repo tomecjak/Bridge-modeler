@@ -1,12 +1,17 @@
 import type { Stationing } from '@bridge/alignment';
 import {
+  activeVariantOf,
   buildParameterSet,
+  effectiveParameters,
   type ModelIssue,
   type Parameter,
   type ParameterSet,
+  type ProjectFile,
+  type StationFunction,
   validateStations,
 } from '@bridge/model';
 import { useMemo } from 'react';
+import type { Command } from './commands.ts';
 import { useProject } from './projectStore.ts';
 
 export interface ParameterState {
@@ -15,14 +20,31 @@ export interface ParameterState {
   issues: readonly ModelIssue[];
 }
 
-/** Množina parametrov projektu; prepočíta sa len pri zmene parametrov alebo osi. */
+/**
+ * Množina parametrov projektu s prepismi aktívneho variantu (ADR 0024); prepočíta sa len pri zmene parametrov alebo
+ * osi.
+ */
 export function useParameterState(stationing: Stationing | undefined): ParameterState {
-  const parameters = useProject((s) => s.project.parameters);
+  const parameters = useProject((s) => effectiveParameters(s.project));
   return useMemo(() => {
     const set = buildParameterSet(parameters);
     const stationIssues = stationing ? validateStations(parameters, stationing) : [];
     return { set, issues: [...set.issues, ...stationIssues] };
   }, [parameters, stationing]);
+}
+
+/**
+ * Príkaz na zmenu priebehu parametra (ADR 0024): ak ho aktívny variant prepisuje, mení sa prepis, inak spoločná
+ * hodnota pre všetky varianty.
+ */
+export function parameterLawCommand(
+  project: Pick<ProjectFile, 'variants' | 'activeVariant'>,
+  id: string,
+  law: StationFunction,
+): Command {
+  return activeVariantOf(project).parameters[id]
+    ? { type: 'setParameterOverride', id, law }
+    : { type: 'updateParameter', id, changes: { law } };
 }
 
 /** Problémy, ktoré sa týkajú daného parametra (vrátane cyklu, v ktorom je). */

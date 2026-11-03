@@ -15,7 +15,7 @@ interface Props {
 }
 
 /**
- * Kontroly v pravom paneli (ADR 0022, vzhľad ADR 0025): súhrn chýb, upozornení a skupín bez problémov,
+ * Kontroly v pravom paneli (ADR 0022, vzhľad ADR 0026): súhrn chýb, upozornení a skupín bez problémov,
  * problémy ako karty po skupinách; klik vyberie prvok, dvojklik ho ukáže.
  */
 export function ChecksPanel({ items, onSelect, onOpen, selected, onSelectRow, onClose }: Props) {

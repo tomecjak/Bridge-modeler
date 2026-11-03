@@ -27,6 +27,11 @@ runtime závislosť. Číslovanie `NNNN-nazov.md`, záznam sa po prijatí nemen�
 | [0019](0019-zalozenie-a-kniznica-podpier.md) | Založenie podpier, ložiská z prierezu a knižnica podpier | Prijaté |
 | [0020](0020-prekazky-a-volne-prierezy.md) | Prekážky a voľné prierezy | Prijaté |
 | [0021](0021-meracka-dxf.md) | Meračka v DXF a balík `survey` | Prijaté |
+| [0022](0022-kontroly-a-klopenie.md) | Kontroly a klopenie z LandXML | Prijaté |
+| [0023](0023-rimsy-a-volna-sirka.md) | Rímsy a voľná šírka | Prijaté |
+| [0024](0024-varianty-a-ukazovatele.md) | Varianty a ukazovatele | Prijaté |
+| [0025](0025-vzhlad-a-temy.md) | Vzhľad: tokeny farieb, svetlá a tmavá téma, písmo | Prijaté |
+| [0026](0026-pracovna-plocha-bez-ribbonu.md) | Pracovná plocha bez ribbonu, 2D výkresy, okná a popisy | Prijaté (nahrádza časť 0016) |
 
 ## Šablóna
 

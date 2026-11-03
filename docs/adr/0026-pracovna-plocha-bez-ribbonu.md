@@ -1,4 +1,4 @@
-# 0025 — Pracovná plocha bez ribbonu: lišta nástrojov, 2D výkresy a samostatné okná
+# 0026 — Pracovná plocha bez ribbonu: lišta nástrojov, 2D výkresy a samostatné okná
 
 - Stav: Prijaté (nahrádza časť ADR 0016 o ribbone a kartách pohľadov)
 - Dátum: 2026-11-03
@@ -17,7 +17,7 @@ ktorú projektant chce vidieť naraz. Prehliadač projektu vľavo a vlastnosti v
   - pole „Prejsť na km“,
   - menu Export (DXF, SVG, STEP),
   - hlavné tlačidlo Importovať LandXML,
-  - prepínač témy (ADR 0024).
+  - prepínač témy (ADR 0025).
 - **Lišta nástrojov nad pohľadmi** namiesto ribbonu:
   - prepínač **3D | 2D výkresy**,
   - za ním skupiny ikon s popisom v tooltipe.
