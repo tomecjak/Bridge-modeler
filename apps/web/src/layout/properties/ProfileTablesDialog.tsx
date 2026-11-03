@@ -35,7 +35,12 @@ export function ProfileTablesDialog({
   const def = useProject((s) => s.project.profiles.find((p) => p.id === profileId));
   if (!def) return null;
   return (
-    <Dialog title={sk.properties.profileTablesTitle(def.name)} onClose={onClose} wide>
+    <Dialog
+      icon="section"
+      title={sk.properties.profileTablesTitle(def.name)}
+      onClose={onClose}
+      wide
+    >
       <ProfileEditor def={def} selectedPoint={selectedPoint} onSelectPoint={onSelectPoint} />
     </Dialog>
   );

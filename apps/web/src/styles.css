@@ -2774,6 +2774,19 @@ text.dw-stationing {
   margin-left: auto;
 }
 
+.dialog-frame input[type="text"],
+.dialog-frame input[type="number"],
+.dialog-frame input:not([type]),
+.dialog-frame select {
+  min-height: 32px;
+  padding: 0 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
 .dialog-frame .button {
   height: 36px;
   padding: 0 16px;
@@ -3003,4 +3016,26 @@ text.dw-stationing {
   display: inline-flex;
   gap: 8px;
   align-items: center;
+}
+
+/* skupiny a polia v dialógoch v novom ráme (ADR 0025) */
+.dialog-frame .modal-group {
+  gap: 8px;
+  padding: 10px 14px 14px;
+  background: var(--bg);
+  border-radius: 10px;
+}
+
+.dialog-frame .modal-group legend {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dialog-frame .dialog-body {
+  max-height: none;
+}
+
+.dialog-frame-actions > .toolbar-separator:first-child {
+  display: none;
 }

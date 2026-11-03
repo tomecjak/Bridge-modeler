@@ -37,7 +37,12 @@ export function EdgeBeamLawDialog({
     });
   };
   return (
-    <Dialog title={sk.edgeBeams.lawTitle(beam.name, parameter)} onClose={onClose} wide>
+    <Dialog
+      icon="stationFunction"
+      title={sk.edgeBeams.lawTitle(beam.name, parameter)}
+      onClose={onClose}
+      wide
+    >
       {def.description && <p className="hint">{def.description}</p>}
       {law ? (
         <button type="button" className="link" onClick={() => setLaw(undefined)}>

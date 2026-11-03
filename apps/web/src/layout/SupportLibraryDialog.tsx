@@ -13,6 +13,7 @@ import { downloadText } from '../persistence/fileIO.ts';
 import { drawingFileName } from '../persistence/fileName.ts';
 import { type SupportSourceKey, supportTypeKey } from '../store/supportTypes.ts';
 import { SupportPreview } from '../views/SupportPreview.tsx';
+import { DialogFrame } from './DialogFrame.tsx';
 import type { SupportSources } from './useSupportSources.ts';
 
 interface Props {
@@ -159,37 +160,13 @@ export function SupportLibraryDialog({
   };
 
   return (
-    <div className="modal-backdrop">
-      <div
-        className="modal modal-wide"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="support-library-title"
-      >
-        <h2 id="support-library-title" className="panel-title">
-          {t.title}
-        </h2>
-        <p className="hint">{t.hint}</p>
-        {cloudError && <p className="issue issue-error">{cloudError}</p>}
-        {issues.length > 0 && (
-          <ul className="issues">
-            {issues.map((i) => (
-              <li key={formatModelIssue(i)} className="issue issue-error">
-                {t.importFailed}: {formatModelIssue(i)}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="library-sources">
-          {sources.map((s) => (
-            <fieldset key={s.key} className="modal-group">
-              <legend>{s.title}</legend>
-              {s.entries.length === 0 && <p className="panel-empty">{t.empty}</p>}
-              <ul className="library-list">{s.entries.map((e) => item(s.key, e))}</ul>
-            </fieldset>
-          ))}
-        </div>
-        <div className="toolbar modal-actions">
+    <DialogFrame
+      title={t.title}
+      icon="pier"
+      width={860}
+      onClose={onClose}
+      actions={
+        <>
           <label className="button">
             {t.import}
             <input
@@ -214,8 +191,29 @@ export function SupportLibraryDialog({
           <button type="button" className="button primary" onClick={onClose}>
             {t.close}
           </button>
-        </div>
+        </>
+      }
+    >
+      <p className="hint">{t.hint}</p>
+      {cloudError && <p className="issue issue-error">{cloudError}</p>}
+      {issues.length > 0 && (
+        <ul className="issues">
+          {issues.map((i) => (
+            <li key={formatModelIssue(i)} className="issue issue-error">
+              {t.importFailed}: {formatModelIssue(i)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="library-sources">
+        {sources.map((s) => (
+          <fieldset key={s.key} className="modal-group">
+            <legend>{s.title}</legend>
+            {s.entries.length === 0 && <p className="panel-empty">{t.empty}</p>}
+            <ul className="library-list">{s.entries.map((e) => item(s.key, e))}</ul>
+          </fieldset>
+        ))}
       </div>
-    </div>
+    </DialogFrame>
   );
 }

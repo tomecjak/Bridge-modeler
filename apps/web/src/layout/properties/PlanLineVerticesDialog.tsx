@@ -67,7 +67,7 @@ export function PlanLineVerticesDialog({
   const last = line.points.at(-1);
   const prev = line.points.at(-2);
   return (
-    <Dialog title={`${t.vertices}: ${line.name}`} onClose={onClose}>
+    <Dialog icon="line" title={`${t.vertices}: ${line.name}`} onClose={onClose}>
       <table className="mini-table">
         <thead>
           <tr>

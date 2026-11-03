@@ -36,7 +36,7 @@ export function BearingsDialog({
       changes: { bearings },
     });
   return (
-    <Dialog title={sk.properties.bearingsTitle(support.name)} onClose={onClose}>
+    <Dialog icon="bearing" title={sk.properties.bearingsTitle(support.name)} onClose={onClose}>
       <table className="mini-table">
         <thead>
           <tr>
