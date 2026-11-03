@@ -4,11 +4,67 @@ import { useState } from 'react';
 import { formatNumber } from '../format/number.ts';
 import { sk } from '../i18n/sk.ts';
 
-/** Vzdialenosť riadkov kót [px]. */
-const ROW_PX = 18;
-/** Odstup prvého riadku od NK [px]. */
-const GAP_PX = 16;
+/** Odstup prvého radu kót od konštrukcie [px] (návrh popisov, ADR 0026). */
+const GAP_PX = 40;
+/** Vzdialenosť radov kót [px]. */
+const ROW_PX = 28;
+/** Presah vynášacej čiary pod prvý rad a nad najvyšší rad, ktorý bod používa [px]. */
+const EXT_PX = 6;
+/** Odstup krúžku osi uloženia nad najvyšším radom [px] a jeho polomer. */
+const MARKER_GAP_PX = 22;
+const MARKER_R = 9;
 const TICK_PX = 4;
+/** Výška pásu s nadpisom pohľadu, do ktorého popisy nezasahujú [px]. */
+const TITLE_PX = 44;
+/** Odhad šírky znaku čísla kóty (IBM Plex Mono 11 px) a voľné miesto okolo textu [px]. */
+const CHAR_PX = 6.7;
+const TEXT_PAD_PX = 8;
+
+/** Os uloženia nad kótami: spojité staničenie, číslo v krúžku a id osi (popis z výkresu sa skryje). */
+export interface DimensionMarker {
+  s: number;
+  /** zobrazované staničenie (tabuľka pod profilom) */
+  station: number;
+  label: string;
+  id: string;
+}
+
+/** Poradie radov od konštrukcie (návrh popisov): polia, dĺžka NK, celková dĺžka, premostenie. */
+const ROW_ORDER: readonly DimensionChain['kind'][] = ['spans', 'deck', 'overall', 'bridged'];
+
+/** Rady prítomných reťazcov nad konštrukciou (bez medzier za chýbajúce reťazce). */
+export function chainRows(chains: readonly DimensionChain[]): Map<DimensionChain['kind'], number> {
+  const kinds = ROW_ORDER.filter((k) => chains.some((c) => c.kind === k));
+  return new Map(kinds.map((k, i) => [k, i]));
+}
+
+/** Šírka textu kóty na obrazovke [px] (odhad pre rozhodnutie, či sa zmestí). */
+export function textWidth(value: number): number {
+  return label(value).length * CHAR_PX + TEXT_PAD_PX;
+}
+
+/**
+ * Kde kresliť text úseku dĺžky `length` px (čistá funkcia, návrh popisov): v strede, mimo kóty na začiatku alebo
+ * na konci (krajné krátke úseky) alebo nekresliť (krátky vnútorný úsek).
+ */
+export function textPlacement(
+  length: number,
+  value: number,
+  index: number,
+  count: number,
+): 'inside' | 'before' | 'after' | 'hidden' {
+  if (textWidth(value) <= length) return 'inside';
+  if (count > 1 && index === 0) return 'before';
+  if (count > 1 && index === count - 1) return 'after';
+  return 'hidden';
+}
+
+/** Rad sa ukáže, ak sa aspoň polovica jeho textov zmestí do kót (inak je pri tomto priblížení len šum). */
+export function rowVisible(lengths: readonly number[], values: readonly number[]): boolean {
+  if (lengths.length === 0) return false;
+  const fit = lengths.filter((l, i) => textWidth(values[i] ?? 0) <= l).length;
+  return fit * 2 >= lengths.length;
+}
 
 const label = (value: number) => formatNumber(value, 2);
 
@@ -21,18 +77,21 @@ function DimensionText({
   angle,
   segment,
   onEdit,
+  anchor = 'middle',
 }: {
   at: Vec2;
   angle: number;
   segment: DimensionSegment;
   onEdit: EditSpan | undefined;
+  anchor?: 'middle' | 'start' | 'end';
 }) {
   const editable = onEdit && segment.span !== undefined;
   return (
     <text
       transform={`translate(${at.x} ${at.y}) rotate(${angle})`}
-      y={-4}
-      textAnchor="middle"
+      y={-5}
+      x={anchor === 'start' ? 6 : anchor === 'end' ? -6 : 0}
+      textAnchor={anchor}
       className={editable ? 'dim-editable' : undefined}
       onPointerDown={
         editable
@@ -48,35 +107,99 @@ function DimensionText({
   );
 }
 
-/** Kóta medzi bodmi obrazovky p → q so šikmými značkami na koncoch a hodnotou nad čiarou (pozdĺž čiary). */
+/**
+ * Kóta medzi bodmi obrazovky p → q so šikmými značkami a hodnotou nad čiarou. Text je v strede viditeľnej časti
+ * (kóta väčšia než výrez má text pripnutý do výrezu), krátka krajná kóta má text mimo, krátka vnútorná bez textu.
+ */
 function DimensionLine({
   p,
   q,
   segment,
   title,
   onEdit,
+  index,
+  count,
+  clip,
 }: {
   p: Vec2;
   q: Vec2;
   segment: DimensionSegment;
   title: string;
   onEdit: EditSpan | undefined;
+  index: number;
+  count: number;
+  /** viditeľný rozsah x na obrazovke (vodorovné kóty v profile) */
+  clip?: { from: number; to: number } | undefined;
 }) {
-  if (Math.hypot(q.x - p.x, q.y - p.y) < 1) return null;
+  const length = Math.hypot(q.x - p.x, q.y - p.y);
+  if (length < 1) return null;
+  const placement = textPlacement(length, segment.value, index, count);
+  const angle = readable(p, q);
+  let text: { at: Vec2; anchor: 'middle' | 'start' | 'end' } | undefined;
+  if (placement === 'inside') {
+    const lo = clip ? Math.max(Math.min(p.x, q.x), clip.from) : Math.min(p.x, q.x);
+    const hi = clip ? Math.min(Math.max(p.x, q.x), clip.to) : Math.max(p.x, q.x);
+    const pinned = clip !== undefined && hi - lo < length - 1;
+    if (!pinned) text = { at: vec2((p.x + q.x) / 2, (p.y + q.y) / 2), anchor: 'middle' };
+    else if (hi - lo >= textWidth(segment.value)) {
+      const t = ((lo + hi) / 2 - p.x) / (q.x - p.x || 1);
+      text = { at: vec2((lo + hi) / 2, p.y + (q.y - p.y) * t), anchor: 'middle' };
+    }
+  } else if (placement !== 'hidden') {
+    // pred začiatkom alebo za koncom kóty, v smere čítania
+    const first = placement === 'before';
+    const end = first ? (p.x <= q.x ? p : q) : p.x <= q.x ? q : p;
+    text = { at: end, anchor: first ? 'end' : 'start' };
+  }
   return (
     <g>
       <title>{title}</title>
       <line x1={p.x} y1={p.y} x2={q.x} y2={q.y} />
       {tick(p, q)}
       {tick(q, p)}
-      <DimensionText
-        at={vec2((p.x + q.x) / 2, (p.y + q.y) / 2)}
-        angle={readable(p, q)}
-        segment={segment}
-        onEdit={onEdit}
-      />
+      {text && (
+        <DimensionText
+          at={text.at}
+          angle={angle}
+          segment={segment}
+          onEdit={onEdit}
+          anchor={text.anchor}
+        />
+      )}
     </g>
   );
+}
+
+/** Os uloženia nad kótami: číslo v krúžku a čiarkovaná os ku konštrukcii (návrh popisov, ADR 0026). */
+function Marker({ at, to, label }: { at: Vec2; to: Vec2; label: string }) {
+  const len = Math.hypot(to.x - at.x, to.y - at.y) || 1;
+  const ux = (to.x - at.x) / len;
+  const uy = (to.y - at.y) / len;
+  return (
+    <g className="dim-marker">
+      <line
+        className="dim-marker-axis"
+        x1={at.x + ux * MARKER_R}
+        y1={at.y + uy * MARKER_R}
+        x2={to.x}
+        y2={to.y}
+      />
+      <circle cx={at.x} cy={at.y} r={MARKER_R} />
+      <text x={at.x} y={at.y} textAnchor="middle" dominantBaseline="central">
+        {label}
+      </text>
+    </g>
+  );
+}
+
+/** Značky osí uloženia, ktoré nie sú bližšie ako priemer krúžku (pri oddialení sa riedia). */
+function spacedMarkers<T extends { x: number }>(items: readonly T[]): T[] {
+  const out: T[] = [];
+  for (const item of [...items].sort((a, b) => a.x - b.x)) {
+    const prev = out[out.length - 1];
+    if (!prev || item.x - prev.x >= 2 * MARKER_R + 4) out.push(item);
+  }
+  return out;
 }
 
 /**
@@ -120,68 +243,135 @@ export function SpanInput({
 }
 
 /**
- * Kóty mosta v pozdĺžnom profile (len na obrazovke, ADR 0012): nad NK rozpätia, dĺžka NK a celková dĺžka, pod NK
- * premostenie. `toX` prevedie staničenie osi cesty na x obrazovky; `top` a `bottom` sú y horného povrchu
- * a spodku NK na obrazovke.
+ * Kóty mosta v pozdĺžnom profile (len na obrazovke, ADR 0012, popisy ADR 0026): nad NK rady polia, dĺžka NK
+ * a celková dĺžka 40 px od NK po 28 px, spojené vynášacími čiarami; nad nimi osi uloženia v krúžkoch s čiarkovanou
+ * osou k NK; pod NK premostenie. `toX` prevedie staničenie osi cesty na x obrazovky; `top` a `bottom` sú y horného
+ * povrchu a spodku NK na obrazovke.
  */
 export function ProfileDimensions({
   chains,
   toX,
   top,
   bottom,
+  width,
   height,
+  markers = [],
   onEdit,
 }: {
   chains: readonly DimensionChain[];
   toX: (s: number) => number | undefined;
   top: number;
   bottom: number;
+  width: number;
   height: number;
+  markers?: readonly DimensionMarker[] | undefined;
   /** klik na rozpätie (zadanie hodnoty) */
   onEdit?: EditSpan | undefined;
 }) {
-  const rows: Record<DimensionChain['kind'], number> = {
-    spans: top - GAP_PX,
-    deck: top - GAP_PX - ROW_PX,
-    overall: top - GAP_PX - 2 * ROW_PX,
-    bridged: bottom + GAP_PX + 6,
+  const clip = { from: 0, to: width };
+  const xs = (seg: DimensionSegment) => {
+    const x1 = toX(seg.sFrom);
+    const x2 = toX(seg.sTo);
+    return x1 === undefined || x2 === undefined ? undefined : ([x1, x2] as const);
   };
+  const visible = (chain: DimensionChain) => {
+    const lens = chain.segments.flatMap((seg) => {
+      const x = xs(seg);
+      return x ? [Math.abs(x[1] - x[0])] : [];
+    });
+    return rowVisible(
+      lens,
+      chain.segments.map((seg) => seg.value),
+    );
+  };
+  const above = chains.filter((c) => c.kind !== 'bridged' && visible(c));
+  const below = chains.filter((c) => c.kind === 'bridged' && visible(c));
+  const rows = chainRows(above);
+  const yOf = (row: number) => top - GAP_PX - row * ROW_PX;
+  /** pod nadpisom pohľadu a nad pravítkom staničenia */
+  const clampY = (y: number) => Math.min(height - 40, Math.max(TITLE_PX, y));
+
+  // vynášacie čiary: od prvého radu po najvyšší rad, ktorý bod používa
+  const reach = new Map<number, number>();
+  for (const chain of above) {
+    const row = rows.get(chain.kind) ?? 0;
+    for (const seg of chain.segments) {
+      for (const x of xs(seg) ?? []) {
+        const key = Math.round(x * 2) / 2;
+        reach.set(key, Math.max(reach.get(key) ?? 0, row));
+      }
+    }
+  }
+  const topRow = Math.max(-1, ...rows.values());
+  const markerY = clampY(yOf(Math.max(0, topRow)) - MARKER_GAP_PX);
+  const shown = spacedMarkers(
+    markers.flatMap((m) => {
+      const x = toX(m.s);
+      return x === undefined || x < -MARKER_R || x > width + MARKER_R ? [] : [{ ...m, x }];
+    }),
+  );
   return (
     <g className="dimensions">
-      {chains.map((chain) => {
-        const y = Math.min(height - 24, Math.max(24, rows[chain.kind]));
-        const reference = chain.kind === 'bridged' ? bottom : top;
+      {[...reach].map(([x, row]) => (
+        <line
+          key={x}
+          className="dim-extension"
+          x1={x}
+          x2={x}
+          y1={clampY(yOf(0) + EXT_PX)}
+          y2={clampY(yOf(row) - EXT_PX)}
+        />
+      ))}
+      {[...above, ...below].map((chain) => {
+        const y =
+          chain.kind === 'bridged'
+            ? clampY(bottom + GAP_PX)
+            : clampY(yOf(rows.get(chain.kind) ?? 0));
+        const segments = chain.segments.flatMap((seg) => {
+          const x = xs(seg);
+          return x ? [{ seg, x }] : [];
+        });
         return (
           <g key={chain.kind}>
-            {chain.segments.map((seg) => {
-              const x1 = toX(seg.sFrom);
-              const x2 = toX(seg.sTo);
-              if (x1 === undefined || x2 === undefined) return null;
-              return (
-                <g key={`${seg.sFrom}-${seg.sTo}`}>
-                  {[x1, x2].map((x) => (
-                    <line key={x} className="dim-extension" x1={x} y1={y} x2={x} y2={reference} />
+            {segments.map(({ seg, x }, i) => (
+              <g key={`${seg.sFrom}-${seg.sTo}`}>
+                {chain.kind === 'bridged' &&
+                  x.map((xx) => (
+                    <line
+                      key={xx}
+                      className="dim-extension"
+                      x1={xx}
+                      x2={xx}
+                      y1={y - EXT_PX}
+                      y2={y + EXT_PX}
+                    />
                   ))}
-                  <DimensionLine
-                    p={vec2(x1, y)}
-                    q={vec2(x2, y)}
-                    segment={seg}
-                    title={sk.dimensions[chain.kind]}
-                    onEdit={onEdit}
-                  />
-                </g>
-              );
-            })}
+                <DimensionLine
+                  p={vec2(x[0], y)}
+                  q={vec2(x[1], y)}
+                  segment={seg}
+                  title={sk.dimensions[chain.kind]}
+                  onEdit={onEdit}
+                  index={i}
+                  count={segments.length}
+                  clip={clip}
+                />
+              </g>
+            ))}
           </g>
         );
       })}
+      {shown.map((m) => (
+        <Marker key={m.id} at={vec2(m.x, markerY)} to={vec2(m.x, top)} label={m.label} />
+      ))}
     </g>
   );
 }
 
 /**
- * Kóty mosta v pôdoryse: reťazce rovnobežné s osou mosta mimo obrysu NK na strane `side` (+1 vpravo), od NK
- * premostenie, rozpätia, dĺžka NK a celková dĺžka. `pointAt(s, x)` = bod v odsadení x od osi mosta (svet).
+ * Kóty mosta v pôdoryse (popisy ADR 0026): reťazce rovnobežné s osou mosta mimo obrysu NK na strane `side`
+ * (+1 vpravo), 40 px od NK po 28 px — polia, dĺžka NK, celková dĺžka, premostenie — spojené vynášacími čiarami;
+ * nad nimi osi uloženia v krúžkoch s čiarkovanou osou až k NK. `pointAt(s, x)` = bod v odsadení x od osi mosta.
  */
 export function PlanDimensions({
   chains,
@@ -190,6 +380,9 @@ export function PlanDimensions({
   side,
   reach,
   scale,
+  width,
+  height,
+  markers = [],
   onEdit,
 }: {
   chains: readonly DimensionChain[];
@@ -200,26 +393,96 @@ export function PlanDimensions({
   reach: number;
   /** mierka pohľadu [px/m] */
   scale: number;
+  width: number;
+  height: number;
+  markers?: readonly DimensionMarker[] | undefined;
   /** klik na rozpätie (zadanie hodnoty) */
   onEdit?: EditSpan | undefined;
 }) {
-  const order: DimensionChain['kind'][] = ['bridged', 'spans', 'deck', 'overall'];
+  const offset = (px: number) => side * (reach + px / scale);
+  const screenLength = (seg: DimensionSegment) => Math.abs(seg.sTo - seg.sFrom) * scale;
+  const shownChains = chains.filter((c) =>
+    rowVisible(
+      c.segments.map(screenLength),
+      c.segments.map((seg) => seg.value),
+    ),
+  );
+  const rows = chainRows(shownChains);
+  const rowPx = (row: number) => GAP_PX + row * ROW_PX;
+  const inView = (p: Vec2) => p.x >= 0 && p.x <= width && p.y >= 0 && p.y <= height;
+
+  const reachRow = new Map<number, number>();
+  for (const chain of shownChains) {
+    const row = rows.get(chain.kind) ?? 0;
+    for (const seg of chain.segments) {
+      for (const s of [seg.sFrom, seg.sTo]) {
+        const key = Math.round(s * 100) / 100;
+        reachRow.set(key, Math.max(reachRow.get(key) ?? 0, row));
+      }
+    }
+  }
+  const topRow = Math.max(0, ...rows.values());
+  const markerPx = rowPx(topRow) + MARKER_GAP_PX;
+  const shown = spacedMarkers(
+    markers.flatMap((m) => {
+      const at = toScreen(pointAt(m.s, offset(markerPx)));
+      return inView(at) ? [{ ...m, at, x: Math.hypot(at.x, at.y) }] : [];
+    }),
+  );
   return (
     <g className="dimensions">
-      {chains.map((chain) => {
-        const row = order.indexOf(chain.kind);
-        const x = side * (reach + (GAP_PX + row * ROW_PX) / scale);
+      {[...reachRow].map(([s, row]) => {
+        const a = toScreen(pointAt(s, offset(rowPx(0) - EXT_PX)));
+        const b = toScreen(pointAt(s, offset(rowPx(row) + EXT_PX)));
+        return <line key={s} className="dim-extension" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+      })}
+      {shownChains.map((chain) => {
+        const x = offset(rowPx(rows.get(chain.kind) ?? 0));
         return (
           <g key={chain.kind}>
-            {chain.segments.map((seg) => {
+            {chain.segments.map((seg, i) => {
               const n = Math.max(1, Math.ceil(Math.abs(seg.sTo - seg.sFrom)));
               const pts = Array.from({ length: n + 1 }, (_, k) =>
                 toScreen(pointAt(seg.sFrom + ((seg.sTo - seg.sFrom) * k) / n, x)),
               );
-              const midS = (seg.sFrom + seg.sTo) / 2;
-              const a = toScreen(pointAt(midS - 0.5, x));
-              const b = toScreen(pointAt(midS + 0.5, x));
-              const mid = toScreen(pointAt(midS, x));
+              const first = pts[0];
+              const last = pts[pts.length - 1];
+              if (!first || !last) return null;
+              // text v strede viditeľnej časti (kóta väčšia než výrez má text pripnutý do výrezu)
+              const visibleIdx = pts.flatMap((p, k) => (inView(p) ? [k] : []));
+              const placement = textPlacement(
+                screenLength(seg),
+                seg.value,
+                i,
+                chain.segments.length,
+              );
+              let text: { at: Vec2; angle: number; anchor: 'middle' | 'start' | 'end' } | undefined;
+              if (placement === 'inside' && visibleIdx.length > 0) {
+                const lo = visibleIdx[0] ?? 0;
+                const hi = visibleIdx[visibleIdx.length - 1] ?? 0;
+                const partS = ((hi - lo) / n) * Math.abs(seg.sTo - seg.sFrom) * scale;
+                const midS = seg.sFrom + ((seg.sTo - seg.sFrom) * (lo + hi)) / (2 * n);
+                if (partS >= textWidth(seg.value) || visibleIdx.length === pts.length) {
+                  const a = toScreen(pointAt(midS - 0.5, x));
+                  const b = toScreen(pointAt(midS + 0.5, x));
+                  text = {
+                    at: toScreen(pointAt(midS, x)),
+                    angle: readable(a, b),
+                    anchor: 'middle',
+                  };
+                }
+              } else if (placement === 'before' || placement === 'after') {
+                const before = placement === 'before';
+                const end = before ? first : last;
+                const next = before ? pts[1] : pts[pts.length - 2];
+                if (next) {
+                  const angle = readable(end, next);
+                  // smer čítania: text pred začiatkom má koniec pri značke, za koncom začiatok
+                  const leftToRight = (before ? next.x >= end.x : end.x >= next.x) === true;
+                  const anchor = before === leftToRight ? 'end' : 'start';
+                  text = { at: end, angle, anchor };
+                }
+              }
               return (
                 <g key={`${seg.sFrom}-${seg.sTo}`}>
                   <title>{sk.dimensions[chain.kind]}</title>
@@ -227,16 +490,27 @@ export function PlanDimensions({
                     points={pts.map((pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ')}
                   />
                   {[
-                    [pts[0], pts[1]],
-                    [pts[pts.length - 1], pts[pts.length - 2]],
+                    [first, pts[1]],
+                    [last, pts[pts.length - 2]],
                   ].map(([e, f]) => (e && f ? tick(e, f) : null))}
-                  <DimensionText at={mid} angle={readable(a, b)} segment={seg} onEdit={onEdit} />
+                  {text && (
+                    <DimensionText
+                      at={text.at}
+                      angle={text.angle}
+                      segment={seg}
+                      onEdit={onEdit}
+                      anchor={text.anchor}
+                    />
+                  )}
                 </g>
               );
             })}
           </g>
         );
       })}
+      {shown.map((m) => (
+        <Marker key={m.id} at={m.at} to={toScreen(pointAt(m.s, side * reach))} label={m.label} />
+      ))}
     </g>
   );
 }
@@ -281,7 +555,12 @@ export function planFrame(
   outline: { left: readonly Vec2[]; right: readonly Vec2[] },
   offsetAt: (s: number) => number,
   sMid: number,
-): { pointAt: (s: number, x: number) => Vec2; side: 1 | -1; reach: number } {
+): {
+  pointAt: (s: number, x: number) => Vec2;
+  side: 1 | -1;
+  reach: number;
+  reachOther: number;
+} {
   const side: 1 | -1 = offsetAt(sMid) > 0.01 ? 1 : -1;
   const reach = deckReach(outline, road, offsetAt);
   return {
@@ -292,6 +571,7 @@ export function planFrame(
     },
     side,
     reach: side > 0 ? reach.right : reach.left,
+    reachOther: side > 0 ? reach.left : reach.right,
   };
 }
 

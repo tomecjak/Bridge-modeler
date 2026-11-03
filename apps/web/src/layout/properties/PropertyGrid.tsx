@@ -211,7 +211,7 @@ export function PropertyGroups({ groups }: { groups: readonly PropertyGroup[] })
                       {row.text}
                     </p>
                   ) : (
-                    <div key={row.label} className="prop-row">
+                    <div key={row.label} className="prop-row" data-kind={row.kind}>
                       <span className="prop-label" title={row.label}>
                         {row.label}
                       </span>
@@ -231,7 +231,10 @@ export function PropertyGroups({ groups }: { groups: readonly PropertyGroup[] })
   );
 }
 
-/** Panel Vlastnosti vpravo ako v Revite: druh / výber typu navrchu, skupiny Názov | Hodnota, akcie. */
+/**
+ * Panel Vlastnosti vpravo (ADR 0016, vzhľad ADR 0026): ikona a druh prvku, výber typu, akcie prvku,
+ * skupiny polí s popisom nad hodnotou.
+ */
 export function PropertiesPalette({
   sheet,
   wide = false,
@@ -247,33 +250,39 @@ export function PropertiesPalette({
       <h2 id="properties-title" className="panel-title">
         {sk.properties.title}
       </h2>
-      <div className="prop-type">
-        <Icon name={sheet.heading.icon} size={24} />
-        {sheet.type ? (
-          <select
-            value={sheet.type.value}
-            aria-label={sheet.type.label}
-            onChange={(e) => sheet.type?.onChange(e.target.value)}
-          >
-            {sheet.type.options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="prop-type-label">{sheet.heading.label}</span>
-        )}
+      <div className="prop-head">
+        <span className="prop-head-icon">
+          <Icon name={sheet.heading.icon} size={22} />
+        </span>
+        <div className="prop-head-text">
+          {sheet.type ? (
+            <>
+              <span className="prop-head-kind">{sheet.heading.label}</span>
+              <select
+                className="prop-head-select"
+                value={sheet.type.value}
+                aria-label={sheet.type.label}
+                onChange={(e) => sheet.type?.onChange(e.target.value)}
+              >
+                {sheet.type.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <span className="prop-head-title">{sheet.heading.label}</span>
+          )}
+        </div>
       </div>
-      {sheet.type && <p className="prop-type-kind">{sheet.heading.label}</p>}
-      <PropertyGroups groups={sheet.groups} />
       {sheet.actions && sheet.actions.length > 0 && (
         <div className="prop-actions">
           {sheet.actions.map((a) => (
             <button
               key={a.label}
               type="button"
-              className={a.danger ? 'button danger' : 'button'}
+              className={a.danger ? 'prop-action-button danger' : 'prop-action-button'}
               disabled={a.disabled}
               onClick={a.onClick}
             >
@@ -283,6 +292,7 @@ export function PropertiesPalette({
           ))}
         </div>
       )}
+      <PropertyGroups groups={sheet.groups} />
     </aside>
   );
 }

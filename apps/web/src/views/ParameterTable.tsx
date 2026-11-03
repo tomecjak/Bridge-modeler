@@ -148,6 +148,7 @@ export function ParameterTable({
                 <tr
                   key={p.id}
                   aria-selected={p.id === selectedId}
+                  data-error={issues.some((i) => i.severity !== 'warning') || undefined}
                   className={overridden ? 'parameter-overridden' : undefined}
                   onFocus={() => onSelect(p.id)}
                   onClick={() => onSelect(p.id)}

@@ -88,7 +88,7 @@ const EXAGGERATIONS = [1, 2, 5, 10];
 
 const VIEW_ICONS = {
   '3d': 'cube',
-  '2d': 'plan',
+  '2d': 'view2d',
   section: 'section',
   parameters: 'parameters',
   checks: 'checks',
@@ -681,8 +681,8 @@ export interface ContextualContext {
 
 const PROFILE_TOOL_ICONS: Record<ProfileTool, RibbonButton['icon']> = {
   select: 'pointer',
-  point: 'goTo',
-  loop: 'line',
+  point: 'addPoint',
+  loop: 'loop',
   delete: 'trash',
 };
 

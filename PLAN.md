@@ -543,6 +543,13 @@ Rozhodnutia 2026-11-02 (plan mode): varianty ako pracovná kópia — prvky akt�
 **Hotové, keď:** dva varianty 212-00 (3 polia jednotrám / 1 pole komora) sa porovnajú v tabuľke a objem NK sedí s ručným výpočtom (A·L pri konštantnom priereze) a so sieťou ± 0,5 %.
 — *2026-11-02:* splnené: golden test `apps/web/src/store/variants.test.ts` (212-00 ako variant A 3 polia jednotrám a B 1 pole komora: polia, piliere, ložiská, cena, objem NK = A·L oboch prierezov ± 1e-6, zvýraznenie lepšej hodnoty) a `packages/mesh/src/indicators.test.ts` (∫A·dL voči sieti ± 0,5 % aj pri NK mimo osi so šikmým a kolmým koncom a s priečnikom, objem podpier). *Ostáva:* skutočné jednotkové ceny a potvrdenie predpokladov ukazovateľov (otázka 29).
 
+#### Vzhľad (ADR 0025)
+- [x] nový vzhľad podľa návrhu (plátno: pracovná plocha 3D, 2D výkresy, parametre; tmavá aj svetlá verzia)
+  - Tokeny farieb v jednom bloku `styles.css`, jantárový akcent pre výber, os cesty modrá (aj v 3D), písmo IBM Plex Sans / Mono, prepínač témy v hornej lište (systém → svetlá → tmavá, `src/theme/theme.ts`, uložené v prehliadači). Editory a dialógy sú doladené podľa návrhu (ADR 0026), riadok parametra s chybou je zvýraznený; farby terénu, prekážok a voľného prierezu majú v oboch témach kontrast aspoň 3 : 1 voči ploche výkresu.
+
+- [x] rozhranie podľa návrhu bez ribbonu (ADR 0026)
+  - Horná lišta, lišta nástrojov s prepínačom 3D | 2D výkresy a kontextovým riadkom, 2D s pôdorysom hore a pozdĺžnym a priečnym rezom dole, editor prierezu / parametre / kontroly ako samostatné okná (`AppWindow`), nové dvojtónové ikony mostných prvkov. Dialógy Rozloženie polí (náhľad polí v mierke, ukotvenie ako prepínač) a Vložiť NK (karty typológií s náčrtom prierezu) majú spoločný rám `DialogFrame`. Kontroly sú v pravom paneli (odkaz pod stromom), prázdny projekt má plochu na import, okná editora prierezu a parametrov sa dajú presunúť do samostatného okna prehliadača. Popisy výkresov na obrazovke podľa návrhu: rady kót 40 / 28 px spojené vynášacími čiarami, osi uloženia v krúžkoch nad kótami, staničenie pôdorysu za okrajom NK, pravítko a tabuľka pod pozdĺžnym profilom (export DXF bez zmeny). Všetky dialógy (rímsy, prekážky, terén, meračka, knižnice prierezov a podpier, dialógy z vlastností, informácie o projekte) sú v ráme `DialogFrame`.
+
 ### Backlog
 - IfcSectionedSolidHorizontal a IfcLinearPlacement (s Fázou 7)
 - zakrivené a zalomené podpery, import okraja NK z DXF

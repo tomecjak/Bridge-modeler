@@ -16,6 +16,7 @@ import { drawingFileName } from '../persistence/fileName.ts';
 import { newId } from '../store/parameters.ts';
 import { projectStore, useProject } from '../store/projectStore.ts';
 import { ProfileThumbnail } from '../views/ProfileThumbnail.tsx';
+import { DialogFrame } from './DialogFrame.tsx';
 import { type CloudLibrary, type SourceKey, useProfileSources } from './useProfileSources.ts';
 
 interface Props {
@@ -93,102 +94,13 @@ export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) 
   }
 
   return (
-    <div className="modal-backdrop">
-      <div
-        className="modal modal-wide"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="library-dialog-title"
-      >
-        <h2 id="library-dialog-title" className="panel-title">
-          {t.title}
-        </h2>
-        <p className="hint">{t.hint}</p>
-        {cloudError && <p className="issue issue-error">{cloudError}</p>}
-        {issues.length > 0 && (
-          <ul className="issues">
-            {issues.map((i) => (
-              <li key={formatModelIssue(i)} className="issue issue-error">
-                {t.importFailed}: {formatModelIssue(i)}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="library-sources">
-          {sources.map((s) => (
-            <fieldset key={s.key} className="modal-group">
-              <legend>{s.title}</legend>
-              {entries[s.key].length === 0 && <p className="panel-empty">{t.empty}</p>}
-              <ul className="library-list">
-                {entries[s.key].map((e) => (
-                  <li key={e.id} className="library-item">
-                    <label className="checkbox">
-                      <input
-                        type="checkbox"
-                        aria-label={t.select(e.name)}
-                        checked={selected.has(key(s.key, e.id))}
-                        onChange={(ev) => {
-                          const next = new Set(selected);
-                          if (ev.target.checked) next.add(key(s.key, e.id));
-                          else next.delete(key(s.key, e.id));
-                          setSelected(next);
-                        }}
-                      />
-                    </label>
-                    <ProfileThumbnail profile={e.profile} />
-                    <span className="library-name">
-                      {e.name}
-                      {e.typology && <span className="hint"> · {e.typology}</span>}
-                      {s.key === 'cloud' && cloud?.library.info(e.id) && (
-                        <span className="hint">
-                          {' '}
-                          ·{' '}
-                          {t.changedBy(
-                            cloud.library.info(e.id)?.updatedBy ?? '',
-                            formatDate(cloud.library.info(e.id)?.updatedAt),
-                          )}
-                        </span>
-                      )}
-                    </span>
-                    {s.key !== 'project' && (
-                      <button type="button" className="button" onClick={() => insert(e)}>
-                        {t.insert}
-                      </button>
-                    )}
-                    {s.key === 'project' && cloud && (
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() =>
-                          void cloudChange(
-                            (lib) => lib.save(entryFromProfile(e.profile)),
-                            t.savedToCloud(e.name),
-                          )
-                        }
-                      >
-                        {t.saveToCloud}
-                      </button>
-                    )}
-                    {s.key === 'cloud' && (
-                      <button
-                        type="button"
-                        className="button danger"
-                        onClick={() => {
-                          if (window.confirm(t.confirmRemove(e.name))) {
-                            void cloudChange((lib) => lib.remove(e.id), t.removedFromCloud(e.name));
-                          }
-                        }}
-                      >
-                        {t.remove}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </fieldset>
-          ))}
-        </div>
-        <div className="toolbar modal-actions">
+    <DialogFrame
+      title={t.title}
+      icon="library"
+      width={860}
+      onClose={onClose}
+      actions={
+        <>
           <label className="button">
             {t.import}
             <input
@@ -213,8 +125,94 @@ export function ProfileLibraryDialog({ onClose, onInserted, onMessage }: Props) 
           <button type="button" className="button primary" onClick={onClose}>
             {t.close}
           </button>
-        </div>
+        </>
+      }
+    >
+      <p className="hint">{t.hint}</p>
+      {cloudError && <p className="issue issue-error">{cloudError}</p>}
+      {issues.length > 0 && (
+        <ul className="issues">
+          {issues.map((i) => (
+            <li key={formatModelIssue(i)} className="issue issue-error">
+              {t.importFailed}: {formatModelIssue(i)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="library-sources">
+        {sources.map((s) => (
+          <fieldset key={s.key} className="modal-group">
+            <legend>{s.title}</legend>
+            {entries[s.key].length === 0 && <p className="panel-empty">{t.empty}</p>}
+            <ul className="library-list">
+              {entries[s.key].map((e) => (
+                <li key={e.id} className="library-item">
+                  <label className="checkbox">
+                    <input
+                      type="checkbox"
+                      aria-label={t.select(e.name)}
+                      checked={selected.has(key(s.key, e.id))}
+                      onChange={(ev) => {
+                        const next = new Set(selected);
+                        if (ev.target.checked) next.add(key(s.key, e.id));
+                        else next.delete(key(s.key, e.id));
+                        setSelected(next);
+                      }}
+                    />
+                  </label>
+                  <ProfileThumbnail profile={e.profile} />
+                  <span className="library-name">
+                    {e.name}
+                    {e.typology && <span className="hint"> · {e.typology}</span>}
+                    {s.key === 'cloud' && cloud?.library.info(e.id) && (
+                      <span className="hint">
+                        {' '}
+                        ·{' '}
+                        {t.changedBy(
+                          cloud.library.info(e.id)?.updatedBy ?? '',
+                          formatDate(cloud.library.info(e.id)?.updatedAt),
+                        )}
+                      </span>
+                    )}
+                  </span>
+                  {s.key !== 'project' && (
+                    <button type="button" className="button" onClick={() => insert(e)}>
+                      {t.insert}
+                    </button>
+                  )}
+                  {s.key === 'project' && cloud && (
+                    <button
+                      type="button"
+                      className="button"
+                      onClick={() =>
+                        void cloudChange(
+                          (lib) => lib.save(entryFromProfile(e.profile)),
+                          t.savedToCloud(e.name),
+                        )
+                      }
+                    >
+                      {t.saveToCloud}
+                    </button>
+                  )}
+                  {s.key === 'cloud' && (
+                    <button
+                      type="button"
+                      className="button danger"
+                      onClick={() => {
+                        if (window.confirm(t.confirmRemove(e.name))) {
+                          void cloudChange((lib) => lib.remove(e.id), t.removedFromCloud(e.name));
+                        }
+                      }}
+                    >
+                      {t.remove}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+        ))}
       </div>
-    </div>
+    </DialogFrame>
   );
 }

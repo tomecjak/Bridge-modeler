@@ -17,7 +17,7 @@ import {
   loadImage,
   MAX_IMAGE,
 } from '../viewer/basemap.ts';
-import { PlanDimensions, SpanInput } from './Dimensions.tsx';
+import { type DimensionMarker, PlanDimensions, SpanInput } from './Dimensions.tsx';
 import { DrawingEntities } from './DrawingEntities.tsx';
 import { handleAt, type LineEditing, type LinePreview, previewOnHandle } from './lineEdit.ts';
 import { MeasureOverlay } from './MeasureOverlay.tsx';
@@ -43,6 +43,28 @@ export interface PlanCursor {
   /** staničenie a odsadenie päty kolmice; undefined mimo osi */
   s: number | undefined;
   offset: number | undefined;
+}
+
+/**
+ * Najväčšia vzdialenosť priesečníka polpriamky z bodu `p` v smere `dir` (jednotkový) s hranami obrysov [m];
+ * 0, ak polpriamka obrysy nepretína.
+ */
+export function rayExtent(p: Vec2, dir: Vec2, outlines: readonly (readonly Vec2[])[]): number {
+  let best = 0;
+  for (const pts of outlines) {
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i] as Vec2;
+      const b = pts[i + 1] as Vec2;
+      const ex = b.x - a.x;
+      const ey = b.y - a.y;
+      const den = dir.x * ey - dir.y * ex;
+      if (Math.abs(den) < 1e-12) continue;
+      const t = ((a.x - p.x) * ey - (a.y - p.y) * ex) / den;
+      const u = ((a.x - p.x) * dir.y - (a.y - p.y) * dir.x) / den;
+      if (t > 0 && u >= 0 && u <= 1) best = Math.max(best, t);
+    }
+  }
+  return best;
 }
 
 interface Props {
@@ -95,6 +117,10 @@ export interface PlanDimensionSet {
   pointAt: (s: number, x: number) => Vec2;
   side: 1 | -1;
   reach: number;
+  /** vzdialenosť okraja NK na druhej strane [m] (čísla staničenia sa odsadia za ňu, ADR 0026) */
+  reachOther?: number;
+  /** osi uloženia v krúžkoch nad kótami (ADR 0026) */
+  markers?: readonly DimensionMarker[];
 }
 
 /** Vrcholy kreslenej čiary bližšie ako 3 px sa zlúčia (dvojklik pridá dva kliky). */
@@ -235,6 +261,23 @@ export function PlanView({
         points: samples.filter((p) => p.s >= e.sStart - 1e-9 && p.s <= e.sEnd + 1e-9),
       })),
     [alignment, samples],
+  );
+
+  /** obrysy NK vo výkrese (odsadenie čísel staničenia za okraj NK, ADR 0026) */
+  const deckOutlines = useMemo(
+    () =>
+      (drawing?.entities ?? []).flatMap((e) =>
+        e.kind === 'polyline' && e.layer === 'deck'
+          ? [e.closed && e.points[0] ? [...e.points, e.points[0]] : e.points]
+          : [],
+      ),
+    [drawing],
+  );
+
+  /** osi uloženia s krúžkom nad kótami: ich popis z výkresu sa nekreslí (ADR 0026) */
+  const markerOwners = useMemo(
+    () => new Set((dimensions ?? []).flatMap((d) => (d.markers ?? []).map((m) => m.id))),
+    [dimensions],
   );
 
   const minorStep = view ? niceStep(MINOR_TICK_PX / view.sx) : 0;
@@ -484,34 +527,6 @@ export function PlanView({
               );
             })()}
           {areaAxis && <polyline className="study-area-axis" points={polyline(areaAxis)} />}
-          {ticks.map((t) => {
-            const p = toScreen(t.point);
-            const nx = Math.cos(t.azimuth);
-            const ny = Math.sin(t.azimuth); // normála vpravo (cos, −sin) vo svete → (cos, +sin) na obrazovke
-            const labeled =
-              Math.abs(t.station / labelStep - Math.round(t.station / labelStep)) < 1e-6;
-            const len = labeled ? 9 : 4;
-            return (
-              <g key={t.s} className={labeled ? 'tick tick-major' : 'tick'}>
-                <line
-                  x1={p.x - nx * len}
-                  y1={p.y - ny * len}
-                  x2={p.x + nx * len}
-                  y2={p.y + ny * len}
-                />
-                {labeled && (
-                  <text
-                    x={p.x - nx * 16}
-                    y={p.y - ny * 16}
-                    textAnchor={nx > 0 ? 'end' : 'start'}
-                    dominantBaseline="middle"
-                  >
-                    {formatStation(t.station, labelStep < 1 ? 1 : 0)}
-                  </text>
-                )}
-              </g>
-            );
-          })}
           {elements.map((e, i) => (
             <polyline
               key={alignment.elements[i]?.index}
@@ -532,8 +547,65 @@ export function PlanView({
               toScreen={toScreen}
               skip={view.sx < SURVEY_TEXT_PX ? OWN_AND_SURVEY_TEXT : OWN_LAYERS}
               selected={selected}
+              hideLabels={markerOwners}
             />
           )}
+          {ticks.map((t) => {
+            const p = toScreen(t.point);
+            // normála vpravo (cos, −sin) vo svete → (cos, +sin) na obrazovke; čísla na strane bez kót (ADR 0026)
+            // všetky čísla na strane bez kót (ADR 0026)
+            const sign = dimensions?.[0] ? -dimensions[0].side : -1;
+            const nx = sign * Math.cos(t.azimuth);
+            const ny = sign * Math.sin(t.azimuth);
+            const labeled =
+              Math.abs(t.station / labelStep - Math.round(t.station / labelStep)) < 1e-6;
+            const len = labeled ? 9 : 4;
+            // čísla za okrajom najvzdialenejšej NK na svojej strane (pred prvým radom kót), s pomocnou čiarou
+            const dir = { x: sign * Math.cos(t.azimuth), y: -sign * Math.sin(t.azimuth) };
+            const along = { x: Math.sin(t.azimuth), y: Math.cos(t.azimuth) };
+            // tri lúče (značka ± 2 m po osi), aby číslo neskončilo na šikmom konci NK
+            const clearance =
+              Math.max(
+                ...[-2, 0, 2].map((d) =>
+                  rayExtent(
+                    { x: t.point.x + along.x * d, y: t.point.y + along.y * d },
+                    dir,
+                    deckOutlines,
+                  ),
+                ),
+              ) * view.sx;
+            const dist = Math.max(18, clearance + 18);
+            return (
+              <g key={t.s} className={labeled ? 'tick tick-major' : 'tick'}>
+                <line
+                  x1={p.x - nx * len}
+                  y1={p.y - ny * len}
+                  x2={p.x + nx * len}
+                  y2={p.y + ny * len}
+                />
+                {labeled && dist > 24 && (
+                  <line
+                    className="tick-leader"
+                    x1={p.x + nx * (len + 2)}
+                    y1={p.y + ny * (len + 2)}
+                    x2={p.x + nx * (dist - 6)}
+                    y2={p.y + ny * (dist - 6)}
+                  />
+                )}
+                {labeled && (
+                  <text
+                    className="tick-label"
+                    x={p.x + nx * dist}
+                    y={p.y + ny * dist}
+                    textAnchor={Math.abs(nx) < 0.3 ? 'middle' : nx > 0 ? 'start' : 'end'}
+                    dominantBaseline={ny > 0.7 ? 'hanging' : ny < -0.7 ? 'auto' : 'middle'}
+                  >
+                    {formatStation(t.station, labelStep < 1 ? 1 : 0)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
           {profileLine && profileLine.length > 1 && (
             <polyline className="profile-axis-plan" points={polyline(profileLine)} />
           )}
@@ -594,6 +666,9 @@ export function PlanView({
               side={d.side}
               reach={d.reach}
               scale={view.sx}
+              width={size.width}
+              height={size.height}
+              markers={d.markers}
               onEdit={
                 lineEditing && tool === 'none'
                   ? (seg, at) =>
@@ -617,6 +692,8 @@ export function PlanView({
               side={linePreview.frame.side}
               reach={linePreview.frame.reach}
               scale={view.sx}
+              width={size.width}
+              height={size.height}
             />
           )}
           {tool === 'measure' && (

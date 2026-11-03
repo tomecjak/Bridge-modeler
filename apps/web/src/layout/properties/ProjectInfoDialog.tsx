@@ -47,7 +47,7 @@ export function ProjectInfoDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Dialog title={sk.ribbon.projectInfo} onClose={onClose} wide>
+    <Dialog icon="info" title={sk.ribbon.projectInfo} onClose={onClose} wide>
       <PropertyGroups
         groups={[
           {

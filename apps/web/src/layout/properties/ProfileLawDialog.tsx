@@ -52,7 +52,12 @@ export function ProfileLawDialog({
     });
   };
   return (
-    <Dialog title={sk.properties.lawTitle(deck.name, parameter)} onClose={onClose} wide>
+    <Dialog
+      icon="stationFunction"
+      title={sk.properties.lawTitle(deck.name, parameter)}
+      onClose={onClose}
+      wide
+    >
       {def.description && <p className="hint">{def.description}</p>}
       {law ? (
         <button type="button" className="link" onClick={() => setLaw(undefined)}>

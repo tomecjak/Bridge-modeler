@@ -21,7 +21,7 @@ export function AxisOffsetDialog({
   const title =
     which === 'horizontalOffset' ? sk.elements.horizontalOffset : sk.elements.verticalOffset;
   return (
-    <Dialog title={`${axis.name}: ${title}`} onClose={onClose}>
+    <Dialog icon="bridgeAxis" title={`${axis.name}: ${title}`} onClose={onClose}>
       <StationFunctionEditor
         law={axis[which]}
         range={range}

@@ -7,6 +7,36 @@ export const sk = {
   app: {
     title: 'Modelér mostov',
   },
+  window: {
+    close: 'Zavrieť',
+    popOut: 'Otvoriť v samostatnom okne',
+    popOutTitle: 'Otvoriť v samostatnom okne prehliadača (napr. na druhom monitore)',
+    profileSubtitle: (users: string) => (users ? `používa ${users}` : 'nepoužíva žiadna NK'),
+    parametersTitle: 'Parametre a staničné funkcie',
+    parametersSubtitle: (n: number) =>
+      `${n} ${n === 1 ? 'parameter' : n > 1 && n < 5 ? 'parametre' : 'parametrov'} · zmeny sa prejavia v modeli okamžite`,
+    variantsSubtitle: (n: number) =>
+      `${n} ${n === 1 ? 'variant' : n < 5 ? 'varianty' : 'variantov'} · ukazovatele a pozdĺžne profily v rovnakej mierke`,
+    checksSubtitle: 'Klik na riadok vyberie prvok, dvojklik ho ukáže v pohľade.',
+  },
+  exportMenu: 'Export',
+  emptyState: {
+    text: 'Os a niveleta z Civil 3D. Zobrazí sa pôdorys a pozdĺžny profil, potom vyznačíte oblasť mosta a vložíte NK.',
+    choose: 'Vybrať súbor…',
+    openProject: 'Otvoriť projekt (.json)',
+    terrain: 'Terén',
+    terrainText: 'LandXML povrch alebo GeoTIFF; DMR 5.0 zo ZBGIS pre oblasť mosta.',
+    survey: 'Meračka DXF',
+    surveyText: 'Body s výškami z textov a čiary existujúceho stavu.',
+    library: 'Knižnica prierezov',
+    libraryText: 'Šablóny, firemná knižnica alebo prierez zo súboru.',
+  },
+  theme: {
+    toggleTitle: 'Farebná téma — kliknutím prepnete (systém → svetlá → tmavá)',
+    system: 'Systém',
+    light: 'Svetlá',
+    dark: 'Tmavá',
+  },
   persistence: {
     newProject: 'Nový',
     open: 'Otvoriť',
@@ -56,8 +86,10 @@ export const sk = {
   viewport: {
     tabs: {
       view3d: '3D',
-      view2d: '2D',
+      view2d: '2D výkresy',
     },
+    views: 'Pohľad',
+    section: 'Priečny rez',
     empty2d: 'Importujte os z LandXML, zobrazí sa pôdorys a pozdĺžny profil.',
     wholeAxis: 'Celá os',
     goTo: 'Prejsť na',
@@ -86,9 +118,9 @@ export const sk = {
     mapFailed: (label: string) => `${label} je nedostupná — terén bez mapy.`,
     terrainDownloadTitle:
       'Projekt nemá terén — stiahne sa DMR 5.0 zo služby ZBGIS (ÚGKK) v obdĺžniku okolo mosta',
-    cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako v záložke Prierez)',
+    cutTitle: 'Rez kolmo na os mosta na staničení prierezu (rovnaké ako priečny rez v 2D)',
     loading: 'Načítavam 3D náhľad…',
-    noDeck: 'Vložte nosnú konštrukciu (záložka Prierez), zobrazí sa jej 3D model.',
+    noDeck: 'Vložte nosnú konštrukciu (nástroj Nosná konštrukcia), zobrazí sa jej 3D model.',
     objects: (n: number) =>
       `${n} ${n === 1 ? 'objekt' : n >= 2 && n <= 4 ? 'objekty' : 'objektov'}`,
     generated: (ms: number) => `generované za ${ms.toFixed(0)} ms`,
@@ -112,6 +144,8 @@ export const sk = {
     stepFailed: 'Export STEP zlyhal.',
   },
   checks: {
+    tiles: { errors: 'chyby', warnings: 'upozornenia', ok: 'skupiny bez problémov' },
+    noProblems: 'bez problémov',
     tab: 'Kontroly',
     title: 'Kontroly',
     groups: {
@@ -336,7 +370,7 @@ export const sk = {
     insertExample: 'Vložiť príklad dvojice NK (rez E–E)',
     addDeck: 'Pridať NK',
     needsAlignment:
-      'Na vytvorenie NK treba os cesty s niveletou — najprv importujte LandXML (záložka 2D alebo tlačidlo Importovať LandXML).',
+      'Na vytvorenie NK treba os cesty s niveletou — najprv importujte LandXML (tlačidlo Importovať LandXML).',
     elapsed: (ms: string) => `výpočet ${ms} ms`,
     area: 'Plocha',
     centroid: 'Ťažisko (od osi mosta)',
@@ -917,8 +951,7 @@ export const sk = {
     tables: 'Tabuľky prierezu',
     profileTablesTitle: (name: string) => `Prierez ${name}: parametre, body a obrysy`,
     editGraphically: 'Upraviť graficky',
-    graphicalHint:
-      'Graficky sa prierez upravuje v záložke Prierez nástrojmi karty „Upraviť | Prierez“.',
+    graphicalHint: 'Graficky sa prierez upravuje v okne Editor prierezu (Upraviť graficky).',
   },
   statusBar: {
     ready: 'Pripravené',
@@ -967,6 +1000,7 @@ export const sk = {
   },
   spanLayout: {
     title: 'Rozloženie polí',
+    subtitle: 'Osi uloženia podľa dĺžok polí po osi mosta',
     hint: 'Osi uloženia sa rozmiestnia podľa dĺžok polí po osi mosta a prečíslujú od začiatku. Existujúce podpery sa zachovajú a presunú (opory na krajné osi, piliere podľa poradia), chýbajúce sa doplnia zvoleným typom, nadbytočné sa odstránia. Koniec NK sa nastaví podľa presahu. Jeden krok späť.',
     deck: 'Nosná konštrukcia',
     spans: 'Polia [m]',
@@ -1064,6 +1098,7 @@ export const sk = {
     problems: 'Problémy',
   },
   dimensions: {
+    table: { line: 'Os uloženia', station: 'Staničenie', grade: 'Niveleta', terrain: 'Terén' },
     overall: 'Celková dĺžka mosta (po konce krídel)',
     deck: 'Dĺžka NK a presahy opôr',
     spans: 'Rozpätia polí po osi mosta',

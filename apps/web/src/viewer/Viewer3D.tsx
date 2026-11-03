@@ -12,6 +12,7 @@ import { BASEMAPS, type BasemapKind, loadBasemap } from './basemap.ts';
 export type { BasemapKind };
 
 import { sceneSurveys } from '../store/survey.ts';
+import { THEME_CHANGE_EVENT } from '../theme/theme.ts';
 import { type Cut, type Picked, SceneView } from './sceneView.ts';
 import { terrainBuffers } from './terrainMesh.ts';
 import { useExactWorker, useMeshWorker } from './useMeshWorker.ts';
@@ -52,11 +53,12 @@ const CLICK_TOLERANCE = 3;
 function readTheme() {
   const css = getComputedStyle(document.documentElement);
   return {
-    background: css.getPropertyValue('--canvas').trim() || '#e9ecf1',
-    accent: css.getPropertyValue('--accent').trim() || '#2563eb',
+    background: css.getPropertyValue('--canvas').trim() || '#eef1f4',
+    accent: css.getPropertyValue('--accent').trim() || '#e08a1e',
     edges: '#2b2f36',
     cut: '#d9773a',
     survey: css.getPropertyValue('--survey').trim() || '#57534e',
+    axis: css.getPropertyValue('--axis-line').trim() || '#1f6fd1',
   };
 }
 
@@ -151,11 +153,13 @@ export default function Viewer3D({
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onScheme = () => view.setTheme(readTheme());
     media.addEventListener('change', onScheme);
+    window.addEventListener(THEME_CHANGE_EVENT, onScheme);
     const observer = new ResizeObserver(() => view.resize(host.clientWidth, host.clientHeight));
     observer.observe(host);
     return () => {
       observer.disconnect();
       media.removeEventListener('change', onScheme);
+      window.removeEventListener(THEME_CHANGE_EVENT, onScheme);
       view.dispose();
       viewRef.current = undefined;
     };

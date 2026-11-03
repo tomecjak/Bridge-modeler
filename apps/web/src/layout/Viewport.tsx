@@ -8,17 +8,25 @@ import { sk } from '../i18n/sk.ts';
 import type { ProfileFreeHeight } from '../store/obstacles.ts';
 import type { EdgeTerrain } from '../store/profile.ts';
 import type { BasemapSource } from '../viewer/basemap.ts';
+import type { DimensionMarker } from '../views/Dimensions.tsx';
 import type { LineEditing } from '../views/lineEdit.ts';
 import { type PlanCursor, type PlanDimensionSet, PlanView } from '../views/PlanView.tsx';
 import { type ProfileCursor, ProfileView } from '../views/ProfileView.tsx';
 import type { FitRequest, ViewTool } from '../views/viewState.ts';
 import type { SRange } from '../views/viewTransform.ts';
+import type { BaseView } from './Toolbar.tsx';
 
 export type ViewMode = '3d' | '2d' | 'section' | 'parameters' | 'checks' | 'variants';
 
+export type { BaseView };
+
 interface Props {
-  mode: ViewMode;
-  onModeChange: (mode: ViewMode) => void;
+  /** zobrazený pohľad; prierez, parametre a kontroly sú samostatné okná (ADR 0026) */
+  view: BaseView;
+  /** lišta nástrojov nad pohľadmi */
+  toolbar: ReactNode;
+  /** prázdny projekt bez osi (import LandXML a podkladov) */
+  empty: ReactNode;
   alignment: Alignment | undefined;
   cursorS: number | undefined;
   onPlanCursor: (cursor: PlanCursor | undefined) => void;
@@ -30,13 +38,10 @@ interface Props {
   /** kóty mosta v pôdoryse a kóty NK v reze profilu (len na obrazovke) */
   planDimensions: readonly PlanDimensionSet[] | undefined;
   profileDimensions: readonly DimensionChain[] | undefined;
+  /** osi uloženia v krúžkoch nad kótami profilu (ADR 0026) */
+  profileMarkers: readonly DimensionMarker[] | undefined;
   /** voľné výšky prekážok v profile (ADR 0020), len pri zapnutých kótach */
   profileFreeHeights: readonly ProfileFreeHeight[] | undefined;
-  parametersView: ReactNode;
-  /** panel Kontroly (ADR 0022) */
-  checksView: ReactNode;
-  /** porovnanie variantov (ADR 0024) */
-  variantsView: ReactNode;
   /** pôdorys mosta */
   plan: Drawing | undefined;
   /** mapový podklad pôdorysu a počiatok projektu v S-JTSK (odpoveď 23) */
@@ -69,11 +74,13 @@ interface Props {
   planLines: readonly PlanLine[];
   onAddPlanLine: (points: Vec2[]) => void;
   onMovePlanLineVertex: (id: string, index: number, point: Vec2) => void;
-  sectionView: ReactNode;
+  /** priečny rez na staničení (v 2D vpravo dole) */
+  crossSection: ReactNode;
   view3d: ReactNode;
   selectedId: string | undefined;
 }
 
+/** Okná a pohľady (pre ribbonTabs; 3D a 2D sú v prepínači lišty nástrojov). */
 export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
   { mode: '3d', label: sk.viewport.tabs.view3d },
   { mode: '2d', label: sk.viewport.tabs.view2d },
@@ -83,10 +90,14 @@ export const VIEW_TABS: { mode: ViewMode; label: string }[] = [
   { mode: 'variants', label: sk.variants.tab },
 ];
 
-/** Karty pohľadov a aktívny pohľad; nástroje pohľadov sú v ribbone (ADR 0016). */
+/**
+ * Pracovná plocha (ADR 0026): lišta nástrojov a 3D alebo 2D výkresy.
+ * V 2D je pôdorys hore, pozdĺžny rez a priečny rez pod ním.
+ */
 export function Viewport({
-  mode,
-  onModeChange,
+  view,
+  toolbar,
+  empty,
   alignment,
   cursorS,
   onPlanCursor,
@@ -95,11 +106,9 @@ export function Viewport({
   onMeasure,
   planDimensions,
   profileDimensions,
+  profileMarkers,
   profileFreeHeights,
-  parametersView,
-  checksView,
-  variantsView,
-  sectionView,
+  crossSection,
   plan,
   planBasemap,
   profile,
@@ -121,36 +130,11 @@ export function Viewport({
 }: Props) {
   return (
     <main className="viewport">
-      <div className="viewport-tabs" role="tablist">
-        {VIEW_TABS.map((tab) => (
-          <button
-            key={tab.mode}
-            type="button"
-            role="tab"
-            id={`viewport-tab-${tab.mode}`}
-            aria-selected={tab.mode === mode}
-            aria-controls="viewport-canvas"
-            onClick={() => onModeChange(tab.mode)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-      <div
-        className="viewport-canvas"
-        id="viewport-canvas"
-        role="tabpanel"
-        aria-labelledby={`viewport-tab-${mode}`}
-      >
-        {mode === '3d' && view3d}
-        {mode === 'parameters' && parametersView}
-        {mode === 'checks' && checksView}
-        {mode === 'variants' && variantsView}
-        {mode === 'section' && sectionView}
-        {mode === '2d' && !alignment && (
-          <p className="panel-empty centered">{sk.viewport.empty2d}</p>
-        )}
-        {mode === '2d' && alignment && (
+      {toolbar}
+      <div className="viewport-canvas" id="viewport-canvas">
+        {view === '3d' && view3d}
+        {view === '2d' && !alignment && empty}
+        {view === '2d' && alignment && (
           <div className="drawings">
             <PlanView
               key={alignment.name}
@@ -180,30 +164,38 @@ export function Viewport({
               dimensions={planDimensions}
               basemap={planBasemap}
             />
-            {profile && (
-              <ProfileView
-                key={`${alignment.name}-profile-${profile.axis}`}
-                line={profile.line}
-                title={profile.title}
-                cursorS={cursorS}
-                onCursor={onProfileCursor}
-                drawing={profile.drawing}
-                edgeTerrain={profile.edgeTerrain}
-                selected={selectedId}
-                exaggeration={exaggeration}
-                tool={tool}
-                onTool={onTool}
-                fitRequest={fitRequest}
-                studyArea={studyArea}
-                focus={focus}
-                onStudyArea={onStudyArea}
-                goTo={goTo}
-                onMeasure={onMeasure}
-                dimensions={profileDimensions}
-                freeHeights={profileFreeHeights}
-                lineEditing={lineEditing}
-              />
-            )}
+            <div className="drawings-bottom">
+              <div className="drawing-cell">
+                {profile && (
+                  <ProfileView
+                    key={`${alignment.name}-profile-${profile.axis}`}
+                    line={profile.line}
+                    title={profile.title}
+                    cursorS={cursorS}
+                    onCursor={onProfileCursor}
+                    drawing={profile.drawing}
+                    edgeTerrain={profile.edgeTerrain}
+                    selected={selectedId}
+                    exaggeration={exaggeration}
+                    tool={tool}
+                    onTool={onTool}
+                    fitRequest={fitRequest}
+                    studyArea={studyArea}
+                    focus={focus}
+                    onStudyArea={onStudyArea}
+                    goTo={goTo}
+                    onMeasure={onMeasure}
+                    dimensions={profileDimensions}
+                    markers={profileMarkers}
+                    freeHeights={profileFreeHeights}
+                    lineEditing={lineEditing}
+                  />
+                )}
+              </div>
+              <section className="drawing-cell" aria-label={sk.viewport.section}>
+                {crossSection}
+              </section>
+            </div>
           </div>
         )}
       </div>
